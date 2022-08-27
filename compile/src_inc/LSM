@@ -1,0 +1,43 @@
+!----------------------------------------------------------------------
+!     Author: Prabal Negi
+!     Description: Include file for Free-surface ALE
+!
+!----------------------------------------------------------------------
+!----------------------------------------------------------------------
+
+      integer lvlsm
+      parameter (lvlsm=lx1*ly1*lz1*lelv)
+
+      real lsm_forc(lvlsm)     ! Forcing field
+      real lsm_ssign(lvlsm)    ! Smooth Sign
+      real lsm_impf(lvlsm)     ! Implicit term
+      real lsm_nx(lvlsm)
+      real lsm_ny(lvlsm)
+      real lsm_nz(lvlsm)
+      real lsm_nnorm(lvlsm)
+      real lsm_phi(lvlsm)
+
+      common /lsm_rv/ lsm_forc,lsm_impf,lsm_phi,lsm_ssign
+      common /lsm_norms_rv/ lsm_nx,lsm_ny,lsm_nz,lsm_nnorm
+
+
+      real eps_tanh    ! interface diffusion
+      real eps_corr    ! diffusivity of correction term
+      real fsign       ! sign of correction term
+
+      common /lsm_rs/ eps_tanh,eps_corr,fsign
+
+      real lsm_alpha   ! alpha for Non-linear map (Shukla et al. ) JCP 229 (2010) 7411-7439
+      parameter (lsm_alpha = 0.1)
+
+      logical lsm_simp              ! semi implicit nonlinearity
+      logical lsm_dealias           ! dealias the convection term
+      logical lsm_ifcf              ! Put convecting SSign*velocity on fine grid
+      logical lsm_fil               ! Filtering for reinitialization step
+      logical lsm_noncon            ! Direct non-convective formulation
+      common /lsm_ls/ lsm_simp, lsm_dealias,lsm_ifcf,lsm_fil,lsm_noncon
+
+
+
+
+

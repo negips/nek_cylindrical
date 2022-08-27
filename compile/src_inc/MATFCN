@@ -1,0 +1,101 @@
+!	Author      : Prabal Negi
+!	Description : Declarations for Krylov method for evaluating 
+!                 : matrix functions
+!     Modified    : 03-05-2019
+!
+!---------------------------------------------------------------------- 
+
+      include 'MFN.inc'
+
+!     Vector Length      
+      integer vlen0,prlen0,tlen0,fsilen0
+      parameter (vlen0   = lx1*ly1*lz1*lelv*ldim)
+      parameter (prlen0  = lx2*ly2*lz2*lelv)
+      parameter (tlen0   = lx1*ly1*lz1*lelv*0)  ! Not added yet
+      parameter (fsilen0 = 0)       ! Not added yet
+
+      integer iflag
+      parameter (iflag=0)
+      
+      integer vlag0,prlag0,tlag0,fsilag0,exlag0
+      parameter (vlag0   = iflag*vlen0*2)
+      parameter (prlag0  = iflag*prlen0*1)
+      parameter (tlag0   = iflag*tlen0*2)
+      parameter (fsilag0 = iflag*fsilen0*2)
+      parameter (exlag0  = iflag*vlen0*2)
+
+      logical lagwt             ! If we want to use the lagarrays in the
+      parameter (lagwt=.false.) ! in the calculation of the inner product.
+
+      integer qlen0
+      parameter (qlen0 = vlen0 + prlen0 + tlen0 + fsilen0 +
+     $                   vlag0 + prlag0 + tlag0 + fsilag0 + exlag0)
+
+
+!     Arnoldi Krylov sub-space
+      complex MATF_Q(qlen0,mfnkryl1)      ! Orthogonal Matrix
+      complex MATF_HS(mfnkryl1,mfnkryl)   ! Hessenberg Matrix
+      complex MATF_HWK(mfnkryl1,mfnkryl)  ! Work array for Hessenberg Matrix
+
+      complex MATF_Ax(qlen0)              ! Single vector
+      complex MATF_Axn(qlen0)             ! Previous iteration solution
+      complex MATF_AxW1(qlen0)            ! Work array
+      complex MATF_AxW2(qlen0)            ! Work array
+      complex MATF_Forc(qlen0)            ! Work array
+      complex MATF_Soln(qlen0)            ! Work array
+
+      common /MATFzv/ MATF_Q,MATF_HS,MATF_HWK,MATF_Ax,MATF_Axn,
+     $                MATF_Forc,MATF_Soln 
+
+      real MATF_ArWt(qlen0)               ! Arnoldi Weights
+      real MATF_MSK(qlen0)                ! Arnoldi Mask
+
+      common /MATFrv/ MATF_ArWt,MATF_MSK
+
+      integer ngs        ! no of Gram-Schmidt Orthogonalizations
+      integer northo     ! no of Krylov vectors to save
+      integer nkryl      ! current size of krylov space
+      integer vlen       ! length of krylov vector
+      integer sstep      ! no of iterations between Re-Ortho
+      integer inistep    ! no of iterations between Re-Ortho
+
+      common /MATFi/ ngs,nkryl,northo,vlen,sstep,inistep
+
+      logical IFMATF          ! if perform Matrix Fcn evals
+      logical MATF_IFPR       ! If we use seminorm
+      logical MATF_UZAWA      ! If use Uzawa for first time step
+
+      common /MATFl/ MATF_UZAWA,IFMATF,MATF_IFPR
+
+      real matf_omega         ! Forcing angular frequency
+      real matf_rhsnorm       ! rhs norm
+
+      common /MATFr/ matf_omega,matf_rhsnorm
+
+!     GMRES variables
+!----------------------------------------------------------------------
+
+!     GMRES Krylov sub-space
+      complex GMR_Q(qlen0,gmrkryl1)      ! Orthogonal Matrix
+      complex GMR_HS(gmrkryl1,gmrkryl)   ! Hessenberg Matrix
+      complex GMR_HINV(gmrkryl1,gmrkryl) ! Inverse Hessenberg Matrix
+      complex GMR_HWK(gmrkryl1,gmrkryl)  ! Work array for Hessenberg Matrix
+
+      complex GMR_Ax(qlen0)              ! Single vector
+      complex GMR_AxW1(qlen0)            ! Work array
+      complex GMR_AxW2(qlen0)            ! Work array
+      complex GMR_Soln(qlen0)            ! Work array
+
+      common /GMRzv/ GMR_Q,GMR_HS,GMR_Ax,GMR_Soln 
+
+      integer gmr_northo     ! no of Krylov vectors to save for GMRES
+      integer gmr_nkryl      ! current size of GMRES krylov space
+
+      common /GMRi/ gmr_nkryl,gmr_northo
+
+
+
+
+      
+
+

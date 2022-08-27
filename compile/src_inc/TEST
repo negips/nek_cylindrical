@@ -1,0 +1,23 @@
+!     temporary variables
+
+
+      real tmp1(lx1,ly1,lz1,lelt)
+      real tmp2(lx1,ly1,lz1,lelt)
+      real tmp3(lx1,ly1,lz1,lelt)
+      real tmp4(lx2,ly2,lz2,lelt)
+
+      real tmp5(lx1,ly1,lz1,lelt)
+      real tmp6(lx1,ly1,lz1,lelt)
+      real tmp7(lx1,ly1,lz1,lelt)
+      real tmp8(lx2,ly2,lz2,lelt)
+
+      real tmp9(lx2,ly2,lz2,lelt)
+      real tmp10(lx2,ly2,lz2,lelt)
+      real tmp11(lx2,ly2,lz2,lelt)
+      real tmp12(lx2,ly2,lz2,lelt)
+
+
+      common /testtmp1/ tmp1,tmp2,tmp3,tmp4
+      common /testtmp2/ tmp5,tmp6,tmp7,tmp8
+      common /testtmp3/ tmp9,tmp10,tmp11,tmp12
+

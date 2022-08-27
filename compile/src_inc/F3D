@@ -1,0 +1,103 @@
+!     Include file for solve_3d routines
+
+
+      real bfz_f3d(lx1,ly1,lz1,lelv)          ! Forcing for z-component. Possibly not needed
+      real prextr_f3d(lx2*ly2*lz2*lelv,2)     ! Need to save two extrapolated pressures
+      real prcorr_f3d(lx2*ly2*lz2*lelv,2)     ! Need to save Pressure correction as well
+
+      common /solv_f3drv/ bfz_f3d,
+     $                    prextr_f3d,
+     $                    prcorr_f3d
+                       
+
+      logical iff3d                           ! Main logical flag to enable module
+      logical ifcyl_f3d                       ! if we are doing cylindrical coordinates
+
+      common /solv_f3dl/ iff3d, ifcyl_f3d
+
+
+      real k_f3d                                 ! Span wise wavenumber
+      real slipl_f3d                             ! slip length
+      real blendl_f3d                            ! blending length
+
+      common /solv_f3dpr/ k_f3d,slipl_f3d,blendl_f3d
+
+!     Strain-Rate/Stress computations
+!     Otherwise used as work arrays
+!     Real Variables      
+      real erxt,errt,erxx,erxr,errr,ertt
+      common /scrpsn3/ erxt(lx1*ly1*lz1*lelt)      ! Er_x\theta
+     $               , errt(lx1*ly1*lz1*lelt)      ! Er_Rt
+     $               , erxx(lx1*ly1*lz1*lelt)      ! Er_xx
+     $               , erxr(lx1*ly1*lz1*lelt)      ! Er_xR
+     $               , errr(lx1*ly1*lz1*lelt)      ! Er_RR
+     $               , ertt(lx1*ly1*lz1*lelt)      ! Er_\theta\theta
+
+!     Imaginary Variables
+      real eixt,eirt,eixx,eixr,eirr,eitt,wrk
+      common /scrpsn4/  eixt(lx1*ly1*lz1*lelt)      ! Ei_x\theta
+     $                , eirt(lx1*ly1*lz1*lelt)      ! Ei_Rt
+     $                , eixx(lx1*ly1*lz1*lelt)      ! Ei_xx
+     $                , eixr(lx1*ly1*lz1*lelt)      ! Ei_xR
+     $                , eirr(lx1*ly1*lz1*lelt)      ! Ei_RR
+     $                , eitt(lx1*ly1*lz1*lelt)      ! Ei_\theta\theta
+     $                , wrk(lx1*ly1*lz1*lelt)       ! work
+
+
+!     Gradients of real part of velocities      
+      real ur1x,ur1r,ur1t,ur2x,ur2r,ur2t,ur3x,ur3r,ur3t
+      common /scrpsn1/ ur1x(lx1*ly1*lz1*lelt)      ! du1dx_r
+     $               , ur1r(lx1*ly1*lz1*lelt)      ! du1dr_r
+     $               , ur2x(lx1*ly1*lz1*lelt)      ! du2dx_r
+     $               , ur2r(lx1*ly1*lz1*lelt)      ! du2dr_r
+     $               , ur3x(lx1*ly1*lz1*lelt)      ! du3dx_r
+     $               , ur3r(lx1*ly1*lz1*lelt)      ! du3dr_r
+
+
+!     Gradient of imaginary part of velocities      
+      real ui1x,ui1r,ui1t,ui2x,ui2r,ui2t,ui3x,ui3r,ui3t
+      common /scrpsn2/ ui1x(lx1*ly1*lz1*lelt)      ! du1dx_i
+     $               , ui1r(lx1*ly1*lz1*lelt)      ! du1dr_i
+     $               , ui2x(lx1*ly1*lz1*lelt)      ! du2dx_i
+     $               , ui2r(lx1*ly1*lz1*lelt)      ! du2dr_i
+     $               , ui3x(lx1*ly1*lz1*lelt)      ! du3dx_i
+     $               , ui3r(lx1*ly1*lz1*lelt)      ! du3dr_i
+
+
+      
+!     Variables needed for the KTH Framework
+!---------------------------------------------------------------------- 
+      integer f3d_id                ! Module id
+      integer f3d_sec_id            ! Section id
+      integer f3d_tmr_tot_id        ! total time id
+      integer f3d_tmr_ini_id        ! initialisation time id
+      integer f3d_k_id              ! wavenumber id
+      integer f3d_iff3d_id          ! If Fourier 3D id
+      integer f3d_ifcyl_id          ! If cylindrical id
+      integer f3d_slipl_id          ! slip length id
+      integer f3d_blendl_id         ! blend length id
+      integer f3d_log_id            ! Logging id
+
+      integer log_f3d               ! Logging Level
+
+      common /f3d_frame_id/ f3d_id, f3d_sec_id, f3d_tmr_tot_id,
+     $                      f3d_tmr_ini_id,f3d_k_id,f3d_iff3d_id,
+     $                      f3d_ifcyl_id,f3d_slipl_id,f3d_blendl_id,
+     $                      f3d_log_id 
+
+      common /f3d_frame_is/ log_f3d
+
+      character*(3) f3d_name
+      parameter (f3d_name='F3D')
+      
+
+
+
+
+
+
+
+
+
+
+

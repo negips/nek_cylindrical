@@ -1,0 +1,34 @@
+#Configuration file for Nek5000 framework developed at KTH
+# Place for short description; doxygen style
+/**
+@defgroup mat2d  Grid mapping
+@ingroup grid
+
+@brief Tool for 3D to 2D grid mapping
+
+@details 
+3D to 2D mesh mappinfg for 2D-extruded meshes.
+
+
+*/
+#List of existing submodules
+SUBMODULES 
+
+#List of conflicting submodules
+EXCLUSIVE
+
+#Default submodules
+DEFAULT
+
+#List of conflicting modules
+CONFLICTS
+
+#List of required modules
+REQUIRED
+
+#List of object files
+OBJECT map2D.o
+
+#List of include files
+INCLUDE MAP2D
+ 

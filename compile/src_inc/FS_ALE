@@ -1,0 +1,164 @@
+!----------------------------------------------------------------------
+!     Author: Prabal Negi
+!     Description: Include file for Free-surface ALE
+!
+!----------------------------------------------------------------------
+!----------------------------------------------------------------------
+
+      logical fs_iffs         ! Enable Free Surface ALE?
+
+      integer*8 fs_gl_num(lx1*ly1*lz1*lelv)     ! final global numbers
+      integer fs_gs_handle                      ! Gather-Scatter handle
+
+      real fs_vmult(lx1,ly1,lz1,lelv)           ! Multiplicity
+      real fs_mask(lx1,ly1,lz1,lelv)            ! Mask for the free surface
+      real fs_crmask(lx1,ly1,lz1,lelv)          ! Mask for only the corners of 
+                                                ! the free surface
+
+      real fs_damp(lx1,ly1,lz1,lelv)            ! Damping function
+      real fs_ofst                              ! offset before damping
+
+      character*3 fs_cbc(6,lelv)                ! mark the interface
+
+      integer fs_nel                            ! No of free surface elements
+      integer fs_nsymo
+      integer fs_elno(lelv)                     ! El no of free surface
+      integer fs_iface(lelv)                    ! face number of free surface
+
+      integer fs_ie(lelt*lx1)                    ! El. No. of SYM & O
+      integer fs_ix(lelt*lx1)                    ! ix No. of SYM & O
+      integer fs_iy(lelt*lx1)                    ! iy No. of SYM & O
+      integer fs_iz(lelt*lx1)                    ! iz No. of SYM & O
+
+      common /fs_gsh/ fs_gs_handle
+
+      common /fs_is/  fs_nel, fs_nsymo
+      common /fs_iv/  fs_elno, fs_iface, fs_ie, fs_ix, fs_iy, fs_iz
+      common /fs_iv8/ fs_gl_num
+      common /fs_rv/  fs_vmult, fs_mask, fs_crmask, fs_damp
+      common /fs_rs/  fs_ofst 
+
+      common /fs_cv/  fs_cbc
+
+      common /fs_ls/  fs_iffs
+
+!     For interpolation onto smooth global element
+!----------------------------------------------------------------------
+
+      logical fs_ifgsm        ! if global smoothening
+      logical fs_iftc         ! if tangential correction
+      logical fs_ifgh         ! if Gordan Hall Correction
+      logical fs_iffil        ! if filter global interpolations
+      logical fs_ifgrid       ! if global approximation is for the grid
+
+      common /fs_globls/ fs_ifgsm, fs_iftc, fs_ifgh, fs_iffil, 
+     $                   fs_ifgrid
+
+!     At the moment we seem to have a max limit of 84
+!     due to Nek internals      
+      integer lxfs,lyfs,lzfs,lxym
+      parameter (lxfs = 12)          ! Global no. of points along x
+      parameter (lyfs = 12)          ! Global no. of points along y
+      parameter (lzfs = 1)           ! Global no. of points along z
+      parameter (lxym=max(lxfs,lyfs))! Maximum of lxfs,lyfs
+
+      real zx_fs(lxfs),wx_fs(lxfs)  ! x GLL and weights
+      real zy_fs(lyfs),wy_fs(lyfs)  ! y GLL and weights
+      real w2_fs(lxfs,lyfs)         ! 2D weights
+
+
+!     Coordinates of the single global element      
+      real xg_fs(lxfs,lyfs,2)
+      real yg_fs(lxfs,lyfs,2)
+      real zg_fs(lxfs,lyfs,2)
+      real fld_fs(lxfs,lyfs,3)
+      real lfld_fs(lx1,ly1,lelv,3)
+
+      common /fs_globzw/ zx_fs,wx_fs,zy_fs,wy_fs,w2_fs
+      common /fs_globxy/ xg_fs,yg_fs,fld_fs,lfld_fs
+
+!     Original mesh points. This way is not very memory optimal
+      real xm0_fs(lx1,ly1,lz1,lelv)
+      real ym0_fs(lx1,ly1,lz1,lelv)
+      real zm0_fs(lx1,ly1,lz1,lelv)
+
+      common /fs_xyz0/ xm0_fs,ym0_fs,zm0_fs
+
+
+!     2D spectral elements at the interface
+      real xm1_fs(lx1,ly1,lelv)
+      real ym1_fs(lx1,ly1,lelv)
+      real zm1_fs(lx1,ly1,lelv)
+
+!     These are not used at the moment.      
+      real xi_fs(lx1*ly1*lelv)
+      real yi_fs(lx1*ly1*lelv)
+      real zi_fs(lx1*ly1*lelv)
+
+      common /fs_locxy/ xm1_fs,ym1_fs,zm1_fs,xi_fs,yi_fs,zi_fs
+
+      real dx_fs(lxfs,lxfs)         ! derivative matrices
+      real dxt_fs(lyfs,lyfs)        ! derivative transpose matrices
+      real dy_fs(lxfs,lxfs)         ! derivative matrices
+      real dyt_fs(lyfs,lyfs)        ! derivative transpose matrices
+
+      real xr_fs(lxfs,lyfs)         ! dx/dr
+      real xs_fs(lxfs,lyfs)         ! dx/ds
+      real yr_fs(lxfs,lyfs)         ! dy/dr
+      real ys_fs(lxfs,lyfs)         ! dy/ds
+
+      real t1x_fs(lxfs,lyfs)      ! Tangential dir
+      real t1y_fs(lxfs,lyfs)      ! Tangential dir
+      real t2x_fs(lxfs,lyfs)      ! Tangential dir
+      real t2y_fs(lxfs,lyfs)      ! Tangential dir
+      real unx_fs(lxfs,lyfs)      ! Normal dir
+      real uny_fs(lxfs,lyfs)      ! Normal dir
+
+      real glfiltop_fs(lxym*lxym)   ! Global Filter op 
+
+
+      common /fs_derivm/ dx_fs,dxt_fs,dy_fs,dyt_fs,xr_fs,xs_fs,
+     $                   yr_fs,ys_fs,t1x_fs,t1y_fs,t2x_fs,t2y_fs,
+     $                   unx_fs,uny_fs,glfiltop_fs
+
+
+      integer intgh_fs        ! Global mesh interpolation handle
+      integer intlh_fs        ! SEM surface mesh interpolation handle
+
+      common /fs_intpi/ intgh_fs,intlh_fs
+
+      real fs_gfldout(lx1,ly1,lelv,3)
+      real fs_lfldout(lxfs,lyfs,3) 
+      common /fs_intpr/ fs_gfldout,fs_lfldout 
+
+
+!     Variables needed for the KTH Framework
+!---------------------------------------------------------------------- 
+      integer fs_id                ! Module id
+      integer fs_sec_id            ! Section id
+      integer fs_tmr_tot_id        ! total time id
+      integer fs_tmr_ini_id        ! initialisation time id
+      integer fs_ofst_id           ! offset id
+    
+      integer fs_iffs_id           ! If Free Surface id
+      integer fs_ifgsm_id          ! If Global Smoothening id
+      integer fs_iftc_id           ! If Tangential Correction id
+      integer fs_ifgh_id           ! If Gordan Hall Correction id
+      integer fs_iffil_id          ! If filter id
+      integer fs_ifgrid_id
+      integer fs_log_id            ! Log id
+
+      integer fs_log               ! Log Level
+
+      common /fs_frame_id/ fs_id, fs_sec_id, fs_tmr_tot_id,
+     $                     fs_tmr_ini_id, fs_ofst_id, fs_iffs_id, 
+     $                     fs_ifgsm_id, fs_iftc_id, fs_ifgh_id,
+     $                     fs_iffil_id, fs_ifgrid_id, fs_log_id
+
+      common /fs_frame_is/ fs_log
+
+      character*(5) fs_name
+      parameter (fs_name='FSALE')
+
+
+
