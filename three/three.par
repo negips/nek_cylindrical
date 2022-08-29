@@ -30,7 +30,7 @@ userParam04 = 7.3e-5   # Water viscosity (Dynamic)   8.3000e-5
 userParam05 = 0.0      # Reset local_solves
 userParam06 = 0.0      # Reset h1_crs
 
-userParam08 = 1.0      #  0: GMRES (nonsymmetric), 1: PCG w/o weights
+userParam08 = 0.0      #  0: GMRES (nonsymmetric), 1: PCG w/o weights
 userParam09 = 1.0      #  0: Additive multilevel (param 42=0), 1: Original 2 level
 userParam10 = 0.0      #  0: E based Schwartz (FEM), 1: A based Schwartz
 

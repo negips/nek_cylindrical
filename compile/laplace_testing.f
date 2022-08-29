@@ -54,11 +54,11 @@
 
       call rzero   (h1,ntot1)
       call copy    (h2,vtrans(1,1,1,1,ifield),ntot1)
-      call rone(h2,ntot1)
+      call rone    (h2,ntot1)
       call invers2 (h2inv,h2,ntot1)
 
       do i=1,ntot2
-        dp(i,1,1,1) = (1.0e-0)*xm2(i,1,1,1)
+        dp(i,1,1,1) = 1.0 ! (1.0e-0)*xm2(i,1,1,1)
       enddo
 
       call col2(dp,bm2,ntot2) ! Mass matrix
@@ -66,31 +66,41 @@
       call opzero(tmp1,tmp2,tmp3)
       call copy(tmp8,dp,ntot2)
       call outpost(tmp1,tmp2,tmp3,tmp8,tmp5,'lap') 
-   
-!      call col2(dp,bm2,ntot2) ! Mass matrix
 
+!     Solve      
       call esolver_new (dp,h1,h2,h2inv,intype)
 
-      call opgradt  (w1 ,w2 ,w3 ,dp)
-      call opbinv   (dv1,dv2,dv3,w1 ,w2 ,w3 ,h2inv)
+      call opgradt (w1 ,w2 ,w3 ,dp)
+      call opbinv  (dv1,dv2,dv3,w1 ,w2 ,w3 ,h2inv)
 
       call opcopy(tmp1,tmp2,tmp3,dv1,dv2,dv3)
       call copy(tmp4,dp,ntot2)
      
       call outpost(tmp1,tmp2,tmp3,tmp4,tmp5,'lap') 
 
-      call cdabdtp(tmp4,tmp8,h1,h2,h2inv,intype)
 
-      call cdtp (tmp1,tmp8,rxm2,sxm2,txm2,1)
-      iflg = 1
-      call multd (tmp12,tmp1,rxm2,sxm2,txm2,1,iflg)
+!!      call cdtp (tmp1,tmp8,rxm2,sxm2,txm2,1)
+!      call cdtM1p (tmp1,tmp8,rxm1,sxm1,txm1,1)
+!      call cdtM1p (tmp2,tmp8,rym1,sym1,tym1,2)
+!
+!      call outpost(tmp1,tmp2,tmp3,tmp4,tmp5,'lap') 
+!
+!      call multdM1 (tmp4,xm1,rxm1,sxm1,txm1,1,1)
+!      call outpost(tmp1,tmp2,tmp3,tmp4,tmp5,'lap') 
+!
+!      call multdM1 (tmp4,ym1,rym1,sym1,tym1,2,1)
+!      call outpost(tmp1,tmp2,tmp3,tmp4,tmp5,'lap') 
 
+      do i=1,ntot2
+        tmp4(i,1,1,1) = xm2(i,1,1,1)**2
+      enddo
+      call col2(tmp4,bm2,ntot2)
+      call opgradtM1(tmp1,tmp2,tmp3,tmp4)
+      call outpost(tmp1,tmp2,tmp3,tmp4,tmp5,'lap') 
+      call opbinv  (dv1,dv2,dv3,tmp1 ,tmp2 ,tmp3 ,h2inv)
+      call opcopy(tmp1,tmp2,tmp3,dv1,dv2,dv3)
       call outpost(tmp1,tmp2,tmp3,tmp4,tmp5,'lap') 
 
-      write(6,*) 'CDDTP'
-      do i=1,lx2
-        write(6,14) 'cddtp',(tmp12(i,j,1,1),j=1,lx2)
-      enddo  
 
 14    format(A5,2x,16(E12.5,2x))
 
@@ -98,7 +108,7 @@
       return
       end
 c-----------------------------------------------------------------------
-      SUBROUTINE ESOLVER_NEW (RES,H1,H2,H2INV,INTYPE)
+      subroutine esolver_new (res,h1,h2,h2inv,intype)
 C
 C     Choose E-solver
 C
@@ -106,17 +116,15 @@ C--------------------------------------------------------------------
       INCLUDE 'SIZE'
       INCLUDE 'ESOLV'
       INCLUDE 'INPUT'
+      include 'CTIMER'
 C
-      REAL RES   (LX2,LY2,LZ2,LELV)
-      REAL H1    (LX1,LY1,LZ1,LELV)
-      REAL H2    (LX1,LY1,LZ1,LELV)
-      REAL H2INV (LX1,LY1,LZ1,LELV)
+      real res   (lx2,ly2,lz2,lelv)
+      real h1    (lx1,ly1,lz1,lelv)
+      real h2    (lx1,ly1,lz1,lelv)
+      real h2inv (lx1,ly1,lz1,lelv)
       common /scruz/ wk1(lx2*ly2*lz2*lelv)
      $             , wk2(lx2*ly2*lz2*lelv)
      $             , wk3(lx2*ly2*lz2*lelv)
-
-      include 'CTIMER'
-      real kwave2
 
       if (icalld.eq.0) teslv=0.0
 
@@ -128,14 +136,14 @@ C
 
       if (.not. ifsplit) then
          if (param(42).eq.1) then
-            CALL UZAWA_NEW(RES,H1,H2,H2INV,INTYPE,ICG)
+            call uzawa_new(res,h1,h2,h2inv,intype,icg)
          else
             call uzawa_gmres_new(res,h1,h2,h2inv,intype,icg)
          endif
       else
-         WRITE(6,*) 'ERROR: E-solver does not exist PnPn'
-         CALL EXITT
-      ENDIF
+         write(6,*) 'error: e-solver does not exist pnpn'
+         call exitt
+      endif
 
       teslv=teslv+(dnekclock()-etime1)
 
@@ -223,6 +231,7 @@ c        if (ratio.le.1.e-5) goto 9000
          ENDIF
 
          CALL CDABDTP  (WP,PCG,H1,H2,H2INV,INTYPE)
+!         CALL CM1DABDTP  (WP,PCG,H1,H2,H2INV,INTYPE)
 !         CALL CDDTP    (WP,PCG)
                                         
 
@@ -359,6 +368,9 @@ c           call copy(r_gmres,res,ntot2)
             !update residual
             call copy(r_gmres,res,ntot2)                      ! r = res
             call cdabdtp(w_gmres,x_gmres,h1,h2,h2inv,intype)  ! w = A x
+!            call cM1dabdtp(w_gmres,x_gmres,h1,h2,h2inv,intype)  ! w = A x
+!            call cddtp(w_gmres,x_gmres)                       ! w = A x
+
             call add2s2(r_gmres,w_gmres,-1.,ntot2)            ! r = r - w
                                                               !      -1
             call col2(r_gmres,ml_gmres,ntot2)                 ! r = L   r
@@ -395,6 +407,10 @@ c              call copy(z_gmres(1,j),w_gmres,ntot2)    ! z  = M   w
      
             call cdabdtp(w_gmres,z_gmres(1,j),    ! w = A z
      $                   h1,h2,h2inv,intype)      !        j
+
+!            call cm1dabdtp(w_gmres,z_gmres(1,j),    ! w = A z
+!     $                   h1,h2,h2inv,intype)      !        j
+
 
 !            call cddtp(w_gmres,z_gmres(1,j))      ! w = A z
                                                   !        j
@@ -634,7 +650,98 @@ C     INTYPE=-1  Compute the matrix-vector product    D*DT*p
       end
 C
 C-----------------------------------------------------------------------
+      subroutine cM1dabdtp (ap,wp,h1,h2,h2inv,intype)
 
+C     INTYPE= 0  Compute the matrix-vector product    DA(-1)DT*p
+C     INTYPE= 1  Compute the matrix-vector product    D(B/DT)(-1)DT*p
+C     INTYPE=-1  Compute the matrix-vector product    D(A+B/DT)(-1)DT*p
+
+      include 'SIZE'
+      include 'TOTAL'
+      REAL           AP    (LX2,LY2,LZ2,1)
+      REAL           WP    (LX2,LY2,LZ2,1)
+      REAL           H1    (LX1,LY1,LZ1,1)
+      REAL           H2    (LX1,LY1,LZ1,1)
+      REAL           H2INV (LX1,LY1,LZ1,1)
+C
+      COMMON /SCRNS/ TA1 (LX1,LY1,LZ1,LELV)
+     $ ,             TA2 (LX1,LY1,LZ1,LELV)
+     $ ,             TA3 (LX1,LY1,LZ1,LELV)
+     $ ,             TB1 (LX1,LY1,LZ1,LELV)
+     $ ,             TB2 (LX1,LY1,LZ1,LELV)
+     $ ,             TB3 (LX1,LY1,LZ1,LELV)
+
+      call opgradtM1(ta1,ta2,ta3,wp)
+      if ((intype.eq.0).or.(intype.eq.-1)) then
+         tolhin=tolhs
+         call ophinv (tb1,tb2,tb3,ta1,ta2,ta3,h1,h2,tolhin,nmxv)
+      else
+         if (ifanls) then
+            dtbdi = dt/bd(1)   ! scale by dt*backwd-diff coefficient
+            CALL OPBINV1(TB1,TB2,TB3,TA1,TA2,TA3,dtbdi)
+         else
+            CALL OPBINV (TB1,TB2,TB3,TA1,TA2,TA3,H2INV)
+         endif
+      endif
+      call opdivM1 (ap,tb1,tb2,tb3)
+
+      return
+      end
+C
+C-----------------------------------------------------------------------
+
+      subroutine opdivM1(outfld,inpx,inpy,inpz)
+C---------------------------------------------------------------------
+C
+C     Compute OUTFLD = SUMi Di*INPi, 
+C     the divergence of the vector field (INPX,INPY,INPZ)
+C
+C---------------------------------------------------------------------
+      include 'SIZE'
+      include 'GEOM'
+      real outfld (lx2,ly2,lz2,1)
+      real inpx   (lx1,ly1,lz1,1)
+      real inpy   (lx1,ly1,lz1,1)
+      real inpz   (lx1,ly1,lz1,1)
+      common /ctmp0/ work (lx2,ly2,lz2,lelv)
+C
+      iflg = 1
+
+      ntot2 = lx2*ly2*lz2*nelv
+      call multdM1 (work,inpx,rxm1,sxm1,txm1,1,iflg)
+      call copy  (outfld,work,ntot2)
+      call multdM1 (work,inpy,rym1,sym1,tym1,2,iflg)
+      call add2  (outfld,work,ntot2)
+      if (ldim.eq.3) then
+         call multdM1 (work,inpz,rzm1,szm1,tzm1,3,iflg)
+         call add2  (outfld,work,ntot2)
+      endif
+C
+      return
+      end
+C
+c-----------------------------------------------------------------------
+      subroutine opgradtM1(outx,outy,outz,inpfld)
+C------------------------------------------------------------------------
+C
+C     Compute DTx, DTy, DTz of an input field INPFLD 
+C
+C-----------------------------------------------------------------------
+      include 'SIZE'
+      include 'TOTAL'
+      real outx   (lx1,ly1,lz1,1)
+      real outy   (lx1,ly1,lz1,1)
+      real outz   (lx1,ly1,lz1,1)
+      real inpfld (lx2,ly2,lz2,1)
+C
+      call cdtM1p (outx,inpfld,rxm1,sxm1,txm1,1)
+      call cdtM1p (outy,inpfld,rym1,sym1,tym1,2)
+      if (ldim.eq.3) 
+     $   call cdtM1p (outz,inpfld,rzm1,szm1,tzm1,3)
+C
+      return
+      end
+c-----------------------------------------------------------------------
 
 
 
