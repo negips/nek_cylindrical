@@ -13,6 +13,7 @@
 \usepackage{bm}			% Bold math
 \usepackage{tabstackengine}
 \usepackage{xcolor}
+\usepackage{relsize}
 %\usepackage{biblatex}
 %\addbibresource{licentiate.bib}
 %\DeclareBibliographyCategory{ignore}
@@ -355,7 +356,47 @@ Which can be written using the Laplacian of individual scalar fields, $u_{x},u_{
 \end{split} \label{eqn:vector_laplacian_scalar}
 \end{eqnarray}
 
+\section{Nek Implementations:}
 
+\subsection{Opgradt}
+
+The opgradt subroutine implements the gradient of a field defined on Mesh 2 (pressure mesh), integrated w.r.t the Mesh 1 test functions.
+This is done with integration by parts which creates a boundary term.
+
+Pressure term in the momentum equations:
+\begin{eqnarray}
+	 - \mathlarger\int_{\Omega} v\dfrac{\partial }{\partial x_{j}}(p\delta_{ij}) d\Omega \nonumber \\
+				  -\mathlarger\int_{\Omega} \dfrac{\partial }{\partial x_{j}}(vp\delta_{ij}) d\Omega + \mathlarger\int_{\Omega} p\delta_{ij}\dfrac{\partial }{\partial x_{j}}(v) d\Omega \nonumber \\
+				  -\mathlarger\int_{\partial\Omega} (vp\delta_{ij}) n_{j} dA + \mathlarger\int_{\Omega} p\delta_{ij}\dfrac{\partial }{\partial x_{j}}(v) d\Omega \nonumber 
+\end{eqnarray}
+The first term is the boundary condition. The second term is what opgradt evaluates. I represent the determinant of the mapping between reference element and physical coordinates, the Jacobian as $\mathcal{J}$. In the continuous formulation, this becomes:
+\begin{eqnarray}
+	w_{i}	=& \mathlarger\int_{\Omega} p\dfrac{\partial v}{\partial x_{i}} d\Omega \nonumber \\
+				 =& \mathlarger\int_{\Omega} p\dfrac{\partial v}{\partial x_{i}} \left(\dfrac{\partial \Omega}{\partial \hat{\Omega}}\right) d\hat{\Omega} \nonumber \\
+				 =& \mathlarger\int_{\Omega} p\left(\dfrac{1}{\mathcal{J}}\dfrac{\partial r}{\partial x_{i}}\dfrac{\partial v}{\partial r} + \dfrac{1}{\mathcal{J}}\dfrac{\partial s}{\partial x_{i}}\dfrac{\partial v}{\partial s} + \dfrac{1}{\mathcal{J}}\dfrac{\partial t}{\partial x_{i}}\dfrac{\partial v}{\partial t}\right)\mathcal{J} d\hat{\Omega} \nonumber \\
+				=& \mathlarger\int_{\Omega} p\left(\dfrac{\partial r}{\partial x_{i}}\dfrac{\partial v}{\partial r} + \dfrac{\partial s}{\partial x_{i}}\dfrac{\partial v}{\partial s} + \dfrac{\partial t}{\partial x_{i}}\dfrac{\partial v}{\partial t}\right) d\hat{\Omega} \nonumber \\
+\implies w_{i}	=& \mathlarger\int_{\Omega} p\left(\dfrac{\partial r_{j}}{\partial x_{i}}\dfrac{\partial v}{\partial r_{j}}\right) d\hat{\Omega},
+\end{eqnarray}
+where, $r_{i}$ represents the reference element coordinate directions $r,s,t$
+After discretization, this becomes:
+\begin{eqnarray}
+	\implies w_{i}	=& \sum_{k} W(x_{k})\left(\dfrac{\partial r_{j}}{\partial x_{i}}\dfrac{\partial v}{\partial r_{j}}(x_{k})\right)p  \nonumber
+\end{eqnarray}
+In the case of no cross derivative terms like $\partial s/\partial x$ etc., this has a simple tensor product evaluation using:
+\begin{subequations}
+\begin{eqnarray}
+	w_{1}	= (\mathcal{I}^{T}_{z12}\otimes\mathcal{I}^{T}_{y12}\otimes\mathcal{D}^{T}_{x12})(W.*\dfrac{\partial r}{\partial x}.*p) \\
+	w_{2}	= (\mathcal{I}^{T}_{z12}\otimes\mathcal{D}^{T}_{y12}\otimes\mathcal{I}^{T}_{x12})(W.*\dfrac{\partial s}{\partial y}.*p) \\
+	w_{3}	= (\mathcal{D}^{T}_{z12}\otimes\mathcal{I}^{T}_{y12}\otimes\mathcal{I}^{T}_{x12})(W.*\dfrac{\partial t}{\partial z}.*p)
+\end{eqnarray}
+\end{subequations}
+
+For the cylindrical case we have
+\begin{eqnarray}
+	w_{x} =& \mathlarger\int_{\Omega} p\left(\dfrac{\partial r}{\partial x}\dfrac{\partial v}{\partial r} + \dfrac{\partial s}{\partial x}\dfrac{\partial v}{\partial s} + \dfrac{\partial t}{\partial x}\dfrac{\partial v}{\partial t}\right) d\hat{\Omega} \nonumber \\
+	w_{R} =& \mathlarger\int_{\Omega} p\left(\dfrac{\partial r}{\partial R}\dfrac{\partial v}{\partial r} + \dfrac{\partial s}{\partial R}\dfrac{\partial v}{\partial s} + \dfrac{\partial t}{\partial R}\dfrac{\partial v}{\partial t}\right) d\hat{\Omega} \nonumber \\
+	w_{\theta} =& \mathlarger\int_{\Omega} \dfrac{p}{R}\left(\dfrac{\partial r}{\partial \theta}\dfrac{\partial v}{\partial r} + \dfrac{\partial s}{\partial \theta}\dfrac{\partial v}{\partial s} + \dfrac{\partial t}{\partial \theta}\dfrac{\partial v}{\partial t}\right) d\hat{\Omega} \nonumber
+\end{eqnarray}
 
 %\begin{figure}[h]
 %	\centering
