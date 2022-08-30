@@ -468,19 +468,51 @@ In the absence of cross geometric factors this becomes
 	 \mathlarger\int_{\Omega} q\nabla\cdot u  = & \left\{
 	 \begin{split}
 	    qW(\mathcal{I}_{t12}\otimes\mathcal{I}_{s12}\otimes D_{x}rD_{r})u \\ 
-	    + qW(\mathcal{I}_{t12}\otimes D_{y}sD_{s}\otimes\mathcal{I}_{r12})u \\ 
-	    + qW(D_{z}tD_{t}\otimes\mathcal{I}_{s12}\otimes \mathcal{I}_{r12})u
- 	 \end{split}\right.
+	    + qW(\mathcal{I}_{t12}\otimes D_{y}sD_{s}\otimes\mathcal{I}_{r12})v \\ 
+	    + qW(D_{z}tD_{t}\otimes\mathcal{I}_{s12}\otimes \mathcal{I}_{r12})w
+ 	 \end{split}\right.  \\
+%
+	 \mathlarger\int_{\Omega} q\nabla\cdot u  = & \left\{
+	 \begin{split}
+	q(W_{t}\mathcal{I}_{t12}\otimes W_{s}\mathcal{I}_{s12}\otimes W_{r}D_{x}rD_{r})u \\ 
+	+ q(W_{t}\mathcal{I}_{t12}\otimes W_{s}D_{y}sD_{s}\otimes W_{r}\mathcal{I}_{r12})v \\ 
+	+ q(W_{t}D_{z}tD_{t}\otimes W_{s}\mathcal{I}_{s12}\otimes W_{r}\mathcal{I}_{r12})w
+\end{split}\right.  
 \end{eqnarray}
 Here $D_{r},D_{s},D_{t}$ is essential $D_{r12},D_{s12},D_{t12}$, since we are evaluating the derivative of a Mesh 1 field on Mesh 2 points.
 
+For the cylindrical case we have
+\begin{eqnarray}
+	\mathlarger\int_{\Omega} q\nabla\cdot u  = & \mathlarger\int_{\Omega} q\dfrac{\partial }{\partial x_{i}}(u_{i}) d\Omega \nonumber \\
+	= & \mathlarger\int_{\Omega} q\dfrac{\partial u_{i}}{\partial x_{i}} R \mathcal{J} d\hat{\Omega} \nonumber \\
+	= & \mathlarger\int_{\Omega} q\left(\dfrac{\partial u}{\partial x} + \dfrac{1}{R}\dfrac{\partial (Rv)}{\partial R} + \dfrac{1}{R}\dfrac{\partial w}{\partial \theta} \right) R \mathcal{J} d\hat{\Omega} \nonumber \\
+	= & \mathlarger\int_{\Omega} q\left(\dfrac{\partial u}{\partial x} + \dfrac{\partial v}{\partial R} + \dfrac{v}{R}+ \dfrac{1}{R}\dfrac{\partial w}{\partial \theta} \right) R \mathcal{J} d\hat{\Omega} \nonumber \\
+	= & \mathlarger\int_{\Omega} q\left(\dfrac{1}{\mathcal{J}}\dfrac{\partial r_{j}}{\partial x}\dfrac{\partial u}{\partial r_{j}} + \dfrac{1}{\mathcal{J}}\dfrac{\partial r_{j}}{\partial R}\dfrac{\partial v}{\partial r_{j}} + \dfrac{v}{R} + \dfrac{1}{R}\dfrac{1}{\mathcal{J}}\dfrac{\partial r_{j}}{\partial \theta}\dfrac{\partial w}{\partial r_{j}} \right) R \mathcal{J} d\hat{\Omega} \nonumber \\
+	= & \mathlarger\int_{\Omega} q\left(\dfrac{\partial r_{j}}{\partial x}\dfrac{\partial u}{\partial r_{j}} + \dfrac{\partial r_{j}}{\partial R}\dfrac{\partial v}{\partial r_{j}} + \dfrac{\mathcal{J}v}{R} + \dfrac{1}{R}\dfrac{\partial r_{j}}{\partial \theta}\dfrac{\partial w}{\partial r_{j}} \right) R  d\hat{\Omega} \nonumber \\	
+	= &  W_{k}q_{k}\left(R\dfrac{\partial r_{j}}{\partial x}\dfrac{\partial u}{\partial r_{j}} + R\dfrac{\partial r_{j}}{\partial R}\dfrac{\partial v}{\partial r_{j}} + \dfrac{R\mathcal{J}v}{R} + \dfrac{\partial r_{j}}{\partial \theta}\dfrac{\partial w}{\partial r_{j}} \right) 
+\end{eqnarray}
+For undeformed elements, $\mathcal{J}$ is a constant throughout the element. Therefore in kronecker notation we have
+\begin{eqnarray}
+	\mathlarger\int_{\Omega} q\nabla\cdot u  = \left\{
+		\begin{split}
+			Wq(\mathcal{I}_{12}\otimes R\otimes D_{x12}rD_{r})u \\
+			+ Wq(\mathcal{I}_{12}\otimes (RD_{R12}sD_{s} + \mathcal{J}\mathcal{I}_{12})\otimes \mathcal{I}_{12})v \\
+			+ Wq(D_{\theta12}tD_{t}\otimes \mathcal{I}_{12}\otimes \mathcal{I}_{12})w
+		\end{split}\right. \\
+	\mathlarger\int_{\Omega} q\nabla\cdot u  = \left\{
+\begin{split}
+	q(W_{t}\mathcal{I}_{12}\otimes W_{s}R\otimes W_{r}D_{x12}rD_{r})u \\
+	+ q(W_{t}\mathcal{I}_{12}\otimes W_{s}(RD_{R12}sD_{s} + \mathcal{J}\mathcal{I}_{12})\otimes W_{r}\mathcal{I}_{12})v \\
+	+ q(W_{t}D_{\theta12}tD_{t}\otimes W_{s}\mathcal{I}_{12}\otimes W_{r}\mathcal{I}_{12})w
+\end{split}\right.	
+\end{eqnarray}
 
 \subsection{Pressure Pseudo-Laplacian}
 
 \begin{eqnarray}
 	S_{\Delta t} = D QD^{T} \label{eqn:pressure_pseudo_laplacian}
 \end{eqnarray}
-where, if $Q=H^{-1}$ there is no decoupling error and we have the Uzawa algorithm. Alternately, $Q=B^{-1}$ in which case we incur a decoupling error but avoid the nested iterations since $B$ being diagonal can be trivially inverted. 
+where, if $Q=H^{-1}$ there is no decoupling error and we have the Uzawa algorithm. Alternately, $Q=B^{-1}$ in which case we incur a decoupling error but avoid the nested iterations since $B$, being diagonal, can be trivially inverted. 
 
 
 %\begin{figure}[h]
