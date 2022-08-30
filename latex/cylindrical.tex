@@ -377,26 +377,111 @@ The first term is the boundary condition. The second term is what opgradt evalua
 				=& \mathlarger\int_{\Omega} p\left(\dfrac{\partial r}{\partial x_{i}}\dfrac{\partial v}{\partial r} + \dfrac{\partial s}{\partial x_{i}}\dfrac{\partial v}{\partial s} + \dfrac{\partial t}{\partial x_{i}}\dfrac{\partial v}{\partial t}\right) d\hat{\Omega} \nonumber \\
 \implies w_{i}	=& \mathlarger\int_{\Omega} p\left(\dfrac{\partial r_{j}}{\partial x_{i}}\dfrac{\partial v}{\partial r_{j}}\right) d\hat{\Omega},
 \end{eqnarray}
-where, $r_{i}$ represents the reference element coordinate directions $r,s,t$
+where, $r_{j}$ represents the reference element coordinate directions $r,s,t$.
 After discretization, this becomes:
 \begin{eqnarray}
-	\implies w_{i}	=& \sum_{k} W(x_{k})\left(\dfrac{\partial r_{j}}{\partial x_{i}}\dfrac{\partial v}{\partial r_{j}}(x_{k})\right)p  \nonumber
+	\implies w_{i}	=& \mathlarger\sum_{k} W(x_{k})\left(\dfrac{\partial r_{j}}{\partial x_{i}}\dfrac{\partial v}{\partial r_{j}}(x_{k})\right)p  \nonumber
 \end{eqnarray}
-In the case of no cross derivative terms like $\partial s/\partial x$ etc., this has a simple tensor product evaluation using:
-\begin{subequations}
+When cross derivative terms like $\partial s/\partial x$ \textit{etc.} are non-zero, we have the following expression
 \begin{eqnarray}
-	w_{1}	= (\mathcal{I}^{T}_{z12}\otimes\mathcal{I}^{T}_{y12}\otimes\mathcal{D}^{T}_{x12})(W.*\dfrac{\partial r}{\partial x}.*p) \\
-	w_{2}	= (\mathcal{I}^{T}_{z12}\otimes\mathcal{D}^{T}_{y12}\otimes\mathcal{I}^{T}_{x12})(W.*\dfrac{\partial s}{\partial y}.*p) \\
-	w_{3}	= (\mathcal{D}^{T}_{z12}\otimes\mathcal{I}^{T}_{y12}\otimes\mathcal{I}^{T}_{x12})(W.*\dfrac{\partial t}{\partial z}.*p)
+	\begin{split}
+		w_{i}	=&  (\mathcal{I}^{T}_{t12}\otimes\mathcal{I}^{T}_{s12}\otimes\mathcal{D}^{T}_{r12})(\dfrac{\partial r}{\partial x_{i}}.*W.*p) + \\
+		& (\mathcal{I}^{T}_{t12}\otimes\mathcal{D}^{T}_{s12}\otimes\mathcal{I}^{T}_{r12})(\dfrac{\partial s}{\partial x_{i}}.*W.*p) + \\
+		& (\mathcal{D}^{T}_{t12}\otimes\mathcal{I}^{T}_{s12}\otimes\mathcal{I}^{T}_{r12})(\dfrac{\partial t}{\partial {x_{i}}}.*W.*p)			
+	\end{split}
 \end{eqnarray}
+
+In the case of no cross derivative terms, the above expression simplifies to:
+\begin{subequations}
+	\begin{eqnarray}
+		w_{1}	= (\mathcal{I}^{T}_{t12}\otimes\mathcal{I}^{T}_{s12}\otimes\mathcal{D}^{T}_{r12})(\dfrac{\partial r}{\partial x}.*W.*p) \\
+		w_{2}	= (\mathcal{I}^{T}_{t12}\otimes\mathcal{D}^{T}_{s12}\otimes\mathcal{I}^{T}_{r12})(\dfrac{\partial s}{\partial y}.*W.*p) \\
+		w_{3}	= (\mathcal{D}^{T}_{t12}\otimes\mathcal{I}^{T}_{s12}\otimes\mathcal{I}^{T}_{r12})(\dfrac{\partial t}{\partial z}.*W.*p)
+	\end{eqnarray}
+\end{subequations}
+which can be further expressed purely as kronecker products, taking $\partial r/\partial x,\ \partial s/\partial y,\ \partial t/\partial z$ \textit{etc.} as diagonal matrices for the respective one dimensional problems.
+\begin{subequations}
+	\begin{eqnarray}
+		w_{1}	= (\mathcal{I}^{T}_{t12}\mathcal{I}_{2}W_{t2}\otimes\mathcal{I}^{T}_{s12}\mathcal{I}_{2}W_{s2}\otimes\mathcal{D}^{T}_{r12}\dfrac{\partial r}{\partial x}W_{r2})p \\
+		w_{2}	= (\mathcal{I}^{T}_{t12}\mathcal{I}_{2}W_{t2}\otimes\mathcal{D}^{T}_{s12}\dfrac{\partial s}{\partial y}W_{s2}\otimes\mathcal{I}^{T}_{r12}\mathcal{I}_{2}W_{r2})p \\
+		w_{3}	= (\mathcal{D}^{T}_{t12}\dfrac{\partial t}{\partial z}W_{t2}\otimes\mathcal{I}^{T}_{s12}\mathcal{I}_{2}W_{s2}\otimes\mathcal{I}^{T}_{r12}\mathcal{I}_{2}W_{r2})p
+	\end{eqnarray}
 \end{subequations}
 
-For the cylindrical case we have
+For the cylindrical case we encounter some differences. There is an additional factor of $R$ in front of the integral, \textit{i.e.} $\partial \Omega_{x,y,z} \rightarrow R\partial \Omega_{x,R,\theta} \rightarrow R\mathcal{J}\partial \hat{\Omega}$. Also, for the $\theta$ term we have an additional division by $R$.
 \begin{eqnarray}
-	w_{x} =& \mathlarger\int_{\Omega} p\left(\dfrac{\partial r}{\partial x}\dfrac{\partial v}{\partial r} + \dfrac{\partial s}{\partial x}\dfrac{\partial v}{\partial s} + \dfrac{\partial t}{\partial x}\dfrac{\partial v}{\partial t}\right) d\hat{\Omega} \nonumber \\
-	w_{R} =& \mathlarger\int_{\Omega} p\left(\dfrac{\partial r}{\partial R}\dfrac{\partial v}{\partial r} + \dfrac{\partial s}{\partial R}\dfrac{\partial v}{\partial s} + \dfrac{\partial t}{\partial R}\dfrac{\partial v}{\partial t}\right) d\hat{\Omega} \nonumber \\
-	w_{\theta} =& \mathlarger\int_{\Omega} \dfrac{p}{R}\left(\dfrac{\partial r}{\partial \theta}\dfrac{\partial v}{\partial r} + \dfrac{\partial s}{\partial \theta}\dfrac{\partial v}{\partial s} + \dfrac{\partial t}{\partial \theta}\dfrac{\partial v}{\partial t}\right) d\hat{\Omega} \nonumber
+	w_{x} =& \mathlarger\int_{\Omega} p\left(\dfrac{\partial r}{\partial x}\dfrac{\partial v}{\partial r} + \dfrac{\partial s}{\partial x}\dfrac{\partial v}{\partial s} + \dfrac{\partial t}{\partial x}\dfrac{\partial v}{\partial t}\right) R d\hat{\Omega} \nonumber \\
+	w_{R} =& \mathlarger\int_{\Omega} p\left(\dfrac{\partial r}{\partial R}\dfrac{\partial v}{\partial r} + \dfrac{\partial s}{\partial R}\dfrac{\partial v}{\partial s} + \dfrac{\partial t}{\partial R}\dfrac{\partial v}{\partial t}\right) R d\hat{\Omega} \nonumber \\
+	w_{\theta} =& \mathlarger\int_{\Omega} p\left(\dfrac{\partial r}{\partial \theta}\dfrac{\partial v}{\partial r} + \dfrac{\partial s}{\partial \theta}\dfrac{\partial v}{\partial s} + \dfrac{\partial t}{\partial \theta}\dfrac{\partial v}{\partial t}\right) d\hat{\Omega} \nonumber
 \end{eqnarray}
+
+Which will lead to the similar (but not identical) expressions for opgradt. If we assume the grid is Cartesian in the $x-R-\theta$ space, \textit{i.e.} there are no cross derivatives.
+\begin{subequations}
+	\begin{eqnarray}
+		w_{1}	= (\mathcal{I}^{T}_{t12}\otimes\mathcal{I}^{T}_{s12}\otimes\mathcal{D}^{T}_{r12})(\dfrac{\partial r}{\partial x}.*R.*W.*p) \\
+		w_{2}	= (\mathcal{I}^{T}_{t12}\otimes\mathcal{D}^{T}_{s12}\otimes\mathcal{I}^{T}_{r12})(\dfrac{\partial s}{\partial y}.*R.*W.*p) \\
+		w_{3}	= (\mathcal{D}^{T}_{t12}\otimes\mathcal{I}^{T}_{s12}\otimes\mathcal{I}^{T}_{r12})(\dfrac{\partial t}{\partial z}.*W.*p)
+	\end{eqnarray}
+\end{subequations}
+The factors of $R,W$ and the geometric factors can also be expressed in kronecker product form:
+\begin{subequations}
+	\begin{eqnarray}
+		w_{1}	=& (\mathcal{I}^{T}_{t12}\otimes\mathcal{I}^{T}_{s12}\otimes\mathcal{D}^{T}_{r12})(\mathcal{I}_{2}\otimes\mathcal{I}_{2}\otimes\dfrac{\partial r}{\partial x})(\mathcal{I}_{2}\otimes R_{2}\otimes\mathcal{I}_{2})(W_{t2}\otimes W_{s2}\otimes W_{r2})p \\
+					  =& (\mathcal{I}^{T}_{t12}\mathcal{I}_{2}\mathcal{I}_{2}\otimes\mathcal{I}^{T}_{s12}\mathcal{I}_{2}R_{2}\otimes\mathcal{D}^{T}_{r12}\dfrac{\partial r}{\partial x}\mathcal{I}_{2})(W_{t2}\otimes W_{s2}\otimes W_{r2})p \\
+					  =& (\mathcal{I}^{T}_{t12}\mathcal{I}_{2}\mathcal{I}_{2}W_{t2}\otimes\mathcal{I}^{T}_{s12}\mathcal{I}_{2}R_{2}W_{s2}\otimes\mathcal{D}^{T}_{r12}\dfrac{\partial r}{\partial x}\mathcal{I}_{2}W_{r2})p					  
+%		w_{2}	= (\mathcal{I}^{T}_{t12}\otimes\mathcal{D}^{T}_{s12}\otimes\mathcal{I}^{T}_{r12})(R.*W.*\dfrac{\partial s}{\partial y}.*p) \\
+%		w_{3}	= (\mathcal{D}^{T}_{t12}\otimes\mathcal{I}^{T}_{s12}\otimes\mathcal{I}^{T}_{r12})(W.*\dfrac{\partial t}{\partial z}.*p)
+	\end{eqnarray}
+\end{subequations}
+
+$R$-direction:
+\begin{subequations}
+	\begin{eqnarray}
+		w_{2}	=& (\mathcal{I}^{T}_{t12}\otimes\mathcal{D}^{T}_{s12}\otimes\mathcal{I}^{T}_{r12})(\mathcal{I}_{2}\otimes\dfrac{\partial s}{\partial R}\otimes\mathcal{I}_{2})(\mathcal{I}_{2}\otimes R_{2}\otimes\mathcal{I}_{2})(W_{t2}\otimes W_{s2}\otimes W_{r2})p \\
+					  =& (\mathcal{I}^{T}_{t12}\mathcal{I}_{2}\mathcal{I}_{2}\otimes\mathcal{D}^{T}_{s12}\dfrac{\partial s}{\partial R}R_{2}\otimes\mathcal{I}^{T}_{r12}\mathcal{I}_{2}\mathcal{I}_{2})(W_{t2}\otimes W_{s2}\otimes W_{r2})p \\
+					  =& (\mathcal{I}^{T}_{t12}\mathcal{I}_{2}\mathcal{I}_{2}W_{t2}\otimes\mathcal{D}^{T}_{s12}\dfrac{\partial s}{\partial R}R_{2}W_{s2}\otimes\mathcal{I}^{T}_{r12}\mathcal{I}_{2}\mathcal{I}_{2}W_{r2})p
+	\end{eqnarray}
+\end{subequations}
+
+$\theta$-direction:
+\begin{subequations}
+	\begin{eqnarray}
+		w_{3}	=& (\mathcal{D}^{T}_{t12}\otimes\mathcal{I}^{T}_{s12}\otimes\mathcal{I}^{T}_{r12})(\dfrac{\partial t}{\partial \theta}\otimes\mathcal{I}_{2}\otimes\mathcal{I}_{2})(\mathcal{I}_{2}\otimes \mathcal{I}_{2}\otimes\mathcal{I}_{2})(W_{t2}\otimes W_{s2}\otimes W_{r2})p \\
+=& (\mathcal{D}^{T}_{t12}\dfrac{\partial t}{\partial \theta}\mathcal{I}_{2}\otimes\mathcal{I}^{T}_{s12}\mathcal{I}_{2}\mathcal{I}_{2}\otimes\mathcal{I}^{T}_{r12}\mathcal{I}_{2}\mathcal{I}_{2})(W_{t2}\otimes W_{s2}\otimes W_{r2})p \\
+=& (\mathcal{D}^{T}_{t12}\dfrac{\partial t}{\partial \theta}\mathcal{I}_{2}W_{t2}\otimes\mathcal{I}^{T}_{s12}\mathcal{I}_{2}\mathcal{I}_{2}W_{s2}\otimes\mathcal{I}^{T}_{r12}\mathcal{I}_{2}\mathcal{I}_{2}W_{r2})p
+	\end{eqnarray}
+\end{subequations}
+
+\subsection{Opdiv}
+
+The opdiv subroutine implements the divergence operation for a vector field $u$, defined on Mesh 1 (velocity mesh), integrated w.r.t the Mesh 2 test functions. We can represent $\partial r/\partial x, \partial s/\partial x, \ldots$ as matrices $D_{x}r, D_{x}s, \ldots$. For a one dimensional case, $D_{x}r$ is a diagonal matrix. Therefore, in one dimension, $D_{x} = D_{x}rD_{r}$ and $D^{T}_{x} = D^{T}_{r}(D_{x}r)^{T}$ \textit{etc.} 
+\begin{eqnarray}
+	 \mathlarger\int_{\Omega} q\nabla\cdot u  = & \mathlarger\int_{\Omega} q\dfrac{\partial }{\partial x_{i}}(u_{i}) d\Omega \nonumber \\
+	 = & \mathlarger\int_{\Omega} q\dfrac{1}{\mathcal{J}}\dfrac{\partial r_{j}}{\partial x_{i}}\dfrac{\partial u_{i}}{\partial r_{j}} \mathcal{J} d\hat{\Omega} \nonumber \\
+	 =& \mathlarger\sum_{k} q(x_{k})W(x_{k})\left(\dfrac{\partial r_{j}}{\partial x_{i}}\dfrac{\partial u_{i}}{\partial r_{j}}(x_{k})\right)  \nonumber \\
+	 =& \mathlarger\sum_{k} q(x_{k})W(x_{k})(D_{x_{i}}r_{j})(D_{r_{j}}u_{i})  \nonumber \\
+	 =&  q_{k}W_{k}(D_{x_{i}}r_{j})(D_{r_{j}}u_{i})  \nonumber
+\end{eqnarray}
+In the absence of cross geometric factors this becomes
+\begin{eqnarray}
+	 \mathlarger\int_{\Omega} q\nabla\cdot u  = &  q_{k}W_{k}(D_{x}rD_{r}u + D_{y}sD_{s}v + D_{z}tD_{t}w)  \nonumber \\
+	 \mathlarger\int_{\Omega} q\nabla\cdot u  = & \left\{
+	 \begin{split}
+	    qW(\mathcal{I}_{t12}\otimes\mathcal{I}_{s12}\otimes D_{x}rD_{r})u \\ 
+	    + qW(\mathcal{I}_{t12}\otimes D_{y}sD_{s}\otimes\mathcal{I}_{r12})u \\ 
+	    + qW(D_{z}tD_{t}\otimes\mathcal{I}_{s12}\otimes \mathcal{I}_{r12})u
+ 	 \end{split}\right.
+\end{eqnarray}
+Here $D_{r},D_{s},D_{t}$ is essential $D_{r12},D_{s12},D_{t12}$, since we are evaluating the derivative of a Mesh 1 field on Mesh 2 points.
+
+
+\subsection{Pressure Pseudo-Laplacian}
+
+\begin{eqnarray}
+	S_{\Delta t} = D QD^{T} \label{eqn:pressure_pseudo_laplacian}
+\end{eqnarray}
+where, if $Q=H^{-1}$ there is no decoupling error and we have the Uzawa algorithm. Alternately, $Q=B^{-1}$ in which case we incur a decoupling error but avoid the nested iterations since $B$ being diagonal can be trivially inverted. 
+
 
 %\begin{figure}[h]
 %	\centering
@@ -410,7 +495,7 @@ For the cylindrical case we have
 \FloatBarrier
 
 \bibliographystyle{elsarticle-harv}
-\bibliography{fsi}
+\bibliography{cylindrical}
 %\printbibliography[notcategory=ignore]
 \end{document}
 

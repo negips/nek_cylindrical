@@ -2,17 +2,12 @@ This is BibTeX, Version 0.99d (TeX Live 2021/Arch Linux)
 Capacity: max_strings=200000, hash_size=200000, hash_prime=170003
 The top-level auxiliary file: cylindrical.aux
 The style file: elsarticle-harv.bst
-I couldn't open database file fsi.bib
----line 16 of file cylindrical.aux
- : \bibdata{fsi
- :             }
-I'm skipping whatever remains of this command
 I found no \citation commands---while reading file cylindrical.aux
-I found no database files---while reading file cylindrical.aux
+Database file #1: cylindrical.bib
 Reallocated singl_function (elt_size=8) to 100 items from 50.
 You've used 0 entries,
             2990 wiz_defined-function locations,
-            626 strings with 5085 characters,
+            625 strings with 5082 characters,
 and the built_in function-call counts, 49 in all, are:
 = -- 0
 > -- 0
@@ -51,4 +46,4 @@ warning$ -- 0
 while$ -- 0
 width$ -- 0
 write$ -- 14
-(There were 3 error messages)
+(There was 1 error message)
