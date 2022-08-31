@@ -59,6 +59,7 @@ $(OBJDIR)/modified_local_solve.o          :./modified_local_solve.f;            
 $(OBJDIR)/mesh2_exchange.o                :./mesh2_exchange.f;                    $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@
 $(OBJDIR)/laplace_testing.o               :./laplace_testing.f;                   $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@
 $(OBJDIR)/cylindrical_subs.o              :./cylindrical_subs.f;                  $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@
+$(OBJDIR)/polar_subs.o                    :./polar_subs.f;                        $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@
 
 
 

@@ -33,6 +33,8 @@
 \newcommand{\ignorecite}[1]{{\@fileswfalse\cite{#1}}}
 \newcommand{\ignorecitep}[1]{{\@fileswfalse\citep{#1}}}
 
+\newcommand{\bigcdot}{\bm{\cdot}}
+
 \begin{document}
 \maketitle
 
@@ -377,41 +379,126 @@ Which can be written using the Laplacian of individual scalar fields, $u_{x},u_{
 \end{split} \label{eqn:vector_laplacian_scalar}
 \end{eqnarray}
 
-Weak Laplacian:
+For the weak Laplacian we need the gradient of the test functions:
+\begin{subequations}
+\begin{eqnarray}
+	\nabla(v_{x}\hat{x})\bigcdot =& \left(\hat{x}\dfrac{\partial v_{x}}{\partial x} \hat{x}\bigcdot + \hat{x}\dfrac{\partial v_{x}}{\partial r}\hat{r}\bigcdot + \hat{x}\dfrac{1}{r}\dfrac{\partial v_{x}}{\partial \theta}\hat{\theta}\bigcdot \right)  \\
+	%
+	\nabla(v_{r}\hat{r})\bigcdot = &\left(\hat{r}\dfrac{\partial v_{r}}{\partial x} \hat{x}\bigcdot + \hat{r}\dfrac{\partial v_{r}}{\partial r}\hat{r}\bigcdot + \hat{r}\dfrac{1}{r}\dfrac{\partial v_{r}}{\partial \theta}\hat{\theta}\bigcdot  + \hat{\theta}\dfrac{v_{r}}{r}\hat{\theta}\bigcdot \right) \\
+	%
+	\nabla(v_{\theta}\hat{\theta})\bigcdot =&
+	 \left(\hat{\theta}\dfrac{\partial v_{\theta}}{\partial x} \hat{x}\bigcdot + \hat{\theta}\dfrac{\partial v_{\theta}}{\partial r}\hat{r}\bigcdot + \hat{\theta}\dfrac{1}{r}\dfrac{\partial v_{\theta}}{\partial \theta}\hat{\theta}\bigcdot  - \hat{r}\dfrac{v_{\theta}}{r}\hat{\theta}\bigcdot  \right)
+	%
+	\end{eqnarray}
+\end{subequations}
+
+Strain rate tensor $\mathcal{S} = 1/2(\nabla \bm{u} + \nabla \bm{u}^{T})$:
 
 \begin{eqnarray}
-	\nabla(v_{x}\hat{x})\cdot\nabla (u_{x}\hat{x}) =& \left(\hat{x}\dfrac{\partial v_{x}}{\partial x} \hat{x} + \hat{r}\dfrac{\partial v_{x}}{\partial r}\hat{x} + \hat{\theta}\dfrac{1}{r}\dfrac{\partial v_{x}}{\partial \theta}\hat{x} \right) \cdot
-	%
-	 \left(\hat{x}\dfrac{\partial u_{x}}{\partial x} \hat{x} + \hat{r}\dfrac{\partial u_{x}}{\partial r}\hat{x} + \hat{\theta}\dfrac{1}{r}\dfrac{\partial u_{x}}{\partial \theta}\hat{x} \right) \nonumber \\
-	 =& \hat{x}\dfrac{\partial v_{x}}{\partial x}\dfrac{\partial u_{x}}{\partial x}\hat{x} + \hat{x}\dfrac{\partial v_{x}}{\partial r}\dfrac{\partial u_{x}}{\partial r}\hat{x} + \hat{x}\dfrac{1}{r^{2}}\dfrac{\partial v_{x}}{\partial \theta}\dfrac{\partial u_{x}}{\partial \theta}\hat{x} 
-\end{eqnarray}
-
-\begin{eqnarray}
-	\nabla(v_{r}\hat{r})\cdot\nabla (u_{r}\hat{r}) = &\left(\hat{x}\dfrac{\partial v_{r}}{\partial x} \hat{r} + \hat{r}\dfrac{\partial v_{r}}{\partial r}\hat{r} + \hat{\theta}\dfrac{1}{r}\dfrac{\partial v_{r}}{\partial \theta}\hat{r}  + \hat{\theta}\dfrac{v_{r}}{r}\hat{\theta} \right) \cdot
-	%
-	\left(\hat{x}\dfrac{\partial u_{r}}{\partial x} \hat{r} + \hat{r}\dfrac{\partial u_{r}}{\partial r}\hat{r} + \hat{\theta}\dfrac{1}{r}\dfrac{\partial u_{r}}{\partial \theta}\hat{r}  + \hat{\theta}\dfrac{u_{r}}{r}\hat{\theta} \right) \nonumber \\
-	= &\left\{
+	2\mathcal{S} = \left\{
 	\begin{split}
-	 \hat{r}\dfrac{\partial v_{r}}{\partial x}\dfrac{\partial u_{r}}{\partial x}\hat{r} + \hat{r}\dfrac{\partial v_{r}}{\partial r}\dfrac{\partial u_{r}}{\partial r}\hat{r} + \hat{r}\dfrac{1}{r^{2}}\dfrac{\partial v_{r}}{\partial \theta}\dfrac{\partial u_{r}}{\partial \theta}\hat{r} + \\
-	\hat{\theta}\dfrac{v_{r}}{r}\dfrac{u_{r}}{r}\hat{\theta} 
-	+\hat{r}\dfrac{1}{r}\dfrac{\partial v_{r}}{\partial \theta}\dfrac{u_{r}}{r}\hat{\theta}
-	+ \hat{\theta}\dfrac{v_{r}}{r}\dfrac{1}{r}\dfrac{\partial u_{r}}{\partial \theta}\hat{r} 	\end{split}\right.
-\end{eqnarray}
-
-\begin{eqnarray}
-	\nabla(v_{\theta}\hat{\theta})\cdot\nabla (u_{\theta}\hat{\theta}) =&
-	%
-	 \left(\hat{x}\dfrac{\partial v_{\theta}}{\partial x} \hat{\theta} + \hat{r}\dfrac{\partial v_{\theta}}{\partial r}\hat{\theta} + \hat{\theta}\dfrac{1}{r}\dfrac{\partial v_{\theta}}{\partial \theta}\hat{\theta}  - \hat{\theta}\dfrac{v_{\theta}}{r}\hat{r}  \right)\cdot
-	\left(\hat{x}\dfrac{\partial u_{\theta}}{\partial x} \hat{\theta} + \hat{r}\dfrac{\partial u_{\theta}}{\partial r}\hat{\theta} + \hat{\theta}\dfrac{1}{r}\dfrac{\partial u_{\theta}}{\partial \theta}\hat{\theta}  - \hat{\theta}\dfrac{u_{\theta}}{r}\hat{r} \right) \nonumber \\
-	%
-	= &\left\{
-	\begin{split}
-			 \hat{\theta}\dfrac{\partial v_{\theta}}{\partial x}\dfrac{\partial u_{\theta}}{\partial x}\hat{\theta} + \hat{\theta}\dfrac{\partial v_{\theta}}{\partial r}\dfrac{\partial u_{\theta}}{\partial r}\hat{\theta} + \hat{\theta}\dfrac{1}{r^{2}}\dfrac{\partial v_{\theta}}{\partial \theta}\dfrac{\partial u_{\theta}}{\partial \theta}\hat{\theta} \\
-			 %
-			 + \hat{r}\dfrac{v_{\theta}}{r}\dfrac{u_{\theta}}{r}\hat{r}  -\hat{\theta}\dfrac{1}{r}\dfrac{\partial v_{\theta}}{\partial \theta}\dfrac{u_{\theta}}{r}\hat{r} 
-			 -\hat{r}\dfrac{v_{\theta}}{r}\dfrac{1}{r}\dfrac{\partial u_{\theta}}{\partial \theta}\hat{\theta}
+		& \left(\hat{x}\dfrac{\partial u_{x}}{\partial x}\hat{x} + \hat{r}\dfrac{\partial u_{x}}{\partial r}\hat{x} + \hat{\theta}\dfrac{1}{r}\dfrac{\partial u_{x}}{\partial \theta}\hat{x}	\right) 
+		%
+		+ \left(\hat{x}\dfrac{\partial u_{x}}{\partial x}\hat{x} + \hat{x}\dfrac{\partial u_{x}}{\partial r}\hat{r} + \hat{x}\dfrac{1}{r}\dfrac{\partial u_{x}}{\partial \theta}\hat{\theta}	\right) \\
+		& \left(\hat{x}\dfrac{\partial u_{r}}{\partial x}\hat{r} + \hat{r}\dfrac{\partial u_{r}}{\partial r}\hat{r} + \hat{\theta}\dfrac{1}{r}\dfrac{\partial u_{r}}{\partial \theta} \hat{r}	 + \hat{\theta}\dfrac{u_{r}}{r}\hat{\theta}	\right) 
+		%
+		+ \left(\hat{r}\dfrac{\partial u_{r}}{\partial x}\hat{x} + \hat{r}\dfrac{\partial u_{r}}{\partial r}\hat{r} + \hat{r}\dfrac{1}{r}\dfrac{\partial u_{r}}{\partial \theta} \hat{\theta} + \hat{\theta}\dfrac{u_{r}}{r}\hat{\theta}	\right) \\
+		& \left(\hat{x}\dfrac{\partial u_{\theta}}{\partial x}\hat{\theta} + \hat{r}\dfrac{\partial u_{\theta}}{\partial r}\hat{\theta} + \hat{\theta}\dfrac{1}{r}\dfrac{\partial u_{\theta}}{\partial \theta}\hat{\theta} - \hat{\theta}\dfrac{u_{\theta}}{r}\hat{r}	\right)
+		%
+		+ \left(\hat{\theta}\dfrac{\partial u_{\theta}}{\partial x}\hat{x} + \hat{\theta}\dfrac{\partial u_{\theta}}{\partial r}\hat{r} + \hat{\theta}\dfrac{1}{r}\dfrac{\partial u_{\theta}}{\partial \theta}\hat{\theta} - \hat{r}\dfrac{u_{\theta}}{r}\hat{\theta}	\right)
 	\end{split}\right.
 \end{eqnarray}
+
+Rearranging terms for convenience:
+%\begin{eqnarray}
+%	2\mathcal{S} = \left\{
+%	\begin{split}
+%		& \hat{x}\left(2\dfrac{\partial u_{x}}{\partial x}\right)\hat{x} + \\
+%		& \hat{x}\left(\dfrac{\partial u_{x}}{\partial r} + \dfrac{\partial u_{r}}{\partial x}			\right)\hat{r} + \\
+%		& \hat{x}\left(\dfrac{\partial u_{\theta}}{\partial x} + \dfrac{1}{r}\dfrac{\partial u_{x}}{\partial \theta} \right)\hat{\theta} + \\
+%		& \hat{r}\left(\dfrac{\partial u_{x}}{\partial r} + \dfrac{\partial u_{r}}{\partial x}			\right)\hat{x} + \\
+%		& \hat{r}\left(2\dfrac{\partial u_{r}}{\partial r}\right) \hat{r} + \\
+%		& \hat{r}\left(\dfrac{\partial u_{\theta}}{\partial r} + \dfrac{1}{r}\dfrac{\partial u_{r}}{\partial \theta} - \dfrac{u_{\theta}}{r}	\right)\hat{\theta} + \\
+%		& \hat{\theta}\left(\dfrac{1}{r}\dfrac{\partial u_{x}}{\partial \theta} + \dfrac{\partial u_{\theta}}{\partial x} \right)\hat{x} + \\
+%		& \hat{\theta}\left(\dfrac{1}{r}\dfrac{\partial u_{r}}{\partial \theta} + \dfrac{\partial u_{\theta}}{\partial r} - \dfrac{u_{\theta}}{r} \right) \hat{r} \\
+%		& \hat{\theta}\left(\dfrac{2}{r}\dfrac{\partial u_{\theta}}{\partial \theta} + 2\dfrac{u_{r}}{r}	\right) \theta
+%	\end{split}\right.
+%\end{eqnarray}
+
+\begin{eqnarray}
+	2\mathcal{S} = \left\{
+	\begin{split}
+		% x
+		& \quad \hat{x}\left(2\dfrac{\partial u_{x}}{\partial x}\right)\hat{x} &+& \hat{x}\left(\dfrac{\partial u_{x}}{\partial r} + \dfrac{\partial u_{r}}{\partial x}			\right)\hat{r}  &+& \hat{x}\left(\dfrac{\partial u_{\theta}}{\partial x} + \dfrac{1}{r}\dfrac{\partial u_{x}}{\partial \theta} \right)\hat{\theta}  \\	
+		% R	
+		& + \hat{r}\left(\dfrac{\partial u_{x}}{\partial r} + \dfrac{\partial u_{r}}{\partial x}			\right)\hat{x}  &+& \hat{r}\left(2\dfrac{\partial u_{r}}{\partial r}\right) \hat{r} & +& \hat{r}\left(\dfrac{\partial u_{\theta}}{\partial r} + \dfrac{1}{r}\dfrac{\partial u_{r}}{\partial \theta} - \dfrac{u_{\theta}}{r}	\right)\hat{\theta} \\
+		% \theta
+		& + \hat{\theta}\left(\dfrac{1}{r}\dfrac{\partial u_{x}}{\partial \theta} + \dfrac{\partial u_{\theta}}{\partial x} \right)\hat{x} & + & \hat{\theta}\left(\dfrac{1}{r}\dfrac{\partial u_{r}}{\partial \theta} + \dfrac{\partial u_{\theta}}{\partial r} - \dfrac{u_{\theta}}{r} \right) \hat{r} &+& \hat{\theta}\left(\dfrac{2}{r}\dfrac{\partial u_{\theta}}{\partial \theta} + 2\dfrac{u_{r}}{r}	\right)\hat{\theta}
+	\end{split}\right.
+\end{eqnarray}
+
+Now taking the dot product with the gradient of the test function, $\nabla (v)\bigcdot$
+\begin{subequations}
+\begin{eqnarray}
+	\nabla(v_{x}\hat{x})\bigcdot\mathcal{S} = & \left\{
+	\begin{split}
+	\dfrac{\partial v_{x}}{\partial x}\dfrac{\partial u_{x}}{\partial x} 
+	+ \dfrac{1}{2}\dfrac{\partial v_{x}}{\partial r}\left(\dfrac{\partial u_{x}}{\partial r} + \dfrac{\partial u_{r}}{\partial x}	\right) \\
+	+ \dfrac{1}{2r}\dfrac{\partial v_{x}}{\partial \theta}\left(\dfrac{1}{r}\dfrac{\partial u_{x}}{\partial \theta} + \dfrac{\partial u_{\theta}}{\partial x} \right) 
+		\end{split} \right. \\
+	%
+	\nabla(v_{r}\hat{r})\bigcdot\mathcal{S} = & \left\{
+	\begin{split}
+	\dfrac{1}{2}\dfrac{\partial v_{r}}{\partial x}\left(\dfrac{\partial u_{x}}{\partial r} + \dfrac{\partial u_{r}}{\partial x} \right)
+	+ \dfrac{\partial v_{r}}{\partial r}\dfrac{\partial u_{r}}{\partial r} \\
+	+ \dfrac{1}{2r}\dfrac{\partial v_{r}}{\partial \theta}\left(\dfrac{1}{r}\dfrac{\partial u_{r}}{\partial \theta} + \dfrac{\partial u_{\theta}}{\partial r} - \dfrac{u_{\theta}}{r} \right) 
+	+ \dfrac{v_{r}}{r}\left(\dfrac{1}{r}\dfrac{\partial u_{\theta}}{\partial \theta} + \dfrac{u_{r}}{r}	\right)
+		\end{split}\right. \\
+	%
+	\nabla(v_{\theta}\hat{\theta})\bigcdot\mathcal{S} =&  \left\{
+	\begin{split}
+	\dfrac{1}{2}\dfrac{\partial v_{\theta}}{\partial x}\left(\dfrac{\partial u_{\theta}}{\partial x} + \dfrac{1}{r}\dfrac{\partial u_{x}}{\partial \theta} \right) 
+	+ \dfrac{1}{2}\dfrac{\partial v_{\theta}}{\partial r}\left(\dfrac{\partial u_{\theta}}{\partial r} + \dfrac{1}{r}\dfrac{\partial u_{r}}{\partial \theta} - \dfrac{u_{\theta}}{r}	\right) \\
+	+ \dfrac{1}{r}\dfrac{\partial v_{\theta}}{\partial \theta}\left(\dfrac{1}{r}\dfrac{\partial u_{\theta}}{\partial \theta} + \dfrac{u_{r}}{r}	\right)
+	- \dfrac{v_{\theta}}{2r} \left(\dfrac{1}{r}\dfrac{\partial u_{r}}{\partial \theta} + \dfrac{\partial u_{\theta}}{\partial r} - \dfrac{u_{\theta}}{r} \right) 
+	\end{split}\right.
+\end{eqnarray}
+\end{subequations}
+
+%
+%\begin{eqnarray}
+%	\nabla(v_{x}\hat{x})\cdot\nabla (u_{x}\hat{x}) =& \left(\hat{x}\dfrac{\partial v_{x}}{\partial x} \hat{x} + \hat{r}\dfrac{\partial v_{x}}{\partial r}\hat{x} + \hat{\theta}\dfrac{1}{r}\dfrac{\partial v_{x}}{\partial \theta}\hat{x} \right) \cdot
+%	%
+%	 \left(\hat{x}\dfrac{\partial u_{x}}{\partial x} \hat{x} + \hat{r}\dfrac{\partial u_{x}}{\partial r}\hat{x} + \hat{\theta}\dfrac{1}{r}\dfrac{\partial u_{x}}{\partial \theta}\hat{x} \right) \nonumber \\
+%	 =& \hat{x}\dfrac{\partial v_{x}}{\partial x}\dfrac{\partial u_{x}}{\partial x}\hat{x} + \hat{x}\dfrac{\partial v_{x}}{\partial r}\dfrac{\partial u_{x}}{\partial r}\hat{x} + \hat{x}\dfrac{1}{r^{2}}\dfrac{\partial v_{x}}{\partial \theta}\dfrac{\partial u_{x}}{\partial \theta}\hat{x} 
+%\end{eqnarray}
+%
+%\begin{eqnarray}
+%	\nabla(v_{r}\hat{r})\cdot\nabla (u_{r}\hat{r}) = &\left(\hat{x}\dfrac{\partial v_{r}}{\partial x} \hat{r} + \hat{r}\dfrac{\partial v_{r}}{\partial r}\hat{r} + \hat{\theta}\dfrac{1}{r}\dfrac{\partial v_{r}}{\partial \theta}\hat{r}  + \hat{\theta}\dfrac{v_{r}}{r}\hat{\theta} \right) \cdot
+%	%
+%	\left(\hat{x}\dfrac{\partial u_{r}}{\partial x} \hat{r} + \hat{r}\dfrac{\partial u_{r}}{\partial r}\hat{r} + \hat{\theta}\dfrac{1}{r}\dfrac{\partial u_{r}}{\partial \theta}\hat{r}  + \hat{\theta}\dfrac{u_{r}}{r}\hat{\theta} \right) \nonumber \\
+%	= &\left\{
+%	\begin{split}
+%	 \hat{r}\dfrac{\partial v_{r}}{\partial x}\dfrac{\partial u_{r}}{\partial x}\hat{r} + \hat{r}\dfrac{\partial v_{r}}{\partial r}\dfrac{\partial u_{r}}{\partial r}\hat{r} + \hat{r}\dfrac{1}{r^{2}}\dfrac{\partial v_{r}}{\partial \theta}\dfrac{\partial u_{r}}{\partial \theta}\hat{r} + \\
+%	\hat{\theta}\dfrac{v_{r}}{r}\dfrac{u_{r}}{r}\hat{\theta} 
+%	+\hat{r}\dfrac{1}{r}\dfrac{\partial v_{r}}{\partial \theta}\dfrac{u_{r}}{r}\hat{\theta}
+%	+ \hat{\theta}\dfrac{v_{r}}{r}\dfrac{1}{r}\dfrac{\partial u_{r}}{\partial \theta}\hat{r} 	\end{split}\right.
+%\end{eqnarray}
+%
+%\begin{eqnarray}
+%	\nabla(v_{\theta}\hat{\theta})\cdot\nabla (u_{\theta}\hat{\theta}) =&
+%	%
+%	 \left(\hat{x}\dfrac{\partial v_{\theta}}{\partial x} \hat{\theta} + \hat{r}\dfrac{\partial v_{\theta}}{\partial r}\hat{\theta} + \hat{\theta}\dfrac{1}{r}\dfrac{\partial v_{\theta}}{\partial \theta}\hat{\theta}  - \hat{\theta}\dfrac{v_{\theta}}{r}\hat{r}  \right)\cdot
+%	\left(\hat{x}\dfrac{\partial u_{\theta}}{\partial x} \hat{\theta} + \hat{r}\dfrac{\partial u_{\theta}}{\partial r}\hat{\theta} + \hat{\theta}\dfrac{1}{r}\dfrac{\partial u_{\theta}}{\partial \theta}\hat{\theta}  - \hat{\theta}\dfrac{u_{\theta}}{r}\hat{r} \right) \nonumber \\
+%	%
+%	= &\left\{
+%	\begin{split}
+%			 \hat{\theta}\dfrac{\partial v_{\theta}}{\partial x}\dfrac{\partial u_{\theta}}{\partial x}\hat{\theta} + \hat{\theta}\dfrac{\partial v_{\theta}}{\partial r}\dfrac{\partial u_{\theta}}{\partial r}\hat{\theta} + \hat{\theta}\dfrac{1}{r^{2}}\dfrac{\partial v_{\theta}}{\partial \theta}\dfrac{\partial u_{\theta}}{\partial \theta}\hat{\theta} \\
+%			 %
+%			 + \hat{r}\dfrac{v_{\theta}}{r}\dfrac{u_{\theta}}{r}\hat{r}  -\hat{\theta}\dfrac{1}{r}\dfrac{\partial v_{\theta}}{\partial \theta}\dfrac{u_{\theta}}{r}\hat{r} 
+%			 -\hat{r}\dfrac{v_{\theta}}{r}\dfrac{1}{r}\dfrac{\partial u_{\theta}}{\partial \theta}\hat{\theta}
+%	\end{split}\right.
+%\end{eqnarray}
 
 
 \section{Nek Implementations:}
@@ -466,7 +553,7 @@ which can be further expressed purely as kronecker products, taking $\partial r/
 	\end{eqnarray}
 \end{subequations}
 
-For the cylindrical case we encounter some differences. There is an additional factor of $R$ in front of the integral, \textit{i.e.} $\partial \Omega_{x,y,z} \rightarrow R\partial \Omega_{x,R,\theta} \rightarrow R\mathcal{J}\partial \hat{\Omega}$. Also, for the $\theta$ term we have an additional division by $R$.
+For the cylindrical case we encounter some differences. There is an additional factor of $R$ in front of the integral, \textit{i.e.} $\partial \Omega_{x,y,z} \rightarrow R\partial \Omega_{x,R,\theta} \rightarrow R\mathcal{J}\partial \hat{\Omega}$. Also, for the $\theta$ term we have an additional division by $R$. Finally, there is an additional term for $R,\theta$ components for the derivative of the unit vectors.
 \begin{eqnarray}
 	w_{x} =& \mathlarger\int_{\Omega} p\left(\dfrac{\partial r}{\partial x}\dfrac{\partial v}{\partial r} + \dfrac{\partial s}{\partial x}\dfrac{\partial v}{\partial s} + \dfrac{\partial t}{\partial x}\dfrac{\partial v}{\partial t}\right) R d\hat{\Omega} \nonumber \\
 	w_{R} =& \mathlarger\int_{\Omega} p\left(\dfrac{\partial r}{\partial R}\dfrac{\partial v}{\partial r} + \dfrac{\partial s}{\partial R}\dfrac{\partial v}{\partial s} + \dfrac{\partial t}{\partial R}\dfrac{\partial v}{\partial t}\right) R d\hat{\Omega} \nonumber \\
@@ -476,15 +563,15 @@ For the cylindrical case we encounter some differences. There is an additional f
 Which will lead to the similar (but not identical) expressions for opgradt. If we assume the grid is Cartesian in the $x-R-\theta$ space, \textit{i.e.} there are no cross derivatives.
 \begin{subequations}
 	\begin{eqnarray}
-		w_{1}	= (\mathcal{I}^{T}_{t12}\otimes\mathcal{I}^{T}_{s12}\otimes\mathcal{D}^{T}_{r12})(\dfrac{\partial r}{\partial x}.*R.*W.*p) \\
-		w_{2}	= (\mathcal{I}^{T}_{t12}\otimes\mathcal{D}^{T}_{s12}\otimes\mathcal{I}^{T}_{r12})(\dfrac{\partial s}{\partial y}.*R.*W.*p) \\
-		w_{3}	= (\mathcal{D}^{T}_{t12}\otimes\mathcal{I}^{T}_{s12}\otimes\mathcal{I}^{T}_{r12})(\dfrac{\partial t}{\partial z}.*W.*p)
+		w_{x}	= (\mathcal{I}^{T}_{t12}\otimes\mathcal{I}^{T}_{s12}\otimes\mathcal{D}^{T}_{r12})(\dfrac{\partial r}{\partial x}.*R.*W.*p) \\
+		w_{R}	= (\mathcal{I}^{T}_{t12}\otimes\mathcal{D}^{T}_{s12}\otimes\mathcal{I}^{T}_{r12})(\dfrac{\partial s}{\partial y}.*R.*W.*p) \\
+		w_{\theta}	= (\mathcal{D}^{T}_{t12}\otimes\mathcal{I}^{T}_{s12}\otimes\mathcal{I}^{T}_{r12})(\dfrac{\partial t}{\partial z}.*W.*p)
 	\end{eqnarray}
 \end{subequations}
 The factors of $R,W$ and the geometric factors can also be expressed in kronecker product form:
 \begin{subequations}
 	\begin{eqnarray}
-		w_{1}	=& (\mathcal{I}^{T}_{t12}\otimes\mathcal{I}^{T}_{s12}\otimes\mathcal{D}^{T}_{r12})(\mathcal{I}_{2}\otimes\mathcal{I}_{2}\otimes\dfrac{\partial r}{\partial x})(\mathcal{I}_{2}\otimes R_{2}\otimes\mathcal{I}_{2})(W_{t2}\otimes W_{s2}\otimes W_{r2})p \\
+		w_{x}	=& (\mathcal{I}^{T}_{t12}\otimes\mathcal{I}^{T}_{s12}\otimes\mathcal{D}^{T}_{r12})(\mathcal{I}_{2}\otimes\mathcal{I}_{2}\otimes\dfrac{\partial r}{\partial x})(\mathcal{I}_{2}\otimes R_{2}\otimes\mathcal{I}_{2})(W_{t2}\otimes W_{s2}\otimes W_{r2})p \\
 					  =& (\mathcal{I}^{T}_{t12}\mathcal{I}_{2}\mathcal{I}_{2}\otimes\mathcal{I}^{T}_{s12}\mathcal{I}_{2}R_{2}\otimes\mathcal{D}^{T}_{r12}\dfrac{\partial r}{\partial x}\mathcal{I}_{2})(W_{t2}\otimes W_{s2}\otimes W_{r2})p \\
 					  =& (\mathcal{I}^{T}_{t12}\mathcal{I}_{2}\mathcal{I}_{2}W_{t2}\otimes\mathcal{I}^{T}_{s12}\mathcal{I}_{2}R_{2}W_{s2}\otimes\mathcal{D}^{T}_{r12}\dfrac{\partial r}{\partial x}\mathcal{I}_{2}W_{r2})p					  
 %		w_{2}	= (\mathcal{I}^{T}_{t12}\otimes\mathcal{D}^{T}_{s12}\otimes\mathcal{I}^{T}_{r12})(R.*W.*\dfrac{\partial s}{\partial y}.*p) \\
@@ -495,7 +582,7 @@ The factors of $R,W$ and the geometric factors can also be expressed in kronecke
 $R$-direction:
 \begin{subequations}
 	\begin{eqnarray}
-		w_{2}	=& (\mathcal{I}^{T}_{t12}\otimes\mathcal{D}^{T}_{s12}\otimes\mathcal{I}^{T}_{r12})(\mathcal{I}_{2}\otimes\dfrac{\partial s}{\partial R}\otimes\mathcal{I}_{2})(\mathcal{I}_{2}\otimes R_{2}\otimes\mathcal{I}_{2})(W_{t2}\otimes W_{s2}\otimes W_{r2})p \\
+		w_{R}	=& (\mathcal{I}^{T}_{t12}\otimes\mathcal{D}^{T}_{s12}\otimes\mathcal{I}^{T}_{r12})(\mathcal{I}_{2}\otimes\dfrac{\partial s}{\partial R}\otimes\mathcal{I}_{2})(\mathcal{I}_{2}\otimes R_{2}\otimes\mathcal{I}_{2})(W_{t2}\otimes W_{s2}\otimes W_{r2})p \\
 					  =& (\mathcal{I}^{T}_{t12}\mathcal{I}_{2}\mathcal{I}_{2}\otimes\mathcal{D}^{T}_{s12}\dfrac{\partial s}{\partial R}R_{2}\otimes\mathcal{I}^{T}_{r12}\mathcal{I}_{2}\mathcal{I}_{2})(W_{t2}\otimes W_{s2}\otimes W_{r2})p \\
 					  =& (\mathcal{I}^{T}_{t12}\mathcal{I}_{2}\mathcal{I}_{2}W_{t2}\otimes\mathcal{D}^{T}_{s12}\dfrac{\partial s}{\partial R}R_{2}W_{s2}\otimes\mathcal{I}^{T}_{r12}\mathcal{I}_{2}\mathcal{I}_{2}W_{r2})p
 	\end{eqnarray}
@@ -504,7 +591,7 @@ $R$-direction:
 $\theta$-direction:
 \begin{subequations}
 	\begin{eqnarray}
-		w_{3}	=& (\mathcal{D}^{T}_{t12}\otimes\mathcal{I}^{T}_{s12}\otimes\mathcal{I}^{T}_{r12})(\dfrac{\partial t}{\partial \theta}\otimes\mathcal{I}_{2}\otimes\mathcal{I}_{2})(\mathcal{I}_{2}\otimes \mathcal{I}_{2}\otimes\mathcal{I}_{2})(W_{t2}\otimes W_{s2}\otimes W_{r2})p \\
+		w_{\theta}	=& (\mathcal{D}^{T}_{t12}\otimes\mathcal{I}^{T}_{s12}\otimes\mathcal{I}^{T}_{r12})(\dfrac{\partial t}{\partial \theta}\otimes\mathcal{I}_{2}\otimes\mathcal{I}_{2})(\mathcal{I}_{2}\otimes \mathcal{I}_{2}\otimes\mathcal{I}_{2})(W_{t2}\otimes W_{s2}\otimes W_{r2})p \\
 =& (\mathcal{D}^{T}_{t12}\dfrac{\partial t}{\partial \theta}\mathcal{I}_{2}\otimes\mathcal{I}^{T}_{s12}\mathcal{I}_{2}\mathcal{I}_{2}\otimes\mathcal{I}^{T}_{r12}\mathcal{I}_{2}\mathcal{I}_{2})(W_{t2}\otimes W_{s2}\otimes W_{r2})p \\
 =& (\mathcal{D}^{T}_{t12}\dfrac{\partial t}{\partial \theta}\mathcal{I}_{2}W_{t2}\otimes\mathcal{I}^{T}_{s12}\mathcal{I}_{2}\mathcal{I}_{2}W_{s2}\otimes\mathcal{I}^{T}_{r12}\mathcal{I}_{2}\mathcal{I}_{2}W_{r2})p
 	\end{eqnarray}
