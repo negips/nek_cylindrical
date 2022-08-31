@@ -187,6 +187,35 @@ Laplacian of a scalar field
 	\label{eqn:scalar_laplacian}
 \end{eqnarray}
 
+Divergence of a Vector field
+\begin{eqnarray}
+	\nabla\cdot(\bm{u}) = \left(\hat{x}\cdot\dfrac{\partial }{\partial x} + \hat{r}\cdot\dfrac{\partial }{\partial r} + \hat{\theta}\cdot\dfrac{1}{r}\dfrac{\partial }{\partial \theta}	\right) \left(u_{x}\hat{x} + u_{r}\hat{r} + u_{\theta}\hat{\theta} \right) \nonumber \\
+	\begin{split}
+	\nabla\cdot(\bm{u}) = & \quad \left(\hat{x}\cdot\hat{x}\dfrac{\partial u_{x}}{\partial x} + 
+	\hat{x}\cdot\dfrac{\partial \hat{x}}{\partial x}u_{x} + \hat{x}\cdot\hat{r}\dfrac{\partial u_{r}}{\partial x} + \hat{x}\cdot\dfrac{\partial\hat{r}}{\partial x}u_{r} + 
+	\hat{x}\cdot\hat{\theta}\dfrac{\partial u_{\theta}}{\partial x} +
+	\hat{x}\cdot\dfrac{\partial \hat{\theta}}{\partial x}u_{\theta} \right) \\
+	%
+	& + \left(\hat{r}\cdot\hat{x}\dfrac{\partial u_{x}}{\partial r} + 		\hat{r}\cdot\dfrac{\partial \hat{x}}{\partial r}u_{x} + \hat{r}\cdot\hat{r}\dfrac{\partial u_{r}}{\partial r} + \hat{r}\cdot\dfrac{\partial\hat{r}}{\partial r}u_{r} + 
+	\hat{r}\cdot\hat{\theta}\dfrac{\partial u_{\theta}}{\partial r} +
+	\hat{r}\cdot\dfrac{\partial \hat{\theta}}{\partial r}u_{\theta} \right) \\
+	%
+	& + \left(\hat{\theta}\cdot\hat{x}\dfrac{1}{r}\dfrac{\partial u_{x}}{\partial \theta} +	
+	\hat{\theta}\cdot\dfrac{\partial \hat{x}}{\partial \theta}\dfrac{1}{r}u_{x} +
+	\hat{\theta}\cdot\hat{r}\dfrac{1}{r}\dfrac{\partial u_{r}}{\partial \theta} +
+	\hat{\theta}\cdot\dfrac{\partial\hat{r}}{\partial \theta}\dfrac{1}{r}u_{r} + 
+	\hat{\theta}\cdot\hat{\theta}\dfrac{1}{r}\dfrac{\partial u_{\theta}}{\partial \theta} +
+	\hat{\theta}\cdot\dfrac{\partial \hat{\theta}}{\partial \theta}\dfrac{1}{r}u_{\theta} \right)	
+	\end{split} \nonumber
+\end{eqnarray}
+
+\begin{eqnarray}
+	\begin{split}
+		\nabla\cdot(\bm{u}) = & \quad \left(\dfrac{\partial u_{x}}{\partial x} + \dfrac{\partial u_{r}}{\partial r} + \dfrac{u_{r}}{r} + 
+		\dfrac{1}{r}\dfrac{\partial u_{\theta}}{\partial \theta}
+		\right)	
+	\end{split} \label{eqn:cylindrical_divergence}
+\end{eqnarray}
 
 Vector gradient. Highlighted in color are the only terms which are non-zero differentials of unit vectors.
 \begin{eqnarray}
@@ -553,19 +582,19 @@ which can be further expressed purely as kronecker products, taking $\partial r/
 	\end{eqnarray}
 \end{subequations}
 
-For the cylindrical case we encounter some differences. There is an additional factor of $R$ in front of the integral, \textit{i.e.} $\partial \Omega_{x,y,z} \rightarrow R\partial \Omega_{x,R,\theta} \rightarrow R\mathcal{J}\partial \hat{\Omega}$. Also, for the $\theta$ term we have an additional division by $R$. Finally, there is an additional term for $R,\theta$ components for the derivative of the unit vectors.
+For the cylindrical case we encounter some differences. There is an additional factor of $R$ in front of the integral, \textit{i.e.} $\partial \Omega_{x,y,z} \rightarrow R\partial \Omega_{x,R,\theta} \rightarrow R\mathcal{J}\partial \hat{\Omega}$. Also, for the $\theta$ term we have an additional division by $R$. Finally, there is an additional term for $R$ component for the derivative of the unit vector.
 \begin{eqnarray}
 	w_{x} =& \mathlarger\int_{\Omega} p\left(\dfrac{\partial r}{\partial x}\dfrac{\partial v}{\partial r} + \dfrac{\partial s}{\partial x}\dfrac{\partial v}{\partial s} + \dfrac{\partial t}{\partial x}\dfrac{\partial v}{\partial t}\right) R d\hat{\Omega} \nonumber \\
-	w_{R} =& \mathlarger\int_{\Omega} p\left(\dfrac{\partial r}{\partial R}\dfrac{\partial v}{\partial r} + \dfrac{\partial s}{\partial R}\dfrac{\partial v}{\partial s} + \dfrac{\partial t}{\partial R}\dfrac{\partial v}{\partial t}\right) R d\hat{\Omega} \nonumber \\
+	w_{R} =& \mathlarger\int_{\Omega} p\left(\dfrac{\partial r}{\partial R}\dfrac{\partial v}{\partial r} + \dfrac{\partial s}{\partial R}\dfrac{\partial v}{\partial s} + \dfrac{\partial t}{\partial R}\dfrac{\partial v}{\partial t} + \dfrac{v}{R} \right) R d\hat{\Omega} \nonumber \\
 	w_{\theta} =& \mathlarger\int_{\Omega} p\left(\dfrac{\partial r}{\partial \theta}\dfrac{\partial v}{\partial r} + \dfrac{\partial s}{\partial \theta}\dfrac{\partial v}{\partial s} + \dfrac{\partial t}{\partial \theta}\dfrac{\partial v}{\partial t}\right) d\hat{\Omega} \nonumber
 \end{eqnarray}
 
-Which will lead to the similar (but not identical) expressions for opgradt. If we assume the grid is Cartesian in the $x-R-\theta$ space, \textit{i.e.} there are no cross derivatives.
+Which will lead to the similar (but not identical) expressions for opgradt. Substituting $\widetilde{\mathcal{D}}^{T}_{s12} = (\partial s/\partial y)\mathcal{D}^{T}_{s12} + \mathcal{I}^{T}_{s12}/R$, and if we assume the grid is Cartesian in the $x-R-\theta$ space, \textit{i.e.} there are no cross derivatives.
 \begin{subequations}
 	\begin{eqnarray}
 		w_{x}	= (\mathcal{I}^{T}_{t12}\otimes\mathcal{I}^{T}_{s12}\otimes\mathcal{D}^{T}_{r12})(\dfrac{\partial r}{\partial x}.*R.*W.*p) \\
-		w_{R}	= (\mathcal{I}^{T}_{t12}\otimes\mathcal{D}^{T}_{s12}\otimes\mathcal{I}^{T}_{r12})(\dfrac{\partial s}{\partial y}.*R.*W.*p) \\
-		w_{\theta}	= (\mathcal{D}^{T}_{t12}\otimes\mathcal{I}^{T}_{s12}\otimes\mathcal{I}^{T}_{r12})(\dfrac{\partial t}{\partial z}.*W.*p)
+		w_{R}	= (\mathcal{I}^{T}_{t12}\otimes(\dfrac{\partial s}{\partial y}\mathcal{D}^{T}_{s12} + \dfrac{\mathcal{I}_{s12}}{R})\otimes\mathcal{I}^{T}_{r12})(R.*W.*p) \\
+		w_{\theta}	= \mathcal{D}^{T}_{t12}\otimes\mathcal{I}^{T}_{s12}\otimes\mathcal{I}^{T}_{r12})(\dfrac{\partial t}{\partial z}.*W.*p)
 	\end{eqnarray}
 \end{subequations}
 The factors of $R,W$ and the geometric factors can also be expressed in kronecker product form:
@@ -573,18 +602,18 @@ The factors of $R,W$ and the geometric factors can also be expressed in kronecke
 	\begin{eqnarray}
 		w_{x}	=& (\mathcal{I}^{T}_{t12}\otimes\mathcal{I}^{T}_{s12}\otimes\mathcal{D}^{T}_{r12})(\mathcal{I}_{2}\otimes\mathcal{I}_{2}\otimes\dfrac{\partial r}{\partial x})(\mathcal{I}_{2}\otimes R_{2}\otimes\mathcal{I}_{2})(W_{t2}\otimes W_{s2}\otimes W_{r2})p \\
 					  =& (\mathcal{I}^{T}_{t12}\mathcal{I}_{2}\mathcal{I}_{2}\otimes\mathcal{I}^{T}_{s12}\mathcal{I}_{2}R_{2}\otimes\mathcal{D}^{T}_{r12}\dfrac{\partial r}{\partial x}\mathcal{I}_{2})(W_{t2}\otimes W_{s2}\otimes W_{r2})p \\
-					  =& (\mathcal{I}^{T}_{t12}\mathcal{I}_{2}\mathcal{I}_{2}W_{t2}\otimes\mathcal{I}^{T}_{s12}\mathcal{I}_{2}R_{2}W_{s2}\otimes\mathcal{D}^{T}_{r12}\dfrac{\partial r}{\partial x}\mathcal{I}_{2}W_{r2})p					  
-%		w_{2}	= (\mathcal{I}^{T}_{t12}\otimes\mathcal{D}^{T}_{s12}\otimes\mathcal{I}^{T}_{r12})(R.*W.*\dfrac{\partial s}{\partial y}.*p) \\
-%		w_{3}	= (\mathcal{D}^{T}_{t12}\otimes\mathcal{I}^{T}_{s12}\otimes\mathcal{I}^{T}_{r12})(W.*\dfrac{\partial t}{\partial z}.*p)
+					  =& (\mathcal{I}^{T}_{t12}\mathcal{I}_{2}\mathcal{I}_{2}W_{t2}\otimes\mathcal{I}^{T}_{s12}\mathcal{I}_{2}R_{2}W_{s2}\otimes\mathcal{D}^{T}_{r12}\dfrac{\partial r}{\partial x}\mathcal{I}_{2}W_{r2})p \\
+					  =& (\mathcal{I}^{T}_{t12}W_{t2}\otimes\mathcal{I}^{T}_{s12}R_{2}W_{s2}\otimes\mathcal{D}^{T}_{r12}\dfrac{\partial r}{\partial x}W_{r2})p					  
 	\end{eqnarray}
 \end{subequations}
 
 $R$-direction:
 \begin{subequations}
 	\begin{eqnarray}
-		w_{R}	=& (\mathcal{I}^{T}_{t12}\otimes\mathcal{D}^{T}_{s12}\otimes\mathcal{I}^{T}_{r12})(\mathcal{I}_{2}\otimes\dfrac{\partial s}{\partial R}\otimes\mathcal{I}_{2})(\mathcal{I}_{2}\otimes R_{2}\otimes\mathcal{I}_{2})(W_{t2}\otimes W_{s2}\otimes W_{r2})p \\
-					  =& (\mathcal{I}^{T}_{t12}\mathcal{I}_{2}\mathcal{I}_{2}\otimes\mathcal{D}^{T}_{s12}\dfrac{\partial s}{\partial R}R_{2}\otimes\mathcal{I}^{T}_{r12}\mathcal{I}_{2}\mathcal{I}_{2})(W_{t2}\otimes W_{s2}\otimes W_{r2})p \\
-					  =& (\mathcal{I}^{T}_{t12}\mathcal{I}_{2}\mathcal{I}_{2}W_{t2}\otimes\mathcal{D}^{T}_{s12}\dfrac{\partial s}{\partial R}R_{2}W_{s2}\otimes\mathcal{I}^{T}_{r12}\mathcal{I}_{2}\mathcal{I}_{2}W_{r2})p
+		w_{R}	=& (\mathcal{I}^{T}_{t12}\otimes\widetilde{\mathcal{D}}^{T}_{s12}\otimes\mathcal{I}^{T}_{r12})(\mathcal{I}_{2}\otimes\dfrac{\partial s}{\partial R}\otimes\mathcal{I}_{2})(\mathcal{I}_{2}\otimes R_{2}\otimes\mathcal{I}_{2})(W_{t2}\otimes W_{s2}\otimes W_{r2})p \\
+	  	=& (\mathcal{I}^{T}_{t12}\mathcal{I}_{2}\otimes\widetilde{\mathcal{D}}^{T}_{s12}R_{2}\otimes\mathcal{I}^{T}_{r12}\mathcal{I}_{2})(W_{t2}\otimes W_{s2}\otimes W_{r2})p \\
+		=& (\mathcal{I}^{T}_{t12}\mathcal{I}_{2}W_{t2}\otimes\widetilde{\mathcal{D}}^{T}_{s12}R_{2}W_{s2}\otimes\mathcal{I}^{T}_{r12}\mathcal{I}_{2}W_{r2})p \\
+		=& (\mathcal{I}^{T}_{t12}W_{t2}\otimes\widetilde{\mathcal{D}}^{T}_{s12}R_{2}W_{s2}\otimes\mathcal{I}^{T}_{r12}W_{r2})p		
 	\end{eqnarray}
 \end{subequations}
 
@@ -592,8 +621,9 @@ $\theta$-direction:
 \begin{subequations}
 	\begin{eqnarray}
 		w_{\theta}	=& (\mathcal{D}^{T}_{t12}\otimes\mathcal{I}^{T}_{s12}\otimes\mathcal{I}^{T}_{r12})(\dfrac{\partial t}{\partial \theta}\otimes\mathcal{I}_{2}\otimes\mathcal{I}_{2})(\mathcal{I}_{2}\otimes \mathcal{I}_{2}\otimes\mathcal{I}_{2})(W_{t2}\otimes W_{s2}\otimes W_{r2})p \\
-=& (\mathcal{D}^{T}_{t12}\dfrac{\partial t}{\partial \theta}\mathcal{I}_{2}\otimes\mathcal{I}^{T}_{s12}\mathcal{I}_{2}\mathcal{I}_{2}\otimes\mathcal{I}^{T}_{r12}\mathcal{I}_{2}\mathcal{I}_{2})(W_{t2}\otimes W_{s2}\otimes W_{r2})p \\
-=& (\mathcal{D}^{T}_{t12}\dfrac{\partial t}{\partial \theta}\mathcal{I}_{2}W_{t2}\otimes\mathcal{I}^{T}_{s12}\mathcal{I}_{2}\mathcal{I}_{2}W_{s2}\otimes\mathcal{I}^{T}_{r12}\mathcal{I}_{2}\mathcal{I}_{2}W_{r2})p
+		=& (\mathcal{D}^{T}_{t12}\dfrac{\partial t}{\partial \theta}\mathcal{I}_{2}\otimes\mathcal{I}^{T}_{s12}\mathcal{I}_{2}\mathcal{I}_{2}\otimes\mathcal{I}^{T}_{r12}\mathcal{I}_{2}\mathcal{I}_{2})(W_{t2}\otimes W_{s2}\otimes W_{r2})p \\
+		=& (\mathcal{D}^{T}_{t12}\dfrac{\partial t}{\partial \theta}\mathcal{I}_{2}W_{t2}\otimes\mathcal{I}^{T}_{s12}\mathcal{I}_{2}\mathcal{I}_{2}W_{s2}\otimes\mathcal{I}^{T}_{r12}\mathcal{I}_{2}\mathcal{I}_{2}W_{r2})p \\
+		=& (\mathcal{D}^{T}_{t12}\dfrac{\partial t}{\partial \theta}W_{t2}\otimes\mathcal{I}^{T}_{s12}W_{s2}\otimes\mathcal{I}^{T}_{r12}W_{r2})p
 	\end{eqnarray}
 \end{subequations}
 
