@@ -188,7 +188,7 @@ Laplacian of a scalar field
 
 Vector gradient. Highlighted in color are the only terms which are non-zero differentials of unit vectors.
 \begin{eqnarray}
-	\nabla(\bm{u}) = \left[\hat{x}\frac{\partial}{\partial x} + \hat{r}\frac{\partial}{\partial r} + \hat{\theta}\frac{1}{r}\frac{\partial}{\partial \theta} \right]\left[\hat{x}u_{x} + \hat{r}u_{r} + \hat{\theta}u_{\theta}\right] \nonumber \\
+	\nabla(\bm{u}) = \left[\hat{x}\frac{\partial}{\partial x} + \hat{r}\frac{\partial}{\partial r} + \hat{\theta}\frac{1}{r}\frac{\partial}{\partial \theta} \right]\left[u_{x}\hat{x} + u_{r}\hat{r} + u_{\theta}\hat{\theta}\right] \nonumber \\
 	= \left\{\begin{split}
 	\left[\hat{x}\frac{\partial u_{x}}{\partial x} \hat{x} + \hat{x}u_{x}\frac{\partial \hat{x}}{\partial x} \right] 
 	+ \left[\hat{x}\frac{\partial u_{r}}{\partial x}\hat{r} + \hat{x}u_{r}\frac{\partial \hat{r}}{\partial x} \right] 
@@ -201,9 +201,30 @@ Vector gradient. Highlighted in color are the only terms which are non-zero diff
 	+ \left[\hat{\theta}\frac{1}{r}\frac{\partial u_{x}}{\partial \theta}\hat{x} + 	\hat{\theta}\frac{u_{x}}{r}\frac{\partial \hat{x}}{\partial \theta}\right]
 	+ \left[\hat{\theta}\frac{1}{r}\frac{\partial u_{r}}{\partial \theta}\hat{r} + 	\hat{\theta}\color{red}{\frac{u_{r}}{r}\frac{\partial \hat{r}}{\partial \theta}} \color{black} \right]
 	+ \left[\hat{\theta}\frac{1}{r}\frac{\partial u_{\theta}}{\partial \theta}\hat{\theta} +  \hat{\theta}\color{blue}{\frac{u_{\theta}}{r}\frac{\partial \hat{\theta}}{\partial \theta}} \color{black}\right]
-	\end{split}\right.
-%	
+	\end{split}\right. \\
+%
+= \left\{\begin{split}
+	\left[\hat{x}\frac{\partial u_{x}}{\partial x} \hat{x} + \hat{x}\frac{\partial u_{r}}{\partial x}\hat{r} + \hat{x}\frac{\partial u_{\theta}}{\partial x}\hat{\theta}	\right] \\
+	%
+	+ \left[\hat{r}\frac{\partial u_{x}}{\partial r}\hat{x} + \hat{r}\frac{\partial u_{r}}{\partial r}\hat{r} + \hat{r}\frac{\partial u_{\theta}}{\partial r}\hat{\theta} \right] \\
+	%
+	+ \left[\hat{\theta}\frac{1}{r}\frac{\partial u_{x}}{\partial \theta}\hat{x} + 	 \hat{\theta}\frac{1}{r}\frac{\partial u_{r}}{\partial \theta}\hat{r} + 	\hat{\theta}\color{red}{\frac{u_{r}}{r}\hat{\theta}} \color{black} 
+	+ \hat{\theta}\frac{1}{r}\frac{\partial u_{\theta}}{\partial \theta}\hat{\theta} -  \hat{\theta}\color{blue}{\frac{u_{\theta}}{r}\hat{r}} \color{black}\right]
+\end{split}\right.
 \end{eqnarray}
+
+Which, I rearrange as gradients of individual velocity components (and their respective unit vectors)
+\begin{subequations}
+\begin{eqnarray}
+\nabla (u_{x}\hat{x}) =& 
+	\hat{x}\dfrac{\partial u_{x}}{\partial x} \hat{x} + \hat{r}\dfrac{\partial u_{x}}{\partial r}\hat{x} + \hat{\theta}\dfrac{1}{r}\dfrac{\partial u_{x}}{\partial \theta}\hat{x} \\
+	%
+	\nabla (u_{r}\hat{r}) =& \hat{x}\dfrac{\partial u_{r}}{\partial x} \hat{r} + \hat{r}\dfrac{\partial u_{r}}{\partial r}\hat{r} + \hat{\theta}\dfrac{1}{r}\dfrac{\partial u_{r}}{\partial \theta}\hat{r}  + \hat{\theta}\dfrac{u_{r}}{r}\hat{\theta}\\
+	%
+	\nabla (u_{\theta}\hat{\theta}) =& \hat{x}\dfrac{\partial u_{\theta}}{\partial x} \hat{\theta} + \hat{r}\dfrac{\partial u_{\theta}}{\partial r}\hat{\theta} + \hat{\theta}\dfrac{1}{r}\dfrac{\partial u_{\theta}}{\partial \theta}\hat{\theta}  - \hat{\theta}\dfrac{u_{\theta}}{r}\hat{r}
+\end{eqnarray}
+\end{subequations}
+
 
 \begin{eqnarray}
 	\def\arraystretch{2.5}
@@ -355,6 +376,43 @@ Which can be written using the Laplacian of individual scalar fields, $u_{x},u_{
 	 \left( \nabla^{2}(u_{\theta}) + \dfrac{2}{r^{2}}\dfrac{\partial u_{r}}{\partial \theta}   - \dfrac{u_{\theta}}{r^{2}} \right)\hat{\theta}  
 \end{split} \label{eqn:vector_laplacian_scalar}
 \end{eqnarray}
+
+Weak Laplacian:
+
+\begin{eqnarray}
+	\nabla(v_{x}\hat{x})\cdot\nabla (u_{x}\hat{x}) =& \left(\hat{x}\dfrac{\partial v_{x}}{\partial x} \hat{x} + \hat{r}\dfrac{\partial v_{x}}{\partial r}\hat{x} + \hat{\theta}\dfrac{1}{r}\dfrac{\partial v_{x}}{\partial \theta}\hat{x} \right) \cdot
+	%
+	 \left(\hat{x}\dfrac{\partial u_{x}}{\partial x} \hat{x} + \hat{r}\dfrac{\partial u_{x}}{\partial r}\hat{x} + \hat{\theta}\dfrac{1}{r}\dfrac{\partial u_{x}}{\partial \theta}\hat{x} \right) \nonumber \\
+	 =& \hat{x}\dfrac{\partial v_{x}}{\partial x}\dfrac{\partial u_{x}}{\partial x}\hat{x} + \hat{x}\dfrac{\partial v_{x}}{\partial r}\dfrac{\partial u_{x}}{\partial r}\hat{x} + \hat{x}\dfrac{1}{r^{2}}\dfrac{\partial v_{x}}{\partial \theta}\dfrac{\partial u_{x}}{\partial \theta}\hat{x} 
+\end{eqnarray}
+
+\begin{eqnarray}
+	\nabla(v_{r}\hat{r})\cdot\nabla (u_{r}\hat{r}) = &\left(\hat{x}\dfrac{\partial v_{r}}{\partial x} \hat{r} + \hat{r}\dfrac{\partial v_{r}}{\partial r}\hat{r} + \hat{\theta}\dfrac{1}{r}\dfrac{\partial v_{r}}{\partial \theta}\hat{r}  + \hat{\theta}\dfrac{v_{r}}{r}\hat{\theta} \right) \cdot
+	%
+	\left(\hat{x}\dfrac{\partial u_{r}}{\partial x} \hat{r} + \hat{r}\dfrac{\partial u_{r}}{\partial r}\hat{r} + \hat{\theta}\dfrac{1}{r}\dfrac{\partial u_{r}}{\partial \theta}\hat{r}  + \hat{\theta}\dfrac{u_{r}}{r}\hat{\theta} \right) \nonumber \\
+	= &\left\{
+	\begin{split}
+	 \hat{r}\dfrac{\partial v_{r}}{\partial x}\dfrac{\partial u_{r}}{\partial x}\hat{r} + \hat{r}\dfrac{\partial v_{r}}{\partial r}\dfrac{\partial u_{r}}{\partial r}\hat{r} + \hat{r}\dfrac{1}{r^{2}}\dfrac{\partial v_{r}}{\partial \theta}\dfrac{\partial u_{r}}{\partial \theta}\hat{r} + \\
+	\hat{\theta}\dfrac{v_{r}}{r}\dfrac{u_{r}}{r}\hat{\theta} 
+	+\hat{r}\dfrac{1}{r}\dfrac{\partial v_{r}}{\partial \theta}\dfrac{u_{r}}{r}\hat{\theta}
+	+ \hat{\theta}\dfrac{v_{r}}{r}\dfrac{1}{r}\dfrac{\partial u_{r}}{\partial \theta}\hat{r} 	\end{split}\right.
+\end{eqnarray}
+
+\begin{eqnarray}
+	\nabla(v_{\theta}\hat{\theta})\cdot\nabla (u_{\theta}\hat{\theta}) =&
+	%
+	 \left(\hat{x}\dfrac{\partial v_{\theta}}{\partial x} \hat{\theta} + \hat{r}\dfrac{\partial v_{\theta}}{\partial r}\hat{\theta} + \hat{\theta}\dfrac{1}{r}\dfrac{\partial v_{\theta}}{\partial \theta}\hat{\theta}  - \hat{\theta}\dfrac{v_{\theta}}{r}\hat{r}  \right)\cdot
+	\left(\hat{x}\dfrac{\partial u_{\theta}}{\partial x} \hat{\theta} + \hat{r}\dfrac{\partial u_{\theta}}{\partial r}\hat{\theta} + \hat{\theta}\dfrac{1}{r}\dfrac{\partial u_{\theta}}{\partial \theta}\hat{\theta}  - \hat{\theta}\dfrac{u_{\theta}}{r}\hat{r} \right) \nonumber \\
+	%
+	= &\left\{
+	\begin{split}
+			 \hat{\theta}\dfrac{\partial v_{\theta}}{\partial x}\dfrac{\partial u_{\theta}}{\partial x}\hat{\theta} + \hat{\theta}\dfrac{\partial v_{\theta}}{\partial r}\dfrac{\partial u_{\theta}}{\partial r}\hat{\theta} + \hat{\theta}\dfrac{1}{r^{2}}\dfrac{\partial v_{\theta}}{\partial \theta}\dfrac{\partial u_{\theta}}{\partial \theta}\hat{\theta} \\
+			 %
+			 + \hat{r}\dfrac{v_{\theta}}{r}\dfrac{u_{\theta}}{r}\hat{r}  -\hat{\theta}\dfrac{1}{r}\dfrac{\partial v_{\theta}}{\partial \theta}\dfrac{u_{\theta}}{r}\hat{r} 
+			 -\hat{r}\dfrac{v_{\theta}}{r}\dfrac{1}{r}\dfrac{\partial u_{\theta}}{\partial \theta}\hat{\theta}
+	\end{split}\right.
+\end{eqnarray}
+
 
 \section{Nek Implementations:}
 
