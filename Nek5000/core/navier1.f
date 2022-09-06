@@ -234,6 +234,9 @@ C     to (1,1,...,1)T  (only if all Dirichlet b.c.).
       real respr (lx2,ly2,lz2,lelv)
       integer*8 ntotg,nxyz2
 
+      call ortho_new(respr)
+      return      ! prabal
+
       nxyz2 = lx2*ly2*lz2
       ntot  = nxyz2*nelv
       ntotg = nxyz2*nelgv
@@ -2499,6 +2502,8 @@ c-----------------------------------------------------------------------
  
 c     (1) Face n-t transformation
 
+      call rotate_cyc_all(r1,r2,r2,idir)
+      return
 
       nface = 2*ldim
       do e=1,nelfld(ifield)

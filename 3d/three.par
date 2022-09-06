@@ -1,0 +1,113 @@
+#
+# nek parameter file
+#
+[GENERAL] 
+#polynomialOrder = 7
+#PnPnFormulation = yes
+minNumProcesses = 1
+
+#startFrom = taylorIC0.f00003
+#time=0 
+#stopAt = endTime
+#endTime = 400
+
+stopAt   = numsteps
+numSteps = 10 
+
+dt = 0.0001
+timeStepper = bdf3
+extrapolation = standard
+variableDt = no
+targetCFL = 5.0
+
+writeControl = TimeStep
+writeInterval = 1
+
+userParam01 = 1.2e-3   # Air Density                 1.2061e-3
+userParam02 = 1.0e-0   # Water Density               1.0
+userParam03 = 1.5e-6   # Air viscosity   (Dynamic)   1.5042e-6
+userParam04 = 7.3e-5   # Water viscosity (Dynamic)   8.3000e-5
+userParam05 = 0.0      # Reset local_solves
+userParam06 = 0.0      # Reset h1_crs
+
+userParam08 = 0.0      #  0: GMRES (nonsymmetric), 1: PCG w/o weights
+userParam09 = 1.0      #  0: Additive multilevel (param 42=0), 1: Original 2 level
+userParam10 = 0.0      #  0: E based Schwartz (FEM), 1: A based Schwartz
+
+
+
+filtering = hpfrt
+filterWeight = 10
+filterModes  = 1
+
+dealiasing = yes
+
+[PROBLEMTYPE]
+variableProperties = yes
+equation = incompNS
+#equation = incompLinNS
+#numberOfPerturbations=2
+#solveBaseFlow = no
+stressFormulation = yes
+axiSymmetry = no
+swirl       = no
+cyclicBoundaries = yes
+
+[PRESSURE]
+#preconditioner = semg_amg
+preconditioner = semg_xxt
+residualTol = 1e-09 
+residualProj = yes
+
+[VELOCITY]
+residualTol = 1e-09
+density = 1
+viscosity = -1000.00
+residualProj = no
+
+#[TEMPERATURE]
+#rhoCp = 1.
+#conductivity = -1000.00
+#residualTol = 1e-10 
+#
+
+[MESH]
+MOTION=user
+
+
+[_F3D]
+iff3d             = yes        # if 3d fourier?
+ifcyl_f3d         = yes        # If cylindrical coordinates
+k_f3d             = 0.00       # \beta
+slipl_f3d         = 0.00       # Slip length
+blendl_f3d        = 0.00       # Blending length between free slip and Dirichlet
+log_f3d           = 1
+
+
+[_FSALE]
+fs_iffs           = no          # If fs-ale motion?
+fs_ifgsm          = no           # Global smoothening
+fs_iftc           = no           # tangential correction
+fs_ifgh           = yes          # Gordon Hall Correction
+fs_iffil          = no           # filter global interpolation
+fs_ifgrid         = no           # Approximate grid?
+fs_ofst           = 0.00         # damping offset
+fs_spm_stiff      = 1.0E+3       # Spring-Mass-Damper: Stiffness
+fs_spm_damp       = 1.0E+1       # Spring-Mass-Damper: Damping
+fs_log            = 1
+
+[_TSTEPPER]             # Runtime parameter section for time stepper module
+MODE              = DIR                    # Simulation mode
+STEPS             = 250                   # Length of stepper phase
+MAXCYC            = 2000                    # Max number of stepper cycles
+TOL               = 1.00000000E-06         # Convergence threshold
+IFTST             = no                     # If enable?
+#
+[_ARN_ARP]              # Runtime parameter section for Arnoldi ARPACK module
+NKRL              = 30                    # Krylov space size
+NEGV              = 10                     # Number of eigenvalues
+IFPR              = yes                    # If pressure in arnoldi vector
+IFCOMPLEX         = yes                    # Use complex arithmetic (znaupd)
+
+
+

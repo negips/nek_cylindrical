@@ -13,6 +13,7 @@
       include 'MASS'          ! bm2
       include 'TSTEP'         ! ifield
       include 'GEOM'          ! xm2
+      include 'DOMAIN'        ! lcr,lxc
       include 'TEST'
 
       real w1,w2,w3
@@ -34,6 +35,16 @@
       integer i,ntot1,ntot2
       integer intype
       integer iflg,j
+
+      real uc,w
+      common /scrpre/ uc(lcr*lelt),w(2*lx1*ly1*lz1)
+
+      real rand
+      integer seed
+      parameter (seed=86456)
+      real rnd
+      real rad
+
 
       if (nio.eq.0) write(6,*) 'Testing Laplace'
 
@@ -58,13 +69,35 @@
       call invers2 (h2inv,h2,ntot1)
 
       do i=1,ntot2
-        dp(i,1,1,1) = 1.0 ! (1.0e-0)*xm2(i,1,1,1)
+        call random_number(rnd)
+        if (ifcyclic) then
+          rad = sqrt(ym2(i,1,1,1)**2 + zm2(i,1,1,1)**2)
+        else
+          rad = ym2(i,1,1,1)
+        endif
+
+        dp(i,1,1,1) = (1.0e-0)*rad + rnd
       enddo
+
+      call rone(tmp4,ntot2)
+      call ortho(tmp4)
+
+      call outpost(tmp1,tmp2,tmp3,tmp4,tmp4,'lap') 
 
       call col2(dp,bm2,ntot2) ! Mass matrix
 
-      call opzero(tmp1,tmp2,tmp3)
+      
+      call rone(tmp8,ntot2)
+      call cdabdtp(tmp4,tmp8,h1,h2,h2inv,intype)
+
+      call opgradt (tmp1,tmp2,tmp3,tmp8)
+      call opgradt (w1 ,w2 ,w3 ,tmp8)
+      call opbinv  (tmp1,tmp2,tmp3,w1 ,w2 ,w3 ,h2inv)
+      call opdiv   (tmp4,tmp1,tmp2,tmp3)
+
+!      call opzero(tmp1,tmp2,tmp3)
       call copy(tmp8,dp,ntot2)
+
       call outpost(tmp1,tmp2,tmp3,tmp8,tmp5,'lap') 
 
 !     Solve      
@@ -91,15 +124,15 @@
 !      call multdM1 (tmp4,ym1,rym1,sym1,tym1,2,1)
 !      call outpost(tmp1,tmp2,tmp3,tmp4,tmp5,'lap') 
 
-      do i=1,ntot2
-        tmp4(i,1,1,1) = xm2(i,1,1,1)**2
-      enddo
-      call col2(tmp4,bm2,ntot2)
-      call opgradtM1(tmp1,tmp2,tmp3,tmp4)
-      call outpost(tmp1,tmp2,tmp3,tmp4,tmp5,'lap') 
-      call opbinv  (dv1,dv2,dv3,tmp1 ,tmp2 ,tmp3 ,h2inv)
-      call opcopy(tmp1,tmp2,tmp3,dv1,dv2,dv3)
-      call outpost(tmp1,tmp2,tmp3,tmp4,tmp5,'lap') 
+!      do i=1,ntot2
+!        tmp4(i,1,1,1) = xm2(i,1,1,1)**2
+!      enddo
+!      call col2(tmp4,bm2,ntot2)
+!      call opgradtM1(tmp1,tmp2,tmp3,tmp4)
+!      call outpost(tmp1,tmp2,tmp3,tmp4,tmp5,'lap') 
+!      call opbinv  (dv1,dv2,dv3,tmp1 ,tmp2 ,tmp3 ,h2inv)
+!      call opcopy(tmp1,tmp2,tmp3,dv1,dv2,dv3)
+!      call outpost(tmp1,tmp2,tmp3,tmp4,tmp5,'lap') 
 
 
 14    format(A5,2x,16(E12.5,2x))
@@ -128,7 +161,7 @@ C
 
       if (icalld.eq.0) teslv=0.0
 
-      call ortho(res) !Ensure that residual is orthogonal to null space
+      call ortho_left(res) !Ensure that residual is orthogonal to null space
 
       icalld=icalld+1
       neslv=icalld
@@ -206,7 +239,7 @@ c      ENDIF
       div0=0.
 C
       tolpss = tolps
-      DO 1000 ITER=1,500 ! NMXP
+      DO 1000 ITER=1,10000 ! NMXP
 C
 C        CALL CONVPR  (RCG,tolpss,ICONV,RNORM)
          call convprn (iconv,rnorm,rrp1,rcg,rpcg,tolpss)
@@ -358,7 +391,7 @@ c
       iconv = 0
       call rzero(x_gmres,ntot2)
 
-      do while(iconv.eq.0.and.iter.lt.1000)
+      do while(iconv.eq.0.and.iter.lt.20000)
 
          if(iter.eq.0) then
                                                         !      -1
@@ -367,9 +400,13 @@ c           call copy(r_gmres,res,ntot2)
          else
             !update residual
             call copy(r_gmres,res,ntot2)                      ! r = res
+!            call ortho_right(r_gmres)
+
             call cdabdtp(w_gmres,x_gmres,h1,h2,h2inv,intype)  ! w = A x
 !            call cM1dabdtp(w_gmres,x_gmres,h1,h2,h2inv,intype)  ! w = A x
 !            call cddtp(w_gmres,x_gmres)                       ! w = A x
+
+            call ortho_left(w_gmres)
 
             call add2s2(r_gmres,w_gmres,-1.,ntot2)            ! r = r - w
                                                               !      -1
@@ -404,7 +441,9 @@ c           call copy(r_gmres,res,ntot2)
 c              call copy(z_gmres(1,j),w_gmres,ntot2)    ! z  = M   w
             endif     
             etime_p = etime_p + dnekclock()-etime2
-     
+    
+!            call ortho_right(z_gmres(1,j)) 
+
             call cdabdtp(w_gmres,z_gmres(1,j),    ! w = A z
      $                   h1,h2,h2inv,intype)      !        j
 
@@ -415,7 +454,7 @@ c              call copy(z_gmres(1,j),w_gmres,ntot2)    ! z  = M   w
 !            call cddtp(w_gmres,z_gmres(1,j))      ! w = A z
                                                   !        j
 
-
+            call ortho_left(w_gmres)
                                                   !      -1
             call col2(w_gmres,ml_gmres,ntot2)     ! w = L   w
 
@@ -520,7 +559,8 @@ c     iter = iter - 1
 
       call copy(res,x_gmres,ntot2)
 
-      call ortho (res)  ! Orthogonalize wrt null space, if present
+      call ortho_right(res)
+!      call ortho (res)  ! Orthogonalize wrt null space, if present
 
       etime1 = dnekclock()-etime1
       if (nio.eq.0) write(6,9999) istep,'  U-PRES gmres  ', 
@@ -743,7 +783,579 @@ C
       end
 c-----------------------------------------------------------------------
 
+      subroutine cdtM1p (dtx,x,rm1,sm1,tm1,isd)
+C-------------------------------------------------------------
+C
+C     Compute DT*X (entire field)
+C     Evaluated on the M1 Mesh.        
+C
+C-------------------------------------------------------------
 
+      implicit none
+
+      include 'SIZE'
+      include 'WZ'
+      include 'DXYZ'
+      include 'IXYZ'
+      include 'GEOM'
+      include 'MASS'
+      include 'INPUT'
+      include 'ESOLV'
+
+      include 'CTIMER'
+C
+      real dtx  (lx1*ly1*lz1,lelv)
+      real x    (lx2*ly2*lz2,lelv)
+      real rm1  (lx1*ly1*lz1,lelv)
+      real sm1  (lx1*ly1*lz1,lelv)
+      real tm1  (lx1*ly1*lz1,lelv)
+
+      real wx,ta1,ta2,ta3
+      common /ctmp1/ wx  (lx1*ly1*lz1)
+     $ ,             ta1 (lx1*ly1*lz1)
+     $ ,             ta2 (lx1*ly1*lz1)
+     $ ,             ta3 (lx1*ly1,lz1)
+
+      REAL           DUAX(LX1)
+
+      COMMON /FASTMD/ IFDFRM(LELT), IFFAST(LELT), IFH2, IFSOLV
+      LOGICAL IFDFRM, IFFAST, IFH2, IFSOLV
+
+      integer isd
+      integer e
+      integer nxyz1,nxyz2,nyz1,nyz2,nxy1
+      integer n1,n2
+C
+#ifdef TIMER
+      if (icalld.eq.0) tcdtp=0.0
+      icalld=icalld+1
+      ncdtp=icalld
+      etime1=dnekclock()
+#endif
+
+      nxyz1 = lx1*ly1*lz1
+      nxyz2 = lx2*ly2*lz2
+      nyz1  = ly1*lz1
+      nyz2  = ly2*lz2
+      nxy1  = lx1*ly1
+
+      n1    = lx1*ly1
+      n2    = lx1*ly2
+
+      do e=1,nelv
+
+C       Use the appropriate derivative- and interpolation operator in 
+C       the y-direction (= radial direction if axisymmetric).
+        if (ifaxis) then
+          if (nio.eq.0) write(6,*) 'CDTM1p not implemented for ifaxis.'
+          call exitt
+
+!         ly12   = ly1*ly2
+!         if (ifrzer(e)) then
+!            call copy (iym12,iam12,ly12)
+!            call copy (dym12,dam12,ly12)
+!            call copy (w3m2,w2am2,nxyz2)
+!         else
+!            call copy (iym12,icm12,ly12)
+!            call copy (dym12,dcm12,ly12)
+!            call copy (w3m2,w2cm2,nxyz2)
+!         endif
+       endif
+C
+C      Collocate with weights
+C
+       if(ifsplit) then
+          if (nio.eq.0) write(6,*) 'CDTM1p not implemented for ifsplit.'
+          call exitt
+
+!         call col3 (wx,bm1(1,1,1,e),x(1,e),nxyz1)
+!         call invcol2(wx,jacm1(1,1,1,e),nxyz1)
+       else
+!         if (.not.ifaxis) call col3 (wx,w3m2,x(1,e),nxyz2)
+
+!         prabal. Interpolate x to Mesh 1
+          call mxm (ixm21,lx1,x(1,e),lx2,ta1,nyz2)
+          call mxm (ta1,lx1,iytm21,ly2,wx,ly1)
+
+!         collocate with weights
+!         Jacobian goes away due to inverse jacobian of the dx/dr etc. 
+          call col2(wx,w3m1,nxyz1)
+
+!         if (ifaxis) then
+!            if (ifrzer(e)) then
+!                call col3    (wx,x(1,e),bm2(1,1,1,e),nxyz2)
+!                call invcol2 (wx,jacm2(1,1,1,e),nxyz2)
+!            else
+!                call col3    (wx,w3m2,x(1,e),nxyz2)
+!                call col2    (wx,ym2(1,1,1,e),nxyz2)
+!            endif
+!         endif
+       endif
+C
+       if (ldim.eq.2) then
+         if (.not.ifdfrm(e) .and. ifalgn(e)) then
+
+            if (      ifrsxy(e).and.isd.eq.1  .or. 
+     $           .not.ifrsxy(e).and.isd.eq.2) then
+
+!              prabal. 
+               call col3 (ta1,wx,rm1(1,e),nxyz1)
+               call mxm  (dxtm1,lx1,ta1,lx1,dtx(1,e),nyz1)
+!               call mxm  (ta2,lx1,iym1,ly2,dtx(1,e),ly1)
+
+
+!               call col3 (ta1,wx,rm2(1,e),nxyz2)
+!               call mxm  (dxtm12,lx1,ta1,lx2,ta2,nyz2)
+!               call mxm  (ta2,lx1,iym12,ly2,dtx(1,e),ly1)
+            else
+!              prabal   
+               call col3 (ta1,wx,sm1(1,e),nxyz1)
+!               call mxm  (ixtm12,lx1,ta1,lx2,ta2,nyz2)
+               call mxm  (ta1,lx1,dym1,ly1,dtx(1,e),ly1)
+
+
+!               call col3 (ta1,wx,sm2(1,e),nxyz2)
+!               call mxm  (ixtm12,lx1,ta1,lx2,ta2,nyz2)
+!               call mxm  (ta2,lx1,dym12,ly2,dtx(1,e),ly1)
+            endif
+         else
+
+            call col3 (ta1,wx,rm1(1,e),nxyz1)
+            call mxm  (dxtm1,lx1,ta1,lx1,dtx(1,e),nyz1)
+
+            call col3 (ta1,wx,sm1(1,e),nxyz1)
+            call mxm  (ta1,lx1,dym1,ly1,ta2,ly1)
+          
+            call add2 (dtx(1,e),ta2,nxyz1)
+
+!            call col3 (ta1,wx,rm2(1,e),nxyz2)
+!            call mxm  (dxtm12,lx1,ta1,lx2,ta2,nyz2)
+!            call mxm  (ta2,lx1,iym12,ly2,dtx(1,e),ly1)
+!
+!            call col3 (ta1,wx,sm2(1,e),nxyz2)
+!            call mxm  (ixtm12,lx1,ta1,lx2,ta2,nyz2)
+!            call mxm  (ta2,lx1,dym12,ly2,ta1,ly1)
+!
+!            call add2 (dtx(1,e),ta1,nxyz1)
+         endif
+
+       else
+         if (ifsplit) then
+
+          if (nio.eq.0) write(6,*) 'CDTM1p not implemented for ifsplit.'
+          call exitt
+
+!            call col3 (ta1,wx,rm2(1,e),nxyz2)
+!            call mxm  (dxtm12,lx1,ta1,lx2,dtx(1,e),nyz2)
+!            call col3 (ta1,wx,sm2(1,e),nxyz2)
+!            i1 = 1
+!            i2 = 1
+!            do iz=1,lz2
+!               call mxm  (ta1(i2),lx1,dym12,ly2,ta2(i1),ly1)
+!               i1 = i1 + n1
+!               i2 = i2 + n2
+!            enddo
+!            call add2 (dtx(1,e),ta2,nxyz1)
+!            call col3 (ta1,wx,tm2(1,e),nxyz2)
+!            call mxm  (ta1,nxy1,dzm12,lz2,ta2,lz1)
+!            call add2 (dtx(1,e),ta2,nxyz1)
+!
+!         else
+!
+!            call col3 (ta1,wx,rm2(1,e),nxyz2)
+!            call mxm  (dxtm12,lx1,ta1,lx2,ta2,nyz2)
+!            i1 = 1
+!            i2 = 1
+!            do iz=1,lz2
+!               call mxm  (ta2(i2),lx1,iym12,ly2,ta1(i1),ly1)
+!               i1 = i1 + n1
+!               i2 = i2 + n2
+!            enddo
+!            call mxm  (ta1,nxy1,izm12,lz2,dtx(1,e),lz1)
+!
+!            call col3 (ta1,wx,sm2(1,e),nxyz2)
+!            call mxm  (ixtm12,lx1,ta1,lx2,ta2,nyz2)
+!            i1 = 1
+!            i2 = 1
+!            do iz=1,lz2
+!               call mxm  (ta2(i2),lx1,dym12,ly2,ta1(i1),ly1)
+!               i1 = i1 + n1
+!               i2 = i2 + n2
+!            enddo
+!            call mxm  (ta1,nxy1,izm12,lz2,ta2,lz1)
+!            call add2 (dtx(1,e),ta2,nxyz1)
+!
+!            call col3 (ta1,wx,tm2(1,e),nxyz2)
+!            call mxm  (ixtm12,lx1,ta1,lx2,ta2,nyz2)
+!            i1 = 1
+!            i2 = 1
+!            do iz=1,lz2
+!               call mxm  (ta2(i2),lx1,iym12,ly2,ta1(i1),ly1)
+!               i1 = i1 + n1
+!               i2 = i2 + n2
+!            enddo
+!            call mxm  (ta1,nxy1,dzm12,lz2,ta2,lz1)
+!            call add2 (dtx(1,e),ta2,nxyz1)
+
+         endif
+
+       endif         
+C
+C     If axisymmetric, add an extra diagonal term in the radial 
+C     direction (only if solving the momentum equations and ISD=2)
+C     NOTE: lz1=lz2=1
+C
+C
+      if(ifsplit) then
+
+       if (ifaxis.and.(isd.eq.4)) then
+        call copy    (ta1,x(1,e),nxyz1)
+        if (ifrzer(e)) THEN
+           call rzero(ta1, lx1)
+           call mxm  (x  (1,e),lx1,datm1,ly1,duax,1)
+           call copy (ta1,duax,lx1)
+        endif
+        call col2    (ta1,baxm1(1,1,1,e),nxyz1)
+        call add2    (dtx(1,e),ta1,nxyz1)
+       endif
+
+      else
+
+       if (ifaxis.and.(isd.eq.2)) then
+         call col3    (ta1,x(1,e),bm2(1,1,1,e),nxyz2)
+         call invcol2 (ta1,ym2(1,1,1,e),nxyz2)
+         call mxm     (ixtm12,lx1,ta1,lx2,ta2,ly2)
+         call mxm     (ta2,lx1,iym12,ly2,ta1,ly1)
+         call add2    (dtx(1,e),ta1,nxyz1)
+       endif
+
+      endif
+
+      enddo
+C
+#ifdef TIMER
+      tcdtp=tcdtp+(dnekclock()-etime1)
+#endif
+      return
+      end
+!---------------------------------------------------------------------- 
+      subroutine multdM1 (dx,x,rm1,sm1,tm1,isd,iflg)
+C---------------------------------------------------------------------
+C
+C     Compute D*X
+C     X    : input variable, defined on M1
+C     DX   : output variable, defined on M2
+C     Integration done on the M1 mesh        
+C     RM1 : RXM1, RYM1 or RZM1
+C     SM1 : SXM1, SYM1 or SZM1
+C     TM1 : TXM1, TYM1 or TZM1
+C     ISD : spatial direction (x=1,y=2,z=3)
+C     IFLG: OPGRAD (iflg=0) or OPDIV (iflg=1)
+C
+C---------------------------------------------------------------------
+      
+      implicit none
+
+      include 'SIZE'
+      include 'WZ'
+      include 'DXYZ'
+      include 'IXYZ'
+      include 'GEOM'
+      include 'MASS'
+      include 'INPUT'
+      include 'ESOLV'
+
+      real           dx   (lx2*ly2*lz2,lelv)
+      real           x    (lx1*ly1*lz1,lelv)
+      real           rm1  (lx1*ly1*lz1,lelv)
+      real           sm1  (lx1*ly1*lz1,lelv)
+      real           tm1  (lx1*ly1*lz1,lelv)
+
+      real           wk1  (lx1*ly1*lz1)
+      real           wk2  (lx1*ly1*lz1)
+
+      integer isd,iflg
+
+      real ta1,ta2,ta3
+      common /ctmp1/ ta1 (lx1*ly1*lz1)
+     $ ,             ta2 (lx1*ly1*lz1)
+     $ ,             ta3 (lx1*ly1*lz1)
+
+      real           duax(lx1)
+
+      common /fastmd/ ifdfrm(lelt), iffast(lelt), ifh2, ifsolv
+      logical ifdfrm, iffast, ifh2, ifsolv
+      include 'CTIMER'
+
+      integer e,i1,i2,iz
+      integer nxy1,nyz1,nxy2,nxyz1,nxyz2,n1,n2
+
+C
+#ifdef TIMER
+      if (icalld.eq.0) tmltd=0.0
+      icalld=icalld+1
+      nmltd=icalld
+      etime1=dnekclock()
+#endif
+
+      nxy1  = lx1*ly1
+      nyz1  = ly1*lz1
+      nxy2  = lx2*ly2
+      nxyz1 = lx1*ly1*lz1
+      nxyz2 = lx2*ly2*lz2
+
+      n1    = lx1*ly1
+      n2    = lx2*ly2
+
+      do e=1,nelv
+
+c        Use the appropriate derivative- and interpolation operator in 
+c        the y-direction (= radial direction if axisymmetric).
+         if (ifaxis) then
+           if (nio.eq.0) write(6,*) 
+     $       'MULTDM1 not implemented for ifaxis.'
+           call exitt
+          
+!            ly12   = ly1*ly2
+!            if (ifrzer(e)) then
+!               call copy (iytm12,iatm12,ly12)
+!               call copy (dytm12,datm12,ly12)
+!               call copy (w3m2,w2am2,nxyz2)
+!            else
+!               call copy (iytm12,ictm12,ly12)
+!               call copy (dytm12,dctm12,ly12)
+!               call copy (w3m2,w2cm2,nxyz2)
+!            endif
+         endif
+
+         if (ldim.eq.2) then
+            if (.not.ifdfrm(e) .and. ifalgn(e)) then
+c
+               if (      ifrsxy(e).and.isd.eq.1  .or. 
+     $              .not.ifrsxy(e).and.isd.eq.2) then
+                  call mxm     (dxm1,lx1,x(1,e),lx1,wk1,nyz1)
+!                  call mxm     (ta1,lx2,iytm12,ly1,dx(1,e),ly2)
+                  call col2    (wk1,rm1(1,e),nxyz1)
+
+
+!                  call mxm     (dxm12,lx2,x(1,e),lx1,ta1,nyz1)
+!                  call mxm     (ta1,lx2,iytm12,ly1,dx(1,e),ly2)
+!                  call col2    (dx(1,e),rm2(1,e),nxyz2)
+               else
+!                  call mxm     (ixm12,lx2,x(1,e),lx1,ta1,nyz1)
+                  call mxm     (x(1,e),lx1,dytm1,ly1,wk1,ly1)
+                  call col2    (wk1,sm1(1,e),nxyz1)
+
+!                  call mxm     (ixm12,lx2,x(1,e),lx1,ta1,nyz1)
+!                  call mxm     (ta1,lx2,dytm12,ly1,dx(1,e),ly2)
+!                  call col2    (dx(1,e),sm2(1,e),nxyz2)
+               endif
+            else
+               call mxm     (dxm1,lx1,x(1,e),lx1,wk1,nyz1)
+!               call mxm     (ta1,lx2,iytm12,ly1,dx(1,e),ly2)
+               call col2    (wk1,rm1(1,e),nxyz1)
+!               call mxm     (ixm12,lx2,x(1,e),lx1,ta1,nyz1)
+               call mxm     (x(1,e),lx1,dytm1,ly1,ta3,ly1)
+               call addcol3 (wk1,ta3,sm1(1,e),nxyz1)
+
+!               call mxm     (dxm12,lx2,x(1,e),lx1,ta1,nyz1)
+!               call mxm     (ta1,lx2,iytm12,ly1,dx(1,e),ly2)
+!               call col2    (dx(1,e),rm2(1,e),nxyz2)
+!               call mxm     (ixm12,lx2,x(1,e),lx1,ta1,nyz1)
+!               call mxm     (ta1,lx2,dytm12,ly1,ta3,ly2)
+!               call addcol3 (dx(1,e),ta3,sm2(1,e),nxyz2)
+            endif
+
+         else  ! 3D
+
+             if (nio.eq.0) write(6,*) 
+     $         'MULTDM1 not implemented for 3D'
+             call exitt
+
+             call mxm  (dxm1,lx2,x(1,e),lx1,ta1,nyz1)
+             call col3 (wk1,ta1,rm1(1,e),nxyz1)
+!
+             call copy(ta3,x(1,e),nxyz1)
+             i1=1
+             i2=1
+             do iz=1,lz1
+               call mxm (ta3(i1),lx1,dytm1,ly1,ta2(i2),ly1)
+               i1=i1+n1
+               i2=i2+n1
+             enddo
+             call addcol3 (wk1,ta2,sm1(1,e),nxyz1)
+!
+             call copy(ta1,x(1,e),nxyz1)
+             call mxm (ta1,nxy1,dztm1,lz1,ta3,lz1)
+             call addcol3 (wk1,ta3,tm1(1,e),nxyz1)
+         endif
+C
+C        Collocate with the weights on the pressure mesh
+
+
+       if(ifsplit) then
+!         call col2   (dx(1,e),bm1(1,1,1,e),nxyz1)
+!         call invcol2(dx(1,e),jacm1(1,1,1,e),nxyz1)
+       else
+!        collocate with weights on Mesh 1          
+         if (.not.ifaxis) call col2 (wk1,w3m1,nxyz1)
+!        Using pressure test function on Mesh 1
+!        integrate to get result on Mesh 2
+         if (if3d) then
+           call mxm(ixtm21,lx2,wk1,lx1,ta1,nyz1)
+           i1=1
+           i2=1
+           do iz=1,lz1
+             call mxm (ta1(i1),lx2,iym21,ly1,ta2(i2),ly2)
+             i1=i1+(lx2*ly1)
+             i2=i2+n2
+           enddo
+           call mxm (ta2,nxy2,izm21,lz1,dx(1,e),lz2)
+         else  
+           call mxm(ixtm21,lx2,wk1,lx1,ta1,lx1)
+           call mxm(ta1,lx2,iym21,lx1,dx(1,e),lx2)
+         endif  
+
+
+!         if (.not.ifaxis) call col2 (dx(1,e),w3m2,nxyz2)
+!         if (ifaxis) then
+!             if (ifrzer(e)) then
+!                 call col2    (dx(1,e),bm2(1,1,1,e),nxyz2)
+!                 call invcol2 (dx(1,e),jacm2(1,1,1,e),nxyz2)
+!             else
+!                 call col2    (dx(1,e),w3m2,nxyz2)
+!                 call col2    (dx(1,e),ym2(1,1,1,e),nxyz2)
+!             endif
+!         endif
+       endif
+
+c        If axisymmetric, add an extra diagonal term in the radial 
+c        direction (ISD=2).
+c        NOTE: lz1=lz2=1
+
+!      if(ifsplit) then
+!
+!       if (ifaxis.and.(isd.eq.2).and.iflg.eq.1) then
+!        call copy    (ta3,x(1,e),nxyz1)
+!        if (ifrzer(e)) then
+!           call rzero(ta3, lx1)
+!           call mxm  (x(1,e),lx1,datm1,ly1,duax,1)
+!           call copy (ta3,duax,lx1)
+!        endif
+!        call col2    (ta3,baxm1(1,1,1,e),nxyz1)
+!        call add2    (dx(1,e),ta3,nxyz2)
+!       endif
+!
+!      else
+!
+!       if (ifaxis.and.(isd.eq.2)) then
+!            call mxm     (ixm12,lx2,x(1,e),lx1,ta1,ly1)
+!            call mxm     (ta1,lx2,iytm12,ly1,ta2,ly2)
+!            call col3    (ta3,bm2(1,1,1,e),ta2,nxyz2)
+!            call invcol2 (ta3,ym2(1,1,1,e),nxyz2)
+!            call add2    (dx(1,e),ta3,nxyz2)
+!       endif
+!
+!      endif
+
+      enddo
+C
+#ifdef TIMER
+      tmltd=tmltd+(dnekclock()-etime1)
+#endif
+      return
+      END
+c-----------------------------------------------------------------------
+
+      subroutine map_f_to_c_l2_bilin_test(uc,uf,w)
+
+c     TRANSPOSE of L2 Iterpolation operator:                    T
+c                                 (linear --> spectral GLL mesh)
+
+      include 'SIZE'
+      include 'DOMAIN'
+      include 'INPUT'
+
+      parameter (lxyz = lx2*ly2*lz2)
+      real uc(nxyz_c,lelt),uf(lxyz,lelt),w(1)
+
+      ltot22 = 2*lx2*ly2*lz2
+      nx_crs = 2   ! bilinear only
+
+      do ie=1,nelv
+         call maph1_to_l2t_test(uc(1,ie),nx_crs,uf(1,ie),
+     $                          lx2,if3d,w,ltot22)
+      enddo
+c
+      return
+      end
+c
+c-----------------------------------------------------------------------
+
+      subroutine maph1_to_l2t_test(b,nb,a,na,if3d,w,ldw)
+c
+c     Input:   a
+c     Output:  b
+c
+      real a(1),b(1),w(1)
+      logical if3d
+c
+      parameter(lx=50)
+      real za(lx),zb(lx)
+c
+      real iba(lx*lx),ibat(lx*lx)
+      save iba,ibat
+c
+      integer nao,nbo
+      save    nao,nbo
+      data    nao,nbo  / -9, -9/
+c
+c
+      if (na.gt.lx.or.nb.gt.lx) then
+         write(6,*)'ERROR: increase lx in maph1_to_l2 to max:',na,nb
+         call exitt
+      endif
+c
+      if (na.ne.nao  .or.   nb.ne.nbo) then
+         nao = na
+         nbo = nb
+         call zwgl (za,w,na)
+         call zwgll(zb,w,nb)
+!         call igllm(iba,ibat,zb,za,nb,na,nb,na)
+         call iglm(iba,ibat,za,zb,na,nb,na,nb)
+      endif
+c
+!      call specmpn(b,nb,a,na,ibat,iba,if3d,w,ldw)
+      call specmpn(b,nb,a,na,iba,ibat,if3d,w,ldw)
+     
+c
+      return
+      end
+c
+c-----------------------------------------------------------------------
+      subroutine crs_solve_l2_test(uf,vf)
+c
+c     Given an input vector v, this generates the H1 coarse-grid solution
+c
+      include 'SIZE'
+      include 'DOMAIN'
+      include 'ESOLV'
+      include 'GEOM'
+      include 'PARALLEL'
+      include 'SOLN'
+      include 'INPUT'
+      include 'TSTEP'
+      real uf(1),vf(1)
+      common /scrpre/ uc(lcr*lelt),w(2*lx1*ly1*lz1)
+
+      call map_f_to_c_l2_bilin_test(uf,vf,w)
+      call fgslib_crs_solve(xxth(ifield),uc,uf)
+      call map_c_to_f_l2_bilin(uf,uc,w)
+
+      return
+      end
+c
+c-----------------------------------------------------------------------
 
 
 
