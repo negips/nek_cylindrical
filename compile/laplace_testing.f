@@ -101,7 +101,7 @@
       call outpost(tmp1,tmp2,tmp3,tmp8,tmp5,'lap') 
 
 !     Solve
-      igmres = 1        ! weighted 
+      igmres = 4        ! 1: weighted; 4: Left preconditioned
       call esolver_new (dp,h1,h2,h2inv,intype,igmres)
 
       call opgradt (w1 ,w2 ,w3 ,dp)
@@ -165,20 +165,21 @@ C
       etime1=dnekclock()
 
       if (.not. ifsplit) then
-         if (param(42).eq.1) then
-            call uzawa_new(res,h1,h2,h2inv,intype,icg)
-         else
-           if (ig.eq.1) call uzawa_gmres_wt(res,h1,h2,h2inv,intype,icg)
-           if (ig.eq.2) call uzawa_gmres_new(res,h1,h2,h2inv,intype,icg)
-           if (ig.eq.3) call uzawa_gmres_std(res,h1,h2,h2inv,intype,icg)
-           if (ig.gt.3) then 
-             write(6,*) 'Unknown GMRES. exitting in esolver_new()'
-             call exitt
-           endif  
-         endif
+        if (param(42).eq.1) then
+          call uzawa_new(res,h1,h2,h2inv,intype,icg)
+        else
+          if (ig.eq.1) call uzawa_gmres_wt(res,h1,h2,h2inv,intype,icg)
+          if (ig.eq.2) call uzawa_gmres_new(res,h1,h2,h2inv,intype,icg)
+          if (ig.eq.3) call uzawa_gmres_std(res,h1,h2,h2inv,intype,icg)
+          if (ig.eq.4) call uzawa_gmres_lpr(res,h1,h2,h2inv,intype,icg)
+          if (ig.gt.4) then 
+            write(6,*) 'Unknown GMRES. exitting in esolver_new()'
+            call exitt
+          endif  
+        endif
       else
-         write(6,*) 'error: e-solver does not exist pnpn'
-         call exitt
+        write(6,*) 'error: e-solver does not exist pnpn'
+        call exitt
       endif
 
       teslv=teslv+(dnekclock()-etime1)
