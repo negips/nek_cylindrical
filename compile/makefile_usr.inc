@@ -62,6 +62,7 @@ $(OBJDIR)/cylindrical_subs.o              :./cylindrical_subs.f;                
 $(OBJDIR)/polar_subs.o                    :./polar_subs.f;                        $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@
 $(OBJDIR)/rotate_cyclic.o                 :./rotate_cyclic.f;                     $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@
 $(OBJDIR)/orthonew.o                      :./orthonew.f;                          $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@
+$(OBJDIR)/gmres_solver.o                  :./gmres_solver.f;                      $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@
 
 
 

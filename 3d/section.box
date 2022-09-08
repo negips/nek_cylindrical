@@ -1,0 +1,10 @@
+base.rea
+3			 Spatial Dimension
+2			 Number of fields
+Box 1			 Section of Annulus
+-3 -3 -3			 Nelx Nely Nelz
+0. 2. 1.0       (xi \Axial Direction)
+1. 3. 1.0       (yi \Radial Direction)
+0. 20. 1.0      (zi \Theta Direction)
+W  ,W  ,v  ,v  ,P  ,P  ,	 BC's: (x,y,z)
+O  ,O  ,O  ,O  ,P  ,P  ,	 Temp BC's: (x,y,z)

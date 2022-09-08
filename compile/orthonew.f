@@ -88,6 +88,9 @@ C     to (1,1,...,1)T  (only if all Dirichlet b.c.).
 
       real glsc3,glsc2
 
+!      call ortho_new(respr)
+!      return
+
       nxyz2 = lx2*ly2*lz2
       ntot  = nxyz2*nelv
       ntotg = nxyz2*nelgv
@@ -144,6 +147,9 @@ C     to (1,1,...,1)T  (only if all Dirichlet b.c.).
       real glsum
 
       real glsc3,glsc2
+
+!      call ortho_new(respr)
+!      return
 
       nxyz2 = lx2*ly2*lz2
       ntot  = nxyz2*nelv

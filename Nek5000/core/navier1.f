@@ -234,9 +234,6 @@ C     to (1,1,...,1)T  (only if all Dirichlet b.c.).
       real respr (lx2,ly2,lz2,lelv)
       integer*8 ntotg,nxyz2
 
-      call ortho_new(respr)
-      return      ! prabal
-
       nxyz2 = lx2*ly2*lz2
       ntot  = nxyz2*nelv
       ntotg = nxyz2*nelgv
@@ -956,7 +953,8 @@ c           CALL COL2        (RPCG,H2M2,NTOT2)
          CALL COPY        (RPCG,RCG,NTOT2)
       ENDIF
 
-      call ortho (rpcg)
+!      call ortho (rpcg)
+      call ortho_right(rpcg)
 
       return
       end

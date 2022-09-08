@@ -187,10 +187,10 @@ c        NOTE: a(),h1,...,w2() must all be large enough
 !         call rzero (h2,n)
          call copy  (h1,h1_usr,n)
          call copy  (h2,h2_usr,n)
-!         call get_local_crs_galerkin(a,ncr,nxc,h1,h2,w1,w2)
-         call get_wt_local_crs_galerkin(a,ncr,nxc,h1,h2,w1,w2)
+         call get_local_crs_galerkin(a,ncr,nxc,h1,h2,w1,w2)
+!         call get_wt_local_crs_galerkin(a,ncr,nxc,h1,h2,w1,w2)
 
-         call copy(acopy,a,ncr*ncr*nelv)
+         call copy(acopy,a,ncr*ncr*nelv)  ! for debugging
 c      endif
 
       call set_mat_ij(ia,ja,ncr,nelv)
@@ -260,11 +260,11 @@ c     Weighted Galerkin projection
          enddo
 
          call axhelm (w2,w1,h1,h2,imsh,isd)        ! A^e * bj
-!         call col2(w2,bm1,nxyz*nelv)               ! Multiply by weight
+         call col2(w2,bm1,nxyz*nelv)               ! Multiply by weight
 
          do e = 1,nelv
          do i = 1,ncl
-            a(i,j,e) = vlsc2(b(1,i),w2(1,e),nxyz)  ! bi^T * A^e * bj
+            a(i,j,e) = vlsc2(b(1,i),w2(1,e),nxyz)  ! bi^T * B * A^e * bj
          enddo
          enddo
 
@@ -274,7 +274,184 @@ c     Weighted Galerkin projection
       end
 c-----------------------------------------------------------------------
 
+      subroutine crs_solve_l2_wt(uf,vf)
+c
+c     Given an input vector v, this generates the H1 coarse-grid solution
+c     Using Weighted projection
+c
+      include 'SIZE'
+      include 'DOMAIN'
+      include 'ESOLV'
+      include 'GEOM'
+      include 'PARALLEL'
+      include 'SOLN'
+      include 'INPUT'
+      include 'TSTEP'
 
+      real uf(1),vf(1)
+      common /scrpre/ uc(lcr*lelt),w1(2*lx1*ly1*lz1),w2(2*lx1*ly1*lz1)
+
+      call map_f_to_c_l2_bilin_wt(uf,vf,w1,w2)
+      call fgslib_crs_solve(xxth(ifield),uc,uf)
+      call map_c_to_f_l2_bilin(uf,uc,w1)
+
+      return
+      end
+c
+c-----------------------------------------------------------------------
+      subroutine map_f_to_c_l2_bilin_wt(uc,uf,w1,w2)
+
+c     TRANSPOSE of L2 Iterpolation operator:                    T
+c                                 (linear --> spectral GLL mesh)
+
+      implicit none
+
+      include 'SIZE'
+      include 'DOMAIN'
+      include 'MASS'          ! BM1
+      include 'INPUT'
+
+      integer lxyz
+      parameter (lxyz = lx2*ly2*lz2)
+      real uc(nxyz_c,lelt),uf(lxyz,lelt)
+      real w1(1),w2(1)
+
+      integer ltot22
+      integer ie
+
+
+      ltot22 = 2*lx2*ly2*lz2
+      nx_crs = 2   ! bilinear only
+
+      do ie=1,nelv
+!       Using BM2 as the weight. Integration is done on the M2 mesh.      
+        call maph1_to_l2t_wt(uc(1,ie),nx_crs,uf(1,ie),
+     $                         lx2,if3d,w1,w2,ltot22,bm2(1,1,1,ie))
+      enddo
+c
+      return
+      end
+c
+c-----------------------------------------------------------------------
+      subroutine maph1_to_l2t_wt(b,nb,a,na,if3d,w1,w2,ldw,wt)
+
+!     Instead of interpolation we do a weighted projection
+
+c     Input:   a
+c     Output:  b
+c
+      real a(1),b(1),wt(1)
+      real w1(1),w2(1)        ! work arrays
+      logical if3d
+c
+      parameter(lx=50)
+      real za(lx),zb(lx)
+c
+      real iba(lx*lx),ibat(lx*lx)
+      save iba,ibat
+c
+      integer nao,nbo
+      save    nao,nbo
+      data    nao,nbo  / -9, -9/
+c
+c
+      if (na.gt.lx.or.nb.gt.lx) then
+         write(6,*)'ERROR: increase lx in maph1_to_l2 to max:',na,nb
+         call exitt
+      endif
+c
+      if (na.ne.nao  .or.   nb.ne.nbo) then
+         nao = na       ! lx2
+         nbo = nb       ! nx_crs
+         call zwgl (za,w,na)
+         call zwgll(zb,w,nb)
+         call igllm(iba,ibat,zb,za,nb,na,nb,na)
+      endif
+
+!     na    - lx2
+!     nb    - nx_crs      
+!     iba   - interpolation matrix of Linear lagrange interpolants on
+!             GLL grid to GL points
+!     ibat  - transpose of iba      
+
+      call specmpn_wt(b,nb,a,na,ibat,iba,if3d,w1,w2,ldw,wt)
+c
+      return
+      end
+c
+c-----------------------------------------------------------------------
+
+      subroutine specmpn_wt(b,nb,a,na,ba,ab,if3d,w1,w2,ldw,wt)
+C
+C     -  Spectral (weighted) projection from A to B via tensor products
+C     -  scratch arrays: w(na*na*nb + nb*nb*na)
+C
+C     5/3/00  -- this routine replaces specmp in navier1.f, which
+c                has a potential memory problem
+C
+
+      implicit none
+
+      logical if3d
+
+      integer nb,na,ldw
+
+      real b(nb,nb,nb),a(na,na,na),wt(na,na,na)
+      real w1(ldw),w2(ldw)       ! work
+
+      real ba(1)        ! - interpolation matrix of Linear lagrange interpolants on
+                        !   GLL grid to GL points (lx2,nx_crs)
+      real ab(1)        ! - transpose of ab (nx_crs,lx2)
+
+      integer ltest,nab,nbb
+      integer k,l,iz
+c
+
+!     na    - lx2
+!     nb    - nx_crs      
+!
+!     ab    - interpolation matrix of Linear lagrange interpolants on
+!             GLL grid to GL points (lx2,nx_crs)
+!     ba    - transpose of ab (nx_crs,lx2)
+!
+!     wt    - BM2      
+
+      ltest = na*nb
+      if (if3d) ltest = na*na*nb + nb*na*na
+      if (ldw.lt.ltest) then
+         write(6,*) 'ERROR specmp:',ldw,ltest,if3d
+         call exitt
+      endif
+
+!     Collocate with weight      
+      if (if3d) then
+        call col3(w2,a,wt,na*na*na)
+      else
+        call col3(w2,a,wt,na*na*1)
+      endif
+c
+      if (if3d) then
+         nab = na*nb
+         nbb = nb*nb
+         call mxm(ba,nb,w2,na,w1,na*na)
+         k=1
+         l=na*na*nb + 1
+         do iz=1,na
+            call mxm(w1(k),nb,ab,na,w1(l),nb)
+            k=k+nab
+            l=l+nbb
+         enddo
+         l=na*na*nb + 1
+         call mxm(w1(l),nbb,ab,na,b,nb)
+      else
+         call mxm(ba,nb,w2,na,w1,na)
+         call mxm(w1,nb,ab,na,b,nb)
+      endif
+
+      return
+      end
+
+!-----------------------------------------------------------------------
 
 
 

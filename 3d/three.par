@@ -51,7 +51,7 @@ equation = incompNS
 stressFormulation = yes
 axiSymmetry = no
 swirl       = no
-cyclicBoundaries = yes
+cyclicBoundaries = no
 
 [PRESSURE]
 #preconditioner = semg_amg

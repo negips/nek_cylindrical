@@ -1,7 +1,7 @@
 #!/bin/sh
 
 genbox << EOF
-section2d.box
+section.box
 EOF
 #
 reatore2 << EOF

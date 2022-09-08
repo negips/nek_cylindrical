@@ -45,6 +45,8 @@
       real rnd
       real rad
 
+      integer igmres
+
 
       if (nio.eq.0) write(6,*) 'Testing Laplace'
 
@@ -75,22 +77,20 @@
         else
           rad = ym2(i,1,1,1)
         endif
-
-        dp(i,1,1,1) = (1.0e-0)*rad + rnd
+        dp(i,1,1,1) = (1.0e-0)*rad + 0.0*rnd
       enddo
 
       call rone(tmp4,ntot2)
-      call ortho(tmp4)
+!      call ortho(tmp4)
 
-      call outpost(tmp1,tmp2,tmp3,tmp4,tmp4,'lap') 
+      call outpost(tmp1,tmp2,tmp3,tmp4,tmp4,'lap')
 
       call col2(dp,bm2,ntot2) ! Mass matrix
-
+!      call ortho(dp)
       
       call rone(tmp8,ntot2)
       call cdabdtp(tmp4,tmp8,h1,h2,h2inv,intype)
 
-      call opgradt (tmp1,tmp2,tmp3,tmp8)
       call opgradt (w1 ,w2 ,w3 ,tmp8)
       call opbinv  (tmp1,tmp2,tmp3,w1 ,w2 ,w3 ,h2inv)
       call opdiv   (tmp4,tmp1,tmp2,tmp3)
@@ -100,8 +100,9 @@
 
       call outpost(tmp1,tmp2,tmp3,tmp8,tmp5,'lap') 
 
-!     Solve      
-      call esolver_new (dp,h1,h2,h2inv,intype)
+!     Solve
+      igmres = 1        ! weighted 
+      call esolver_new (dp,h1,h2,h2inv,intype,igmres)
 
       call opgradt (w1 ,w2 ,w3 ,dp)
       call opbinv  (dv1,dv2,dv3,w1 ,w2 ,w3 ,h2inv)
@@ -111,28 +112,22 @@
      
       call outpost(tmp1,tmp2,tmp3,tmp4,tmp5,'lap') 
 
+!     Solve std.
+      call copy(dp,tmp8,ntot2)            ! restore dp
 
-!!      call cdtp (tmp1,tmp8,rxm2,sxm2,txm2,1)
-!      call cdtM1p (tmp1,tmp8,rxm1,sxm1,txm1,1)
-!      call cdtM1p (tmp2,tmp8,rym1,sym1,tym1,2)
-!
-!      call outpost(tmp1,tmp2,tmp3,tmp4,tmp5,'lap') 
-!
-!      call multdM1 (tmp4,xm1,rxm1,sxm1,txm1,1,1)
-!      call outpost(tmp1,tmp2,tmp3,tmp4,tmp5,'lap') 
-!
-!      call multdM1 (tmp4,ym1,rym1,sym1,tym1,2,1)
-!      call outpost(tmp1,tmp2,tmp3,tmp4,tmp5,'lap') 
+      igmres = 3        ! standard 
+      call esolver_new (dp,h1,h2,h2inv,intype,igmres)
 
-!      do i=1,ntot2
-!        tmp4(i,1,1,1) = xm2(i,1,1,1)**2
-!      enddo
-!      call col2(tmp4,bm2,ntot2)
-!      call opgradtM1(tmp1,tmp2,tmp3,tmp4)
-!      call outpost(tmp1,tmp2,tmp3,tmp4,tmp5,'lap') 
-!      call opbinv  (dv1,dv2,dv3,tmp1 ,tmp2 ,tmp3 ,h2inv)
-!      call opcopy(tmp1,tmp2,tmp3,dv1,dv2,dv3)
-!      call outpost(tmp1,tmp2,tmp3,tmp4,tmp5,'lap') 
+      call opgradt (w1 ,w2 ,w3 ,dp)
+      call opbinv  (dv1,dv2,dv3,w1 ,w2 ,w3 ,h2inv)
+
+      call opcopy(tmp1,tmp2,tmp3,dv1,dv2,dv3)
+     
+      call outpost(tmp1,tmp2,tmp3,dp,tmp5,'lap')
+     
+!     difference between standard and new gmres      
+      call sub2(tmp4,dp,ntot2) 
+      call outpost(tmp1,tmp2,tmp3,tmp4,tmp5,'lap')
 
 
 14    format(A5,2x,16(E12.5,2x))
@@ -141,7 +136,7 @@
       return
       end
 c-----------------------------------------------------------------------
-      subroutine esolver_new (res,h1,h2,h2inv,intype)
+      subroutine esolver_new (res,h1,h2,h2inv,intype,ig)
 C
 C     Choose E-solver
 C
@@ -159,9 +154,11 @@ C
      $             , wk2(lx2*ly2*lz2*lelv)
      $             , wk3(lx2*ly2*lz2*lelv)
 
+      integer ig
+
       if (icalld.eq.0) teslv=0.0
 
-      call ortho_left(res) !Ensure that residual is orthogonal to null space
+!      call ortho_left(res) !Ensure that residual is orthogonal to null space
 
       icalld=icalld+1
       neslv=icalld
@@ -171,7 +168,13 @@ C
          if (param(42).eq.1) then
             call uzawa_new(res,h1,h2,h2inv,intype,icg)
          else
-            call uzawa_gmres_new(res,h1,h2,h2inv,intype,icg)
+           if (ig.eq.1) call uzawa_gmres_wt(res,h1,h2,h2inv,intype,icg)
+           if (ig.eq.2) call uzawa_gmres_new(res,h1,h2,h2inv,intype,icg)
+           if (ig.eq.3) call uzawa_gmres_std(res,h1,h2,h2inv,intype,icg)
+           if (ig.gt.3) then 
+             write(6,*) 'Unknown GMRES. exitting in esolver_new()'
+             call exitt
+           endif  
          endif
       else
          write(6,*) 'error: e-solver does not exist pnpn'
@@ -266,7 +269,8 @@ c        if (ratio.le.1.e-5) goto 9000
          CALL CDABDTP  (WP,PCG,H1,H2,H2INV,INTYPE)
 !         CALL CM1DABDTP  (WP,PCG,H1,H2,H2INV,INTYPE)
 !         CALL CDDTP    (WP,PCG)
-                                        
+
+         call ortho_left(wp)        ! prabal         
 
          PAP   = GLSC2 (PCG,WP,NTOT2)
 
@@ -296,7 +300,7 @@ c        if (ratio.le.1.e-5) goto 9000
             endif
          endif
 
-         call ortho(rcg)
+!         call ortho(rcg)
 
          RRP2 = RRP1
 !         CALL UZPREC  (RPCG,RCG,H1,H2,INTYPE,WP)
@@ -318,7 +322,8 @@ c     if (istep.gt.20) CALL EMERXIT
 !      call copy(xcg,rcg,ntot2)
 
       if (iter.gt.0) call copy (rcg,xcg,ntot2)
-      call ortho(rcg)
+!      call ortho(rcg)
+      call ortho_right(rcg)   ! prabal
 
       etime1 = dnekclock()-etime1
       IF (NIO.EQ.0) WRITE(6,9999) ISTEP, '  U-Press std. ',
@@ -400,7 +405,6 @@ c           call copy(r_gmres,res,ntot2)
          else
             !update residual
             call copy(r_gmres,res,ntot2)                      ! r = res
-!            call ortho_right(r_gmres)
 
             call cdabdtp(w_gmres,x_gmres,h1,h2,h2inv,intype)  ! w = A x
 !            call cM1dabdtp(w_gmres,x_gmres,h1,h2,h2inv,intype)  ! w = A x
@@ -551,6 +555,7 @@ c            call outmat(h,m,j,' h    ',j)
                        !          i  i
          enddo
 c        if(iconv.eq.1) call dbg_write(x,lx2,ly2,lz2,nelv,'esol',3)
+         call ortho_right(x_gmres)
       enddo
  9000 continue
 c
@@ -559,7 +564,6 @@ c     iter = iter - 1
 
       call copy(res,x_gmres,ntot2)
 
-      call ortho_right(res)
 !      call ortho (res)  ! Orthogonalize wrt null space, if present
 
       etime1 = dnekclock()-etime1
@@ -607,8 +611,8 @@ c
       ntot2  = lx2*ly2*lz2*nelv
       call rzero(z2,ntot2)
 
-c  Both local and global solver...
-       call dd_solver_new (z2,r2)
+c     Both local and global solver...
+      call dd_solver_new (z2,r2)
 
 
 c
@@ -621,7 +625,9 @@ c
       end
 c-----------------------------------------------------------------------
       subroutine dd_solver_new(u,v)
-c
+
+      implicit none
+
       include 'SIZE'
       include 'DOMAIN'
       include 'INPUT'
@@ -630,8 +636,12 @@ c
       include 'CTIMER'
 c
       real u(1),v(1)
+      real uc
       common /scrprc/ uc(lx1*ly1*lz1*lelt)
-c
+
+      integer ntot
+      real alpha
+
       if (icalld.eq.0) then
          tddsl=0.0
          tcrsl=0.0
@@ -651,7 +661,7 @@ c
       tddsl=tddsl+dnekclock()-etime1
 
       etime1=dnekclock()
-      call crs_solve_l2 (uc,v)
+      call crs_solve_l2(uc,v)
       tcrsl=tcrsl+dnekclock()-etime1
 
       alpha = 0.
