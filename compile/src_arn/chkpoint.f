@@ -215,7 +215,8 @@
 
       ! adjust max ISTEP for cyclic checkpoint writning
          call mntr_get_step_delay(lstdl)
-         chpt_nstep = NSTEPS - lstdl -1
+!        Why the fuck do we do this?
+         chpt_nstep = NSTEPS - lstdl -1  
       ! check if chpt_nstep is in the middle of writing cycle
          itmp = chpt_nstep + chpt_step -1
          if (mod(itmp,chpt_step).ge.(chpt_step-lstdl)) then

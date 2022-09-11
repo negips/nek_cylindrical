@@ -3,6 +3,281 @@
 !     Description: Testing Solver/Preconditioner for Laplace.
 !
 !======================================================================       
+      subroutine pseudolaplace_arnoldi()
+
+      implicit none
+  
+      include 'SIZE'
+      include 'INPUT'         ! uparam/param
+      include 'SOLN'          ! vtrans
+      include 'MASS'          ! bm2
+      include 'TSTEP'         ! ifield
+      include 'GEOM'          ! xm2
+
+      include 'ARN_ARPD'
+      include 'TSTEPPERD'
+ 
+      include 'TEST'
+
+      real h1,h2,h2inv
+      common /scrvh/ h1    (lx1,ly1,lz1,lelv)
+     $ ,             h2    (lx1,ly1,lz1,lelv)
+      common /scrhi/ h2inv (lx1,ly1,lz1,lelv)
+
+      integer i,ntot1,ntot2
+      integer intype
+      integer iflg,j
+
+      real rnd
+      real rad
+
+      real lambda
+
+      integer igmres
+
+      if (nio.eq.0) write(6,*) 'Pseudo Laplacian Arnoldi'
+
+      ifield = 1
+      istep  = 1
+
+      ntot1  = lx1*ly1*lz1*nelv
+      ntot2  = lx2*ly2*lz2*nelv
+
+      call rone    (vtrans,ntot1)
+
+      intype = 1        ! explicit
+
+      call rzero   (h1,ntot1)
+      call copy    (h2,vtrans(1,1,1,1,ifield),ntot1)
+      call invers2 (h2inv,h2,ntot1)
+
+      call reset_preconditioner() 
+
+      do i=1,ntot2
+        call random_number(rnd)
+        prp(i,1) = 1.0*rnd
+      enddo
+
+      call opzero(vxp,vyp,vzp)
+      call cdabdtp(tmp4,prp,h1,h2,h2inv,intype)
+
+      ifflow = .false.
+      ifheat = .false.
+      call tst_init()   ! also calls arn_init()
+
+      istep = 0
+      do while (istep.lt.nsteps)
+
+        istep = istep+1
+        call settime
+        call setdt
+      
+        if (nio.eq.0) write(6,*) 'Iteration:', istep,dt 
+
+!        call rk4_advance(prp,dt)
+
+!!       tmp = E*p
+!!        call eprec2_new(tmp4,prp)
+!        call ortho_right(prp) 
+!        call cdabdtp(tmp4,prp,h1,h2,h2inv,intype)
+!        call ortho_left(tmp4)
+!!       p = (I + \lambda*E)*p
+!        lambda = -1.0*dt
+!        call add2s2(prp,tmp4,lambda,ntot2)
+
+!       tmp = E*p        
+        call eprec2_new(tmp4,prp)
+        call ortho_new(tmp4)
+        call copy(tmp8,tmp4,ntot2)
+        call cdabdtp(tmp4,tmp8,h1,h2,h2inv,intype)
+!       p = (I + \lambda*E)*p
+        lambda = -1.0*dt
+        call add2s2(prp,tmp4,lambda,ntot2)
+
+
+!        if (mod(istep,iostep).eq.0) then
+!          call outpost(vx,vy,vz,prp,t,'lap') 
+!        endif
+
+        call tst_solve()    
+        if (lastep.eq.1) istep = nsteps
+
+      enddo
+
+14    format(A5,2x,16(E12.5,2x))
+
+
+      return
+      end
+c-----------------------------------------------------------------------
+
+      subroutine rk4_pseudolaplace(p,h1,h2,h2inv,intype,dt)
+
+      implicit none
+
+      include 'SIZE'
+      include 'MASS'          ! bm2
+      include 'PARALLEL'      ! nio
+
+      integer lt,lt2
+      parameter (lt  = lx1*ly1*lz1*lelt)
+      parameter (lt2 = lx2*ly2*lz2*lelt)
+
+      real p1,p2,p3
+      real Ep,Ep1,Ep2,Ep3
+      common /scrns/ p1  (lt)
+     $ ,             p2  (lt)
+     $ ,             p3  (lt)
+     $ ,             Ep  (lt)
+     $ ,             Ep1 (lt)
+     $ ,             Ep2 (lt)
+     $ ,             Ep3 (lt)
+
+      real h1    (lt)
+      real h2    (lt)
+      real h2inv (lt)
+
+      real p(lt2)
+      integer intype
+
+      real s0,s1,s2,s3
+      real s
+
+      integer n1,n2
+      real dt
+      real visc
+
+      if (nio.eq.0) write(6,*) 'RK4', dt
+
+      n1  = lx1*ly1*lz1*nelv
+      n2  = lx2*ly2*lz2*nelv
+
+      visc = 1.0
+
+      s0  = 1.0
+      s1  = visc*dt/2.0
+      s2  = visc*dt/2.0
+      s3  = visc*dt/1.0
+
+      call cdabdtp(Ep,p,h1,h2,h2inv,intype)     ! Ep  = E*p
+      call invcol2(Ep,bm2,n2)                   ! Ep  = (B^-1)*E*p
+      call add3s2(p1,p,Ep,s0,s1,n2)            ! p1  = p - (dt/2)*E*p
+
+      call cdabdtp(Ep1,p1,h1,h2,h2inv,intype)   ! Ep1 = E*p1
+      call invcol2(Ep1,bm2,n2)                  ! Ep1 = (B^-1)*E*p1
+      call add3s2(p2,p,Ep1,s0,s2,n2)           ! p2  = p - (dt/2)*E*p1
+
+      call cdabdtp(Ep2,p2,h1,h2,h2inv,intype)   ! Ep2 = E*p2
+      call invcol2(Ep2,bm2,n2)                  ! Ep2 = (B^-1)*E*p2
+      call add3s2(p3,p,Ep2,s0,s3,n2)           ! p3  = p - (dt)*E*p2
+
+      call cdabdtp(Ep3,p3,h1,h2,h2inv,intype)   ! Ep3 = E*p3
+      call invcol2(Ep3,bm2,n2)                  ! Ep3 = (B^-1)*E*p3
+   
+      call add2s2(Ep,Ep1,2.0,n2)    ! Ep = E*p + 2*E*p1
+      call add2s2(Ep,Ep2,2.0,n2)    ! Ep = E*p + 2*E*p1 + 2*E*p2
+      call add2s2(Ep,Ep3,1.0,n2)    ! Ep = E*p + 2*E*p1 + 2*E*p2 + E*p3
+
+      s =  visc*dt/6.0
+      call add2s2(p,Ep,s,n2)
+    
+      return
+      end subroutine rk4_pseudolaplace
+!---------------------------------------------------------------------- 
+      subroutine rk4_advance(v,dt)
+
+      implicit none
+
+      include 'SIZE'
+      include 'MASS'    ! bm2
+
+      integer lt,lt2
+      parameter (lt  = lx1*ly1*lz1*lelt)
+      parameter (lt2 = lx2*ly2*lz2*lelt)
+
+      real vi
+      real Ev
+      common /scrns/ vi (lt,4)
+     $ ,             Ev (lt,4)
+
+      real v(1)         ! input/output
+
+      real wk1,wk2,wk3
+      common /scruz/ wk1(lt2)
+     $             , wk2(lt2)
+     $             , wk3(lt2)
+
+
+      real s0
+      real si(4),s
+
+      integer n1,n2,n
+      real dt
+      real visc
+
+      integer i
+
+      real h1    (lt)
+      real h2    (lt)
+      real h2inv (lt)
+      integer intype
+
+      intype = 1
+
+      n1  = lx1*ly1*lz1*nelv
+      n2  = lx2*ly2*lz2*nelv
+
+      n   = n2
+
+      call rzero   (h1,n1)
+      call rone    (h2,n1)
+      call invers2 (h2inv,h2,n1)
+
+      visc = -1.0
+
+      s0    = 1.0
+
+      si(1) = 2.0 
+      si(2) = 2.0
+      si(3) = 1.0
+      si(4) = 6.0
+
+
+      call rzero(Ev,lt*4)
+      call rzero(vi,lt*4)
+
+      call copy(vi(1,1),v,n2)
+      call copy(wk1,v,n2)
+!      call col2(wk1,bm2,n2)         ! Mass Matrix
+      
+      do i=1,3
+
+!       M*vi
+        call cdabdtp(Ev(1,i),vi(1,i),h1,h2,h2inv,intype)    ! Ev_i = E*v_i
+
+!       vi+1 = v + (dt*fac)*M*vi
+        s = visc*dt/si(i)
+        call add3s2(vi(1,i+1),wk1,Ev(1,i),s0,s,n)  ! v_i+1 = Bv + (dt/2)*E*v_i
+!        call invcol2(vi(1,i+1),bm2,n)              ! v_i+1 = (B^-1)*v_i+1
+      enddo
+
+      call cdabdtp(Ev(1,4),vi(1,4),h1,h2,h2inv,intype)   ! Ev4 = E*p4
+!      call invcol2(Ev(1,4),bm2,n)                        ! Ev4 = (B^-1)*E*p4
+
+      do i=1,3
+        s = si(i)
+        call add2s2(Ev(1,1),Ev(1,i+1),s,n)
+      enddo
+      
+      s = visc*dt/si(4)
+      call add3s2(v,wk1,Ev(1,1),s0,s,n)
+!      call invcol2(v,bm2,n)               ! v_i+1 = (B^-1)*v_i+1
+   
+      return
+      end subroutine rk4_advance
+!---------------------------------------------------------------------- 
+
+
       subroutine laplace_test()
 
       implicit none
@@ -51,6 +326,7 @@
       if (nio.eq.0) write(6,*) 'Testing Laplace'
 
       ifield = 1
+      istep  = 2
 
       ntot1  = lx1*ly1*lz1*nelv
       ntot2  = lx2*ly2*lz2*nelv
@@ -60,7 +336,7 @@
       param(43)=uparam(9)       ! 0: Additive multilevel (param 42=0), 1: Original 2 level
       param(44)=uparam(10)      ! 0: E based Schwartz (FEM), 1: A based Schwartz
       
-      call rone(vtrans,ntot1) 
+!      call rone(vtrans,ntot1) 
       call reset_preconditioner()
 
       intype = 1        ! explicit
@@ -77,15 +353,19 @@
         else
           rad = ym2(i,1,1,1)
         endif
-        dp(i,1,1,1) = (1.0e-0)*rad + 0.0*rnd
+!        dp(i,1,1,1) = (1.0e-0)*rad + 0.0*rnd
+        dp(i,1,1,1) = (1.0e-0)*xm2(i,1,1,1) + 0.0*rnd
       enddo
 
-      call rone(tmp4,ntot2)
+!      call rone(tmp4,ntot2)
 !      call ortho(tmp4)
 
-      call outpost(tmp1,tmp2,tmp3,tmp4,tmp4,'lap')
-
       call col2(dp,bm2,ntot2) ! Mass matrix
+
+      call crs_solve_l2(tmp4,dp)
+
+      call outpost(tmp1,tmp2,tmp3,tmp4,tmp5,'lap')
+
 !      call ortho(dp)
       
       call rone(tmp8,ntot2)
@@ -101,7 +381,7 @@
       call outpost(tmp1,tmp2,tmp3,tmp8,tmp5,'lap') 
 
 !     Solve
-      igmres = 4        ! 1: weighted; 4: Left preconditioned
+      igmres = 1        ! 1: weighted; 4: Left preconditioned
       call esolver_new (dp,h1,h2,h2inv,intype,igmres)
 
       call opgradt (w1 ,w2 ,w3 ,dp)
@@ -169,7 +449,7 @@ C
           call uzawa_new(res,h1,h2,h2inv,intype,icg)
         else
           if (ig.eq.1) call uzawa_gmres_wt(res,h1,h2,h2inv,intype,icg)
-          if (ig.eq.2) call uzawa_gmres_new(res,h1,h2,h2inv,intype,icg)
+!          if (ig.eq.2) call uzawa_gmres_new(res,h1,h2,h2inv,intype,icg)
           if (ig.eq.3) call uzawa_gmres_std(res,h1,h2,h2inv,intype,icg)
           if (ig.eq.4) call uzawa_gmres_lpr(res,h1,h2,h2inv,intype,icg)
           if (ig.gt.4) then 
@@ -654,18 +934,18 @@ c
       ncrsl  = ncrsl  + 1
 
       ntot  = lx2*ly2*lz2*nelv
-      call copy(u,v,ntot)
+!      call copy(u,v,ntot)
 
-!      call rzero(u,ntot)
+      call rzero(u,ntot)
       etime1=dnekclock()
-!      call local_solves_fdm    (u,v)
+      call local_solves_fdm    (u,v)
       tddsl=tddsl+dnekclock()-etime1
 
       etime1=dnekclock()
       call crs_solve_l2(uc,v)
       tcrsl=tcrsl+dnekclock()-etime1
 
-      alpha = 0.
+      alpha = 10.00
 c     if (param(89).ne.0.) alpha = abs(param(89))
       call add2s2(u,uc,alpha,ntot)
 

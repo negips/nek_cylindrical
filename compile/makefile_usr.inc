@@ -32,9 +32,10 @@ $(OBJDIR)/tstepper.o                      :$(SRC_ARN)/tstepper.f;               
 $(OBJDIR)/conht_tools.o                   :$(SRC_ARN)/conht_tools.f;              $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@
 $(OBJDIR)/arn_arp.o                       :$(SRC_ARN)/arn_arp.f;                  $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@
 $(OBJDIR)/arn_arp_io.o                    :$(SRC_ARN)/arn_arp_io.f;               $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@
+$(OBJDIR)/arn_cmath.o                     :$(SRC_ARN)/arn_cmath.f;                $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@
+$(OBJDIR)/arn_usr.o                       :$(SRC_ARN)/arn_usr.f;                  $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@
 $(OBJDIR)/chkpoint.o                      :$(SRC_CHP)/chkpoint.f;                 $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@
 $(OBJDIR)/chkpt_mstp.o                    :$(SRC_CHP)/chkpt_mstp.f;               $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@
-$(OBJDIR)/arn_cmath.o                     :$(SRC_ARN)/arn_cmath.f;                $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@
 $(OBJDIR)/fs_ale.o                        :$(SRC_FS)/fs_ale.f;                    $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@
 $(OBJDIR)/fs_sort.o                       :$(SRC_FS)/fs_sort.f;                   $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@
 $(OBJDIR)/fs_global_surf.o                :$(SRC_FS)/fs_global_surf.f;            $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@

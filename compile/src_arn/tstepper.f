@@ -92,7 +92,10 @@
 
       ! place for submodule registration
       ! register arnoldi or power iterations
-      call stepper_register()
+!      call stepper_register()
+!     prabal
+!     I have renamed this to arn_register()
+!      call arn_register()    ! now called in frame_usr_register
 
       ! set initialisation flag
       tst_ifinit=.false.
@@ -104,10 +107,10 @@
       return
       end subroutine
 !=======================================================================
-!> @brief Initilise time stepper module
+!> @brief Get the stepper parameters
 !! @ingroup tstepper
-!! @note This routine should be called in frame_usr_init
-      subroutine tst_init()
+!! @note Read Stepper parameters from par file
+      subroutine tst_getparam()
       implicit none
 
       include 'SIZE'
@@ -168,6 +171,73 @@
       call rprm_rp_get(itmp,rtmp,ltmp,ctmp,tst_iftst_id,rpar_log)
       tst_iftst = ltmp
 
+      return
+      end subroutine tst_getparam
+!---------------------------------------------------------------------- 
+!> @brief Initilise time stepper module
+!! @ingroup tstepper
+!! @note This routine should be called in frame_usr_init
+      subroutine tst_init()
+      implicit none
+
+      include 'SIZE'
+      include 'FRAMELP'
+      include 'TSTEP'
+      include 'INPUT'
+      include 'MASS'
+      include 'SOLN'
+      include 'ADJOINT'
+      include 'TSTEPPERD'
+      include 'ARN_ARPD'
+
+      ! local variables
+      integer itmp, il
+      real rtmp, ltim
+      logical ltmp
+      character*20 ctmp
+
+      ! functions
+      real dnekclock, cht_glsc2_wt
+      logical cht_is_initialised
+!-----------------------------------------------------------------------
+      ! check if the module was already initialised
+      if (tst_ifinit) then
+         call mntr_warn(tst_id,
+     $        'module ['//trim(tst_name)//'] already initiaised.')
+         return
+      endif
+
+      ! timing
+      ltim = dnekclock()
+
+      ! intialise conjugated heat transfer
+      if (.not.cht_is_initialised()) call cht_init
+
+!      ! get runtime parameters
+!      call rprm_rp_get(itmp,rtmp,ltmp,ctmp,tst_mode_id,rpar_str)
+!      if (trim(ctmp).eq.'DIR') then
+!        tst_mode = 1
+!      else if (trim(ctmp).eq.'ADJ') then
+!        tst_mode = 2
+!      else if (trim(ctmp).eq.'OIC') then
+!        tst_mode = 3
+!      else
+!        call mntr_abort(tst_id,
+!     $        'wrong simulation mode; possible values: DIR, ADJ, OIC')
+!      endif
+!
+!      call rprm_rp_get(itmp,rtmp,ltmp,ctmp,tst_step_id,rpar_int)
+!      tst_step = itmp
+!
+!      call rprm_rp_get(itmp,rtmp,ltmp,ctmp,tst_cmax_id,rpar_int)
+!      tst_cmax = itmp
+!
+!      call rprm_rp_get(itmp,rtmp,ltmp,ctmp,tst_tol_id,rpar_real)
+!      tst_tol = rtmp
+!
+!      call rprm_rp_get(itmp,rtmp,ltmp,ctmp,tst_iftst_id,rpar_log)
+!      tst_iftst = ltmp
+
 
 !     Check simulation parameters
 !     Only if Time stepper is enabled.          ! prabal
@@ -195,22 +265,26 @@
       tst_istep = 0
       tst_vstep = 0
 
-      ! vector length
-      tst_nv  = NX1*NY1*NZ1*NELV ! velocity single component
-      if (IFHEAT) then        !temperature
-         tst_nt  = NX1*NY1*NZ1*NELT
-      else
-         tst_nt  = 0
-      endif
+!     vector length
+      tst_nv = 0
+      if (ifflow) tst_nv  = NX1*NY1*NZ1*NELV ! velocity single component
+
+      tst_nt = 0
+      if (IFHEAT) tst_nt  = NX1*NY1*NZ1*NELT
+
       tst_np = 0
-      if (arna_ifpr) tst_np = NX2*NY2*NZ2*NELV ! presure
+!      if (arna_ifpr) tst_np = NX2*NY2*NZ2*NELV ! presure
+      tst_np = NX2*NY2*NZ2*NELV ! presure
 
       ! place for submodule initialisation
       ! arnoldi or power iterations
-      call stepper_init
+!      call stepper_init
+!     prabal
+!     I have renamed this to arn_init()
+      call arn_init()
 
       ! zero presure
-      call rzero(PRP,tst_np)
+!      call rzero(PRP,tst_np)
 
       ! set initial time
       TIME=0.0

@@ -20,7 +20,8 @@
 !> @brief Register Arnoldi ARPACK module
 !! @ingroup arn_arp
 !! @note This interface is called by @ref tst_register
-      subroutine stepper_register()
+!      subroutine stepper_register()
+      subroutine arn_register()
       implicit none
 
       include 'SIZE'
@@ -98,8 +99,77 @@
 !=======================================================================
 !> @brief Initilise Arnoldi ARPACK module
 !! @ingroup arn_arp
+!  @note Get Arpack parameters
+      subroutine arn_getparam()
+      implicit none
+
+      include 'SIZE'            ! NIO, NDIM, NPERT
+      include 'TSTEP'           ! NSTEPS
+      include 'INPUT'           ! IF3D, IFHEAT
+      include 'SOLN'            ! V?MASK, TMASK, V[XYZ]P, TP
+      include 'FRAMELP'
+      include 'CHKPOINTD'
+      include 'TSTEPPERD'
+      include 'ARN_ARPD'
+
+      include 'F3D'
+
+      ! ARPACK include file
+      INCLUDE 'debug.h'
+
+      ! local variables
+      integer itmp
+      real rtmp, ltim
+      logical ltmp
+      character*20 ctmp
+
+      ! functions
+      real dnekclock
+
+      ! timing
+      ltim = dnekclock()
+
+      ! get runtime parameters
+!     if pressure
+      call rprm_rp_get(itmp,rtmp,ltmp,ctmp,arna_ifpr_id,rpar_log)
+      arna_ifpr = ltmp
+
+!     if complex
+      call rprm_rp_get(itmp,rtmp,ltmp,ctmp,arna_ifcomplex_id,rpar_log)
+      arna_ifcomplex = ltmp
+
+!     NKRYL
+      call rprm_rp_get(itmp,rtmp,ltmp,ctmp,arna_nkrl_id,rpar_int)
+      arna_nkrl = itmp
+
+!     NEV      
+      call rprm_rp_get(itmp,rtmp,ltmp,ctmp,arna_negv_id,rpar_int)
+      arna_negv = itmp
+
+!     get restart options
+!     if restart      
+      call rprm_rp_get(itmp,rtmp,ltmp,ctmp,chpt_ifrst_id,rpar_log)
+      arna_ifrst = ltmp
+
+!     restart file number      
+      call rprm_rp_get(itmp,rtmp,ltmp,ctmp,chpt_fnum_id,rpar_int)
+      arna_fnum = itmp
+
+      ltim = dnekclock() - ltim
+      call mntr_tmr_add(arna_tmr_ini_id,1,ltim)
+
+      return
+      end subroutine arn_getparam
+!---------------------------------------------------------------------- 
+
+!> @brief Initilise Arnoldi ARPACK module
+!! @ingroup arn_arp
 !! @note This interface is called by @ref tst_init
-      subroutine stepper_init()
+!      subroutine stepper_init()
+
+!  @note I have renamed this to arn_init()
+!     Otherwise this is confusing as fuck.
+      subroutine arn_init()
       implicit none
 
       include 'SIZE'            ! NIO, NDIM, NPERT
@@ -137,33 +207,31 @@
       ! timing
       ltim = dnekclock()
 
-      ! get runtime parameters
-!     if pressure
-      call rprm_rp_get(itmp,rtmp,ltmp,ctmp,arna_ifpr_id,rpar_log)
-      arna_ifpr = ltmp
-
-!     if complex
-      call rprm_rp_get(itmp,rtmp,ltmp,ctmp,arna_ifcomplex_id,rpar_log)
-      arna_ifcomplex = ltmp
-
-!     NKRYL
-      call rprm_rp_get(itmp,rtmp,ltmp,ctmp,arna_nkrl_id,rpar_int)
-      arna_nkrl = itmp
-
-!     NEV      
-      call rprm_rp_get(itmp,rtmp,ltmp,ctmp,arna_negv_id,rpar_int)
-      arna_negv = itmp
-
-!     get restart options
-!     if restart      
-      call rprm_rp_get(itmp,rtmp,ltmp,ctmp,chpt_ifrst_id,rpar_log)
-      arna_ifrst = ltmp
-
-!     restart file number      
-      call rprm_rp_get(itmp,rtmp,ltmp,ctmp,chpt_fnum_id,rpar_int)
-      arna_fnum = itmp
-
-      if (.not.tst_iftst) return
+!      ! get runtime parameters
+!!     if pressure
+!      call rprm_rp_get(itmp,rtmp,ltmp,ctmp,arna_ifpr_id,rpar_log)
+!      arna_ifpr = ltmp
+!
+!!     if complex
+!      call rprm_rp_get(itmp,rtmp,ltmp,ctmp,arna_ifcomplex_id,rpar_log)
+!      arna_ifcomplex = ltmp
+!
+!!     NKRYL
+!      call rprm_rp_get(itmp,rtmp,ltmp,ctmp,arna_nkrl_id,rpar_int)
+!      arna_nkrl = itmp
+!
+!!     NEV      
+!      call rprm_rp_get(itmp,rtmp,ltmp,ctmp,arna_negv_id,rpar_int)
+!      arna_negv = itmp
+!
+!!     get restart options
+!!     if restart      
+!      call rprm_rp_get(itmp,rtmp,ltmp,ctmp,chpt_ifrst_id,rpar_log)
+!      arna_ifrst = ltmp
+!
+!!     restart file number      
+!      call rprm_rp_get(itmp,rtmp,ltmp,ctmp,chpt_fnum_id,rpar_int)
+!      arna_fnum = itmp
 
       ! check simulation parameters
 #ifdef ARPACK_DIRECT
@@ -243,7 +311,7 @@
       endif
       if (arna_ifpr) arna_ns = arna_ns + tst_np    ! pressure
       ! temperature
-      if(IFHEAT) then
+      if (IFHEAT) then
          arna_ns = arna_ns + tst_nt ! temperature
       endif
       if (arna_ns.gt.arna_ls) then
@@ -331,100 +399,102 @@
          ! read checkpoint
          call arn_rst_read
       else
-         ! if no restart fill RESIDA with initial conditions
-         ! V?MASK removes points at the wall and inflow
-#ifdef ARPACK_DIRECT
-         ! A*x = lambda*x
-         ! velocity
-         if (arna_ifcomplex) then
-           i = 1
-           call copytocomplex(resida(i),vxp(1,1),vxp(1,2),tst_nv)
-           call col2_cr(resida(i),v1mask,tst_nv) 
-           i = i + tst_nv
 
-           call copytocomplex(resida(i),vyp(1,1),vyp(1,2),tst_nv)
-           call col2_cr(resida(i),v2mask,tst_nv) 
-           i = i + tst_nv
-           
-           if (iff3d) then
-             call copytocomplex(resida(i),vzp(1,1),vzp(1,2),tst_nv)
-             call col2_cr(resida(i),v3mask,tst_nv)
-             i = i + tst_nv
-           endif  
-            
-           if (arna_ifpr) then
-             call copytocomplex(resida(i),prp(1,1),prp(1,2),tst_np)
-             i = i + tst_np
-           endif  
-         else           ! real arithmetic
-           i = 1
-           call col3(resida(i),VXP,V1MASK,tst_nv)
-           i = i + tst_nv
-           call col3(resida(i),VYP,V2MASK,tst_nv)
-           i = i + tst_nv
-           if (IF3D.or.iff3d) then
-             call col3(resida(i),VZP,V3MASK,tst_nv)
-             i = i + tst_nv
-           endif
-           if (arna_ifpr) then 
-             call copy(resida(i),prp,tst_np)
-             i = i + tst_np
-           endif  
-         endif          ! arna_ifcomplex             
-
-         ! no temperature here
-#else
-         ! A*x = lambda*M*x
-         if (arna_ifcomplex) then   
-           i = 1
-           call copytocomplex(resida(i),vxp(1,1),vxp(1,2),tst_nv)
-           call col2_cr(resida(i),v1mask,tst_nv) 
-           i = i + tst_nv
-
-           call copytocomplex(resida(i),vyp(1,1),vyp(1,2),tst_nv)
-           call col2_cr(resida(i),v2mask,tst_nv) 
-           i = i + tst_nv
-           
-           if (iff3d) then
-             call copytocomplex(resida(i),vzp(1,1),vzp(1,2),tst_nv)
-             call col2_cr(resida(i),v3mask,tst_nv)
-             i = i + tst_nv
-           endif  
-            
-           if (arna_ifpr) then
-             call copytocomplex(resida(i),prp(1,1),prp(1,2),tst_np)
-             i = i + tst_np
-           endif
-
-           if (ifheat) then
-             call copytocomplex(resida(i),tp(1,1,1),tp(1,1,2),tst_nt)
-             call col2_cr(resida(i),tmask,tst_nt)
-             i = i + tst_nt
-           endif 
-
-         else           ! real arithmetic
-           ! velocity
-           i = 1
-           call col3(resida(i),VXP,v1mask,tst_nv)
-           i = i + tst_nv
-           call col3(resida(i),VYP,v2mask,tst_nv)
-           i = i + tst_nv
-           if (IF3D.or.iff3d) then
-             call col3(resida(i),VZP,v3mask,tst_nv)
-             i = i + tst_nv
-           endif
-           if (arna_ifpr) then
-             call copy(resida(i),PRP,tst_np)
-             i = i + tst_np
-           endif  
-           ! temperature
-           if (IFHEAT) then
-             call col3(resida(i),TP,tmask,tst_nt)
-             i = i + tst_nt
-           endif  
-         endif          ! arna_ifcomplex
-
-#endif
+         call arn_nektoresida()   
+!         ! if no restart fill RESIDA with initial conditions
+!         ! V?MASK removes points at the wall and inflow
+!#ifdef ARPACK_DIRECT
+!         ! A*x = lambda*x
+!         ! velocity
+!         if (arna_ifcomplex) then
+!           i = 1
+!           call copytocomplex(resida(i),vxp(1,1),vxp(1,2),tst_nv)
+!           call col2_cr(resida(i),v1mask,tst_nv) 
+!           i = i + tst_nv
+!
+!           call copytocomplex(resida(i),vyp(1,1),vyp(1,2),tst_nv)
+!           call col2_cr(resida(i),v2mask,tst_nv) 
+!           i = i + tst_nv
+!           
+!           if (iff3d) then
+!             call copytocomplex(resida(i),vzp(1,1),vzp(1,2),tst_nv)
+!             call col2_cr(resida(i),v3mask,tst_nv)
+!             i = i + tst_nv
+!           endif  
+!            
+!           if (arna_ifpr) then
+!             call copytocomplex(resida(i),prp(1,1),prp(1,2),tst_np)
+!             i = i + tst_np
+!           endif  
+!         else           ! real arithmetic
+!           i = 1
+!           call col3(resida(i),VXP,V1MASK,tst_nv)
+!           i = i + tst_nv
+!           call col3(resida(i),VYP,V2MASK,tst_nv)
+!           i = i + tst_nv
+!           if (IF3D.or.iff3d) then
+!             call col3(resida(i),VZP,V3MASK,tst_nv)
+!             i = i + tst_nv
+!           endif
+!           if (arna_ifpr) then 
+!             call copy(resida(i),prp,tst_np)
+!             i = i + tst_np
+!           endif  
+!         endif          ! arna_ifcomplex             
+!
+!         ! no temperature here
+!#else
+!         ! A*x = lambda*M*x
+!         if (arna_ifcomplex) then   
+!           i = 1
+!           call copytocomplex(resida(i),vxp(1,1),vxp(1,2),tst_nv)
+!           call col2_cr(resida(i),v1mask,tst_nv) 
+!           i = i + tst_nv
+!
+!           call copytocomplex(resida(i),vyp(1,1),vyp(1,2),tst_nv)
+!           call col2_cr(resida(i),v2mask,tst_nv) 
+!           i = i + tst_nv
+!           
+!           if (iff3d) then
+!             call copytocomplex(resida(i),vzp(1,1),vzp(1,2),tst_nv)
+!             call col2_cr(resida(i),v3mask,tst_nv)
+!             i = i + tst_nv
+!           endif  
+!            
+!           if (arna_ifpr) then
+!             call copytocomplex(resida(i),prp(1,1),prp(1,2),tst_np)
+!             i = i + tst_np
+!           endif
+!
+!           if (ifheat) then
+!             call copytocomplex(resida(i),tp(1,1,1),tp(1,1,2),tst_nt)
+!             call col2_cr(resida(i),tmask,tst_nt)
+!             i = i + tst_nt
+!           endif 
+!
+!         else           ! real arithmetic
+!           ! velocity
+!           i = 1
+!           call col3(resida(i),VXP,v1mask,tst_nv)
+!           i = i + tst_nv
+!           call col3(resida(i),VYP,v2mask,tst_nv)
+!           i = i + tst_nv
+!           if (IF3D.or.iff3d) then
+!             call col3(resida(i),VZP,v3mask,tst_nv)
+!             i = i + tst_nv
+!           endif
+!           if (arna_ifpr) then
+!             call copy(resida(i),PRP,tst_np)
+!             i = i + tst_np
+!           endif  
+!           ! temperature
+!           if (IFHEAT) then
+!             call col3(resida(i),TP,tmask,tst_nt)
+!             i = i + tst_nt
+!           endif  
+!         endif          ! arna_ifcomplex
+!
+!#endif
 
          ! initialise rest of variables
          ! first call
@@ -510,89 +580,91 @@
 
       ! fill work array with velocity
       ! V?MASK removes points at the boundary
-#ifdef ARPACK_DIRECT
-      ! no temperature here
-      ! A*x = lambda*x
-      ! velocity
-      if (arna_ifcomplex) then
-        i = ipntarp(2)
-        call copytocomplex(workda(i),vxp(1,1),vxp(1,2),tst_nv)
-        call col2_cr(workda(i),v1mask,tst_nv)
-        i = i + tst_nv
-        call copytocomplex(workda(i),vyp(1,1),vyp(1,2),tst_nv)
-        call col2_cr(workda(i),v2mask,tst_nv)
-        i = i + tst_nv
-        if (iff3d) then
-          call copytocomplex(workda(i),vzp(1,1),vzp(1,2),tst_nv)
-          call col2_cr(workda(i),v3mask,tst_nv)
-          i = i + tst_nv
-        endif
-        if (arna_ifpr) then
-          call copytocomplex(workda(i),prp(1,1),prp(1,2),tst_np)
-          i = i + tst_np
-        endif  
-      else 
-        i = ipntarp(2) 
-        call col3(workda(i),VXP,V1MASK,tst_nv)
-        i = i + tst_nv
-        call col3(workda(i),VYP,V2MASK,tst_nv)
-        i = i + tst_nv
-        if (IF3D.or.iff3d) then 
-          call col3(workda(i),VZP,V3MASK,tst_nv)
-          i = i + tst_nv
-        endif  
-      endif  
-#else
-      ! velocity
-      ! A*x = lambda*M*x
-      if (arna_ifcomplex) then
-        i = ipntarp(2)
-        call copytocomplex(workda(i),vxp(1,1),vxp(1,2),tst_nv)
-        call col2_cr(workda(i),v1mask,tst_nv)
-        i = i + tst_nv
-        call copytocomplex(workda(i),vyp(1,1),vyp(1,2),tst_nv)
-        call col2_cr(workda(i),v2mask,tst_nv)
-        i = i + tst_nv
-        if (iff3d) then
-          call copytocomplex(workda(i),vzp(1,1),vzp(1,2),tst_nv)
-          call col2_cr(workda(i),v3mask,tst_nv)
-          i = i + tst_nv
-        endif
-        if (arna_ifpr) then
-          call copytocomplex(workda(i),prp(1,1),prp(1,2),tst_np)
-          i = i + tst_np
-        endif
-        if (ifheat) then
-          call copytocomplex(workda(i),tp(1,1,1),tp(1,1,2),tst_nt)
-          call col2_cr(workda(i),tmask,tst_nt)
-          i = i + tst_nt
-        endif
-      else
-        i = ipntarp(2) 
-        call col3(workda(i),VXP,V1MASK,tst_nv)
-        i = i + tst_nv
-        call col3(workda(i),VYP,V2MASK,tst_nv)
-        i = i + tst_nv
-        if (IF3D.or.iff3d) then
-          call col3(workda(i),VZP,V3MASK,tst_nv)
-          i = i + tst_nv
-        endif
-!       pressure
-        if (arna_ifpr) then
-          call copy(workda(i),prp,tst_np)        
-          i = i + tst_np
-        endif  
-!       temperature
-        if (IFHEAT) then
-          call col3(workda(i),TP,TMASK,tst_nt)
-          i = i + tst_nt
-        endif  
-        ! this may be not necessary, but ARPACK manual is not clear about it
-        !call col3(workda(ipntarp(1)),VXP,BM1,tst_nv)
-        !call col3(workda(ipntarp(1)+tst_nv),VYP,BM1,tst_nv)
-        !if (IF3D) call col3(workda(ipntarp(1)+2*tst_nv),VZP,BM1,tst_nv)
-      endif       ! arna_ifcomplex 
-#endif
+      call arn_nektoworkda()
+
+!#ifdef ARPACK_DIRECT
+!      ! no temperature here
+!      ! A*x = lambda*x
+!      ! velocity
+!      if (arna_ifcomplex) then
+!        i = ipntarp(2)
+!        call copytocomplex(workda(i),vxp(1,1),vxp(1,2),tst_nv)
+!        call col2_cr(workda(i),v1mask,tst_nv)
+!        i = i + tst_nv
+!        call copytocomplex(workda(i),vyp(1,1),vyp(1,2),tst_nv)
+!        call col2_cr(workda(i),v2mask,tst_nv)
+!        i = i + tst_nv
+!        if (iff3d) then
+!          call copytocomplex(workda(i),vzp(1,1),vzp(1,2),tst_nv)
+!          call col2_cr(workda(i),v3mask,tst_nv)
+!          i = i + tst_nv
+!        endif
+!        if (arna_ifpr) then
+!          call copytocomplex(workda(i),prp(1,1),prp(1,2),tst_np)
+!          i = i + tst_np
+!        endif  
+!      else 
+!        i = ipntarp(2) 
+!        call col3(workda(i),VXP,V1MASK,tst_nv)
+!        i = i + tst_nv
+!        call col3(workda(i),VYP,V2MASK,tst_nv)
+!        i = i + tst_nv
+!        if (IF3D.or.iff3d) then 
+!          call col3(workda(i),VZP,V3MASK,tst_nv)
+!          i = i + tst_nv
+!        endif  
+!      endif  
+!#else
+!      ! velocity
+!      ! A*x = lambda*M*x
+!      if (arna_ifcomplex) then
+!        i = ipntarp(2)
+!        call copytocomplex(workda(i),vxp(1,1),vxp(1,2),tst_nv)
+!        call col2_cr(workda(i),v1mask,tst_nv)
+!        i = i + tst_nv
+!        call copytocomplex(workda(i),vyp(1,1),vyp(1,2),tst_nv)
+!        call col2_cr(workda(i),v2mask,tst_nv)
+!        i = i + tst_nv
+!        if (iff3d) then
+!          call copytocomplex(workda(i),vzp(1,1),vzp(1,2),tst_nv)
+!          call col2_cr(workda(i),v3mask,tst_nv)
+!          i = i + tst_nv
+!        endif
+!        if (arna_ifpr) then
+!          call copytocomplex(workda(i),prp(1,1),prp(1,2),tst_np)
+!          i = i + tst_np
+!        endif
+!        if (ifheat) then
+!          call copytocomplex(workda(i),tp(1,1,1),tp(1,1,2),tst_nt)
+!          call col2_cr(workda(i),tmask,tst_nt)
+!          i = i + tst_nt
+!        endif
+!      else
+!        i = ipntarp(2) 
+!        call col3(workda(i),VXP,V1MASK,tst_nv)
+!        i = i + tst_nv
+!        call col3(workda(i),VYP,V2MASK,tst_nv)
+!        i = i + tst_nv
+!        if (IF3D.or.iff3d) then
+!          call col3(workda(i),VZP,V3MASK,tst_nv)
+!          i = i + tst_nv
+!        endif
+!!       pressure
+!        if (arna_ifpr) then
+!          call copy(workda(i),prp,tst_np)        
+!          i = i + tst_np
+!        endif  
+!!       temperature
+!        if (IFHEAT) then
+!          call col3(workda(i),TP,TMASK,tst_nt)
+!          i = i + tst_nt
+!        endif  
+!        ! this may be not necessary, but ARPACK manual is not clear about it
+!        !call col3(workda(ipntarp(1)),VXP,BM1,tst_nv)
+!        !call col3(workda(ipntarp(1)+tst_nv),VYP,BM1,tst_nv)
+!        !if (IF3D) call col3(workda(ipntarp(1)+2*tst_nv),VZP,BM1,tst_nv)
+!      endif       ! arna_ifcomplex 
+!#endif
 
 !     ARPACK interface
       call arn_naupd
@@ -752,16 +824,18 @@
                ! get growth rate; get eigenvalues of Operator
                if (arna_ifcomplex) then
                  ritzr = real(driarp(il,1))
-                 ritzi = aimag(driarp(il,1))
-                 eigr  = log(abs(driarp(il,1)))*dumm
-                 eigi  = atan2(ritzi,ritzr)*dumm
+                 ritzi = aimag(cmplx(driarp(il,1)))
+                 call arn_eig_transform(eigr,eigi,ritzr,ritzi,dumm)
+!                 eigr  = log(abs(driarp(il,1)))*dumm
+!                 eigi  = atan2(ritzi,ritzr)*dumm
                  driarp(il,2) = cmplx(eigr,eigi)
                else
                  ritzr = driarp(il,1)
                  ritzi = driarp(il,2)
-                 eigr = log(sqrt(ritzr**2 +
-     $              ritzi**2))*dumm
-                 eigi = atan2(ritzi,ritzr)*dumm
+                 call arn_eig_transform(eigr,eigi,ritzr,ritzi,dumm)
+!                 eigr = log(sqrt(ritzr**2 +
+!     $              ritzi**2))*dumm
+!                 eigi = atan2(ritzi,ritzr)*dumm
                  driarp(il,3) = eigr
                  driarp(il,4) = eigi
                endif  
@@ -931,68 +1005,69 @@
 
 !        multiply by weights and masks
          do
-           if (arna_ifcomplex) then
-             ix = ipntarp(1)
-             iy = ipntarp(2) 
-!            velocities 
-             call ccopy(workda(iy),workda(ix),arna_ns)
-             i = iy
-             call col2_cr(workda(i),bm1,tst_nv)
-             call col2_cr(workda(i),v1mask,tst_nv)
-             i = i+tst_nv
-             call col2_cr(workda(i),bm1,tst_nv)
-             call col2_cr(workda(i),v2mask,tst_nv)
-             i = i+tst_nv
-             if (iff3d) then
-               call col2_cr(workda(i),bm1,tst_nv)
-               call col2_cr(workda(i),v3mask,tst_nv)
-               i = i+tst_nv
-             endif
-!            pressure                  
-             if (arna_ifpr) then
-               call czero(workda(i),tst_np)
-               i = i+tst_np
-             endif
-!            temperature
-             if (ifheat) then
-               call col2_cr(workda(i),bm1,tst_nt)
-               call col2_cr(workda(i),tmask,tst_nt)
-!              rescale coefficient of temperature
-               call cmult_cr(workda(i),1.0,tst_nt)
-               i = i+tst_nt
-             endif
-           else
-             ix = ipntarp(1)
-             iy = ipntarp(2) 
-             i  = iy
-!            velocity
-             call col3(workda(i),BM1,V1MASK,tst_nv)
-             i = i + tst_nv
-             call col3(workda(i),BM1,V2MASK,tst_nv)
-             i = i + tst_nv
-             if (IF3D.or.iff3d) then
-               call col3(workda(i),BM1,V3MASK,tst_nv)
-               i = i + tst_nv
-             endif
-!            Pressure             
-             if (arna_ifpr) then
-               call rzero(workda(i),tst_np)
-               i = i + tst_np
-             endif     
-
-!            Temperature
-             if(IFHEAT) then
-                call col3(workda(i),BM1,TMASK,tst_nt)
-                i = i + tst_nt
-!               Temperature coefficients
-                call cht_weight_fun (workda(ipntarp(2)),
-     $               workda(ipntarp(2)+tst_nv),
-     $               workda(ipntarp(2)+2*tst_nv),
-     $               workda(ipntarp(2)+NDIM*tst_nv),1.0)
-             endif
-
-             call col2(workda(iy),workda(ix),arna_ns)
-           endif        ! arna_ifcomplex
+           call arn_innerprod()
+!           if (arna_ifcomplex) then
+!             ix = ipntarp(1)
+!             iy = ipntarp(2) 
+!!            velocities 
+!             call ccopy(workda(iy),workda(ix),arna_ns)
+!             i = iy
+!             call col2_cr(workda(i),bm1,tst_nv)
+!             call col2_cr(workda(i),v1mask,tst_nv)
+!             i = i+tst_nv
+!             call col2_cr(workda(i),bm1,tst_nv)
+!             call col2_cr(workda(i),v2mask,tst_nv)
+!             i = i+tst_nv
+!             if (iff3d) then
+!               call col2_cr(workda(i),bm1,tst_nv)
+!               call col2_cr(workda(i),v3mask,tst_nv)
+!               i = i+tst_nv
+!             endif
+!!            pressure                  
+!             if (arna_ifpr) then
+!               call czero(workda(i),tst_np)
+!               i = i+tst_np
+!             endif
+!!            temperature
+!             if (ifheat) then
+!               call col2_cr(workda(i),bm1,tst_nt)
+!               call col2_cr(workda(i),tmask,tst_nt)
+!!              rescale coefficient of temperature
+!               call cmult_cr(workda(i),1.0,tst_nt)
+!               i = i+tst_nt
+!             endif
+!           else
+!             ix = ipntarp(1)
+!             iy = ipntarp(2) 
+!             i  = iy
+!!            velocity
+!             call col3(workda(i),BM1,V1MASK,tst_nv)
+!             i = i + tst_nv
+!             call col3(workda(i),BM1,V2MASK,tst_nv)
+!             i = i + tst_nv
+!             if (IF3D.or.iff3d) then
+!               call col3(workda(i),BM1,V3MASK,tst_nv)
+!               i = i + tst_nv
+!             endif
+!!            Pressure             
+!             if (arna_ifpr) then
+!               call rzero(workda(i),tst_np)
+!               i = i + tst_np
+!             endif     
+!
+!!            Temperature
+!             if(IFHEAT) then
+!                call col3(workda(i),BM1,TMASK,tst_nt)
+!                i = i + tst_nt
+!!               Temperature coefficients
+!                call cht_weight_fun (workda(ipntarp(2)),
+!     $               workda(ipntarp(2)+tst_nv),
+!     $               workda(ipntarp(2)+2*tst_nv),
+!     $               workda(ipntarp(2)+NDIM*tst_nv),1.0)
+!             endif
+!
+!             call col2(workda(iy),workda(ix),arna_ns)
+!           endif        ! arna_ifcomplex
 
 #ifdef MPI
            if (arna_ifcomplex) then            
@@ -1032,56 +1107,76 @@
       if (idoarp.eq.-1.or.idoarp.eq.1) then
          call mntr_log(arna_id,lp_prd,'Restarting stepper')
 
-!        move renormed data back to nekton
-         if (arna_ifcomplex) then
-           i = ipntarp(1)
-           call copytoreal(vxp(1,1),vxp(1,2),workda(i),tst_nv)
-           i = i+tst_nv
-           call copytoreal(vyp(1,1),vyp(1,2),workda(i),tst_nv)
-           i = i+tst_nv
-           if (iff3d) then 
-             call copytoreal(vzp(1,1),vzp(1,2),workda(i),tst_nv)
-             i = i+tst_nv
-           endif
-           if (arna_ifpr) then 
-             call copytoreal(prp(1,1),prp(1,2),workda(i),tst_np)
-             i = i+tst_np
-           endif
-           if (ifheat) then
-             call copytoreal(tp(1,1,1),tp(1,1,2),workda(i),tst_nt)
-             i = i+tst_nt
-           endif  
-         else  
-           ! velocity
-           i = ipntarp(1)
-           call copy(VXP,workda(i),tst_nv)
-           i = i + tst_nv
-           call copy(VYP,workda(i),tst_nv)
-           i = i + tst_nv
-           if (IF3D.or.iff3d) then 
-             call copy(VZP,workda(i),tst_nv)
-             i = i + tst_nv
-           endif
-!          Pressure 
-           if (arna_ifpr) then
-             call copy(prp,workda(i),tst_np)
-             i = i + tst_np
-           endif  
-!          Temperature
-           if (IFHEAT) then
-             call copy(TP,workda(i),tst_nt)
-             i = i + tst_nt
-           endif  
+         call arn_workdatonek()
 
-!          make sure the velocity and temperature fields are continuous at
-!          element faces and edges
-         endif          ! arna_ifcomplex
-         call tst_dssum
+!!        move renormed data back to nekton
+!         if (arna_ifcomplex) then
+!           i = ipntarp(1)
+!           call copytoreal(vxp(1,1),vxp(1,2),workda(i),tst_nv)
+!           i = i+tst_nv
+!           call copytoreal(vyp(1,1),vyp(1,2),workda(i),tst_nv)
+!           i = i+tst_nv
+!           if (iff3d) then 
+!             call copytoreal(vzp(1,1),vzp(1,2),workda(i),tst_nv)
+!             i = i+tst_nv
+!           endif
+!           if (arna_ifpr) then 
+!             call copytoreal(prp(1,1),prp(1,2),workda(i),tst_np)
+!             i = i+tst_np
+!           endif
+!           if (ifheat) then
+!             call copytoreal(tp(1,1,1),tp(1,1,2),workda(i),tst_nt)
+!             i = i+tst_nt
+!           endif  
+!         else  
+!           ! velocity
+!           i = ipntarp(1)
+!           call copy(VXP,workda(i),tst_nv)
+!           i = i + tst_nv
+!           call copy(VYP,workda(i),tst_nv)
+!           i = i + tst_nv
+!           if (IF3D.or.iff3d) then 
+!             call copy(VZP,workda(i),tst_nv)
+!             i = i + tst_nv
+!           endif
+!!          Pressure 
+!           if (arna_ifpr) then
+!             call copy(prp,workda(i),tst_np)
+!             i = i + tst_np
+!           endif  
+!!          Temperature
+!           if (IFHEAT) then
+!             call copy(TP,workda(i),tst_nt)
+!             i = i + tst_nt
+!           endif  
+!
+!!          make sure the velocity and temperature fields are continuous at
+!!          element faces and edges
+!         endif          ! arna_ifcomplex
+!         call tst_dssum
       endif                     ! idoarp.eq.-1.or.idoarp.eq.1
 
       return
       end
 !=======================================================================
+
+      subroutine arn_eig_transform(er,ei,ritzr,ritzi,dumm)
+
+      implicit none
+
+      real er,ei,ritzr,ritzi
+      real dumm         ! == 1/(DT*steps)
+
+!     For the exponential Case
+!      er = log(sqrt(ritzr**2 +ritzi**2))*dumm
+!      ei = atan2(ritzi,ritzr)*dumm
+
+!     prabal      ! for (I - \lambda*E)p
+      er = (ritzr - 1.0)*dumm
+      ei = ritzi*dumm 
+
+      end subroutine
+!---------------------------------------------------------------------- 
 
 
 
