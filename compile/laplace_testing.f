@@ -337,7 +337,7 @@ c-----------------------------------------------------------------------
       param(44)=uparam(10)      ! 0: E based Schwartz (FEM), 1: A based Schwartz
       
 !      call rone(vtrans,ntot1) 
-      call reset_preconditioner()
+!      call reset_preconditioner()
 
       intype = 1        ! explicit
 
@@ -353,8 +353,8 @@ c-----------------------------------------------------------------------
         else
           rad = ym2(i,1,1,1)
         endif
-!        dp(i,1,1,1) = (1.0e-0)*rad + 0.0*rnd
-        dp(i,1,1,1) = (1.0e-0)*xm2(i,1,1,1) + 0.0*rnd
+        dp(i,1,1,1) = (1.0e-0)*rad + 0.0*rnd
+!        dp(i,1,1,1) = (1.0e-0)*xm2(i,1,1,1) + 0.0*rnd
       enddo
 
 !      call rone(tmp4,ntot2)

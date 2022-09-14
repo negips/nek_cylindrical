@@ -10,11 +10,11 @@ c
 
       ! BASIC
       parameter (ldim=3)               ! domain dimension (2 or 3)
-      parameter (lx1=10)                ! GLL points per element along each direction
-      parameter (lxd=16)               ! GL  points for over-integration (dealiasing) 
-      parameter (lx2=lx1-2)            ! GLL points for pressure (lx1 or lx1-2)
+      parameter (lx1=20)                ! GLL points per element along each direction
+      parameter (lxd=22)               ! GL  points for over-integration (dealiasing) 
+      parameter (lx2=lx1-1)            ! GLL points for pressure (lx1 or lx1-2)
                                      
-      parameter (lelg=50)             ! max number of global elements
+      parameter (lelg=30)             ! max number of global elements
       parameter (lpmin=1)              ! min number of MPI ranks 
       parameter (lelt=lelg/lpmin + 3)  ! max number of local elements per MPI rank
       parameter (ldimt=2)              ! max auxiliary fields (temperature + scalars)
@@ -41,4 +41,7 @@ c
 
       ! INTERNALS
       include 'SIZE.inc'
+
+      logical ifpgll
+      common /psnpgll/ ifpgll
 
