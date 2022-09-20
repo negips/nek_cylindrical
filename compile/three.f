@@ -88,6 +88,7 @@ c-----------------------------------------------------------------------
       include 'INPUT'
       include 'TSTEP'
       include 'MASS'
+      include 'PARALLEL'      ! nelgv
 
       include 'F3D'
       include 'FS_ALE'
@@ -124,6 +125,14 @@ c-----------------------------------------------------------------------
       common /scrhi/ h2inv (lx1,ly1,lz1,lelv)
 
       integer nit
+
+      integer lxyz
+      parameter (lxyz=(lx1+2)*(ly1+2)*(lz1+2))
+      integer*8 glo_num
+      common /c_is1/ glo_num(lxyz*lelv)
+      real vertex
+      common /ivrtx/ vertex ((2**ldim)*lelt)
+
 
       n  = lx1*ly1*lz1*nelv
       n2 = lx2*ly2*lz2*nelv
@@ -172,8 +181,20 @@ c-----------------------------------------------------------------------
 
         time = 1.0
         istep = 1
-       
+
+        if (ifpgll) then
+
+          call get_vert()
+          call setupds(pgs_handle,lx2,ly2,lz2,nelv,nelgv,vertex,glo_num)
+      
+!          call exitt
+        endif
+
         call theta_outpost()
+
+        call jacobi_davidson_e()
+
+        call exitt
 
         call laplace_test()
 

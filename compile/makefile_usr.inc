@@ -42,6 +42,8 @@ $(OBJDIR)/fs_global_surf.o      :$(SRC_FS)/fs_global_surf.f;            $(F77) -
 $(OBJDIR)/frame_fs.o            :$(SRC_FS)/frame_fs.f;                  $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@
 $(OBJDIR)/localfilter.o         :$(SRC_USR)/localfilter.f;              $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@
 $(OBJDIR)/wrapper_lapack.o      :$(SRC_MATF)/wrapper_lapack.f;          $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@
+$(OBJDIR)/matf_krylov.o         :$(SRC_MATF)/matf_krylov.f;             $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@
+$(OBJDIR)/matrix_functions.o    :$(SRC_MATF)/matrix_functions.f;        $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@
 $(OBJDIR)/lsm.o                 :$(SRC_LSM)/lsm.f;                      $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@
 $(OBJDIR)/lsm_newton.o          :$(SRC_LSM)/lsm_newton.f;               $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@
 $(OBJDIR)/lsm_heat.o            :$(SRC_LSM)/lsm_heat.f;                 $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@
@@ -63,6 +65,7 @@ $(OBJDIR)/rotate_cyclic.o       :$(SRC_USR)/rotate_cyclic.f;            $(F77) -
 $(OBJDIR)/gmres_solver.o        :$(SRC_USR)/gmres_solver.f;             $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@
 $(OBJDIR)/mesh2_exchange.o      :$(SRC_USR)/mesh2_exchange.f;           $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@
 $(OBJDIR)/subs_ifpgll.o         :$(SRC_USR)/subs_ifpgll.f;              $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@
+$(OBJDIR)/null_space_jd.o       :$(SRC_USR)/null_space_jd.f;            $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@
 
 
 

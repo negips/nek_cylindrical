@@ -229,7 +229,7 @@ C
 !     prabal
 !-----------
       ELSEIF (IFPGLL) THEN 
-      CALL IGLJM (IAM21,IATM21,ZAM1,ZAM2,ly1,ly2,ly1,ly2,ALPHA,BETA)
+      CALL IGLJM (IAM21,IATM21,ZAM2,ZAM1,ly2,ly1,ly2,ly1,ALPHA,BETA)
 !----------- 
       ELSE
       CALL IGJM  (IAM21,IATM21,ZAM2,ZAM1,ly2,ly1,ly2,ly1,ALPHA,BETA)
@@ -375,9 +375,9 @@ C
 !     prabal
 !-----------          
       ELSEIF(IFPGLL) THEN
-         CALL IGLLM (IXM21,IXTM21,ZGM1(1,1),ZGM2(1,1),lx1,lx2,lx1,lx2)
-         CALL IGLLM (IYM21,IYTM21,ZGM1(1,2),ZGM2(1,2),ly1,ly2,ly1,ly2)
-         CALL IGLLM (IZM21,IZTM21,ZGM1(1,3),ZGM2(1,3),lz1,lz2,lz1,lz2)
+         CALL IGLLM (IXM21,IXTM21,ZGM2(1,1),ZGM1(1,1),lx2,lx1,lx2,lx1)
+         CALL IGLLM (IYM21,IYTM21,ZGM2(1,2),ZGM1(1,2),ly2,ly1,ly2,ly1)
+         CALL IGLLM (IZM21,IZTM21,ZGM2(1,3),ZGM1(1,3),lz2,lz1,lz2,lz1)
 !----------- 
       ELSE
          CALL IGLM  (IXM21,IXTM21,ZGM2(1,1),ZGM1(1,1),lx2,lx1,lx2,lx1)

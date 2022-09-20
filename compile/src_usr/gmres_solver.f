@@ -409,6 +409,8 @@ c
 
       if (ifweighted) iforthowt = .true.
 
+      if (ifpgll) call fgslib_gs_op(pgs_handle,res,1,1,0)  ! 1 ==> +
+
 !     Orthogonalize w.r.t constant vector      
       if (iforthowt) then
         call ortho_left(res)
@@ -461,6 +463,7 @@ c
             endif     
 
             call cdabdtp(w_gmres,z_gmres,h1,h2,h2inv,intype)  ! w = A z
+            if (ifpgll) call fgslib_gs_op(pgs_handle,w_gmres,1,1,0)  ! 1 ==> +
 
 !           (U^T)*A*U*x
             if (iforthowt) then
@@ -521,6 +524,7 @@ c
 
 !           w = A*U*(M^-1)w    
             call cdabdtp(w_gmres,r_gmres,h1,h2,h2inv,intype)
+            if (ifpgll) call fgslib_gs_op(pgs_handle,w_gmres,1,1,0)  ! 1 ==> +
 
 !           w = (U^T)*A*U*(M^-1)*w
             if (iforthowt) then
@@ -688,7 +692,9 @@ c
 c
 
 !     prabal. I've removed ortho from earlier calls and call it here at
-!     the beginning      
+!     the beginning
+      if (ifpgll) call fgslib_gs_op(pgs_handle,res,1,1,0)  ! 1 ==> +
+
       call ortho(res)
 c
       if(.not.iflag) then
@@ -726,6 +732,8 @@ c           call copy(r_gmres,res,ntot2)
             !update residual
             call copy(r_gmres,res,ntot2)                      ! r = res
             call cdabdtp(w_gmres,x_gmres,h1,h2,h2inv,intype)  ! w = A x
+            if (ifpgll) call fgslib_gs_op(pgs_handle,w_gmres,1,1,0)  ! 1 ==> +
+           
             call add2s2(r_gmres,w_gmres,-1.,ntot2)            ! r = r - w
                                                               !      -1
             call col2(r_gmres,ml_gmres,ntot2)                 ! r = L   r
@@ -763,7 +771,8 @@ c              call copy(z_gmres(1,j),w_gmres,ntot2)    ! z  = M   w
      
             call cdabdtp(w_gmres,z_gmres(1,j),    ! w = A z
      $                   h1,h2,h2inv,intype)      !        j
-     
+            if (ifpgll) call fgslib_gs_op(pgs_handle,w_gmres,1,1,0)  ! 1 ==> +
+
                                                   !      -1
             call col2(w_gmres,ml_gmres,ntot2)     ! w = L   w
 

@@ -317,7 +317,6 @@ c-----------------------------------------------------------------------
       end subroutine rk4_advance
 !---------------------------------------------------------------------- 
 
-
       subroutine laplace_test()
 
       implicit none
@@ -393,60 +392,54 @@ c-----------------------------------------------------------------------
         else
           rad = ym2(i,1,1,1)
         endif
-        dp(i,1,1,1) = (1.0e-0)*rad + 0.0*rnd
+        pr(i,1,1,1) = (1.0e-0)*rad + 0.0*rnd
 !        dp(i,1,1,1) = (1.0e-0)*xm2(i,1,1,1) + 0.0*rnd
       enddo
 
 !      call rone(tmp4,ntot2)
 !      call ortho(tmp4)
 
-      call col2(dp,bm2,ntot2) ! Mass matrix
+      call col2(pr,bm2,ntot2) ! Mass matrix
+      call copy(tmp8,pr,ntot2)            ! restore dp
 
-!      call crs_solve_l2(tmp4,dp)
-
-      call outpost(tmp1,tmp2,tmp3,dp,tmp5,'lap')
-
-!      call ortho(dp)
-      
-      call rone(tmp8,ntot2)
-      call cdabdtp(tmp4,tmp8,h1,h2,h2inv,intype)
-
-      call opgradt (w1 ,w2 ,w3 ,tmp8)
-      call opbinv  (tmp1,tmp2,tmp3,w1 ,w2 ,w3 ,h2inv)
-      call opdiv   (tmp4,tmp1,tmp2,tmp3)
-
-!      call opzero(tmp1,tmp2,tmp3)
-      call copy(tmp8,dp,ntot2)
+      call outpost(tmp1,tmp2,tmp3,pr,tmp5,'lap')
 
 !     Solve
       igmres = 1        ! 1: weighted; 4: Left preconditioned
-      call esolver_new (dp,h1,h2,h2inv,intype,igmres)
+      call esolver_new (pr,h1,h2,h2inv,intype,igmres)
 
-      call opgradt (w1 ,w2 ,w3 ,dp)
+      call opgradt (w1 ,w2 ,w3 ,pr)
       call opbinv  (dv1,dv2,dv3,w1 ,w2 ,w3 ,h2inv)
 
       call opcopy(tmp1,tmp2,tmp3,dv1,dv2,dv3)
-      call copy(tmp4,dp,ntot2)
+      call copy(tmp4,pr,ntot2)
      
       call outpost(tmp1,tmp2,tmp3,tmp4,tmp5,'lap') 
 
 !     Solve std.
-      call copy(dp,tmp8,ntot2)            ! restore dp
+      call copy(pr,tmp8,ntot2)            ! restore dp
       istep  = 3
 
       igmres = 3        ! standard 
-      call esolver_new (dp,h1,h2,h2inv,intype,igmres)
+!      call esolver_new (pr,h1,h2,h2inv,intype,igmres)
+      call esolver (pr,h1,h2,h2inv,intype,igmres)
 
-      call opgradt (w1 ,w2 ,w3 ,dp)
+      call opgradt (w1 ,w2 ,w3 ,pr)
       call opbinv  (dv1,dv2,dv3,w1 ,w2 ,w3 ,h2inv)
-
       call opcopy(tmp1,tmp2,tmp3,dv1,dv2,dv3)
      
-      call outpost(tmp1,tmp2,tmp3,dp,tmp5,'lap')
+      call outpost(tmp1,tmp2,tmp3,pr,tmp5,'lap')
      
 !     difference between standard and new gmres      
-      call sub2(tmp4,dp,ntot2) 
-      call outpost(tmp1,tmp2,tmp3,tmp4,tmp5,'lap')
+      call sub2(tmp4,pr,ntot2)
+
+      call opgradt (w1 ,w2 ,w3 ,tmp4)
+      call opbinv  (dv1,dv2,dv3,w1 ,w2 ,w3 ,h2inv)
+      call opcopy(tmp1,tmp2,tmp3,dv1,dv2,dv3)
+
+      call cdabdtp(tmp8,tmp4,h1,h2,h2inv,intype)
+    
+      call outpost(tmp1,tmp2,tmp3,tmp8,tmp5,'lap')
 
 
 14    format(A5,2x,16(E12.5,2x))
