@@ -18,7 +18,7 @@
       include 'GEOM'          ! testing
 
       integer jdlv
-      parameter (jdlv = 10)
+      parameter (jdlv = 20)
 
       integer lt2
       parameter(lt2=lx2*ly2*lz2*lelv)
@@ -71,15 +71,16 @@
       logical ifconv
 
       real eigtol
+      real mu                 ! temporary (I - mu*E)
 
       nt1 = lx1*ly1*lz1*nelv
       nt2 = lx2*ly2*lz2*nelv
 
-      ifwgt       = .false.
+      ifwgt       = .true.
       ngs         = 2
-      maxiter     = 20
-      jd_restarts = 20
-      eigtol      = 1.0e-6
+      maxiter     = 90
+      jd_restarts = 50
+      eigtol      = 1.0e-12
 
       ifield = 1
       intype = 1
@@ -113,7 +114,6 @@
       call copy(jd_V(1,1),jdv,nt2)
 
 !     w = E*v      
-!      call cdabdtp(jdw,jdv,h1,h2,h2inv,intype) 
       call jd_Eop(jdw,jdv,h1,h2,h2inv,intype) 
       call copy(jd_W(1,1),jdw,nt2)
 
@@ -129,7 +129,7 @@
 !     Also stores the best approximation of our wanted eigenvector      
       call copy(jdu0,jdv,nt2) 
 
-      theta = 0.0 ! 1.0e-12
+      theta = 1.0 ! 1.0e-12
 
 !     r = w - \theta*v      
       call add3s2(jdr,jdw,jdv,1.0,theta,nt2)
@@ -141,6 +141,7 @@
         ifconv = .true.
       endif  
 
+      istep = 0
       do while(ijd.lt.jd_restarts.and..not.ifconv)
 
         ijd = ijd+1
@@ -149,6 +150,7 @@
 !         r = -r      
           call chsign(jdr,nt2)
           
+          istep = istep+1
 !         Correction.
 !         (I - u0*u0')*(A - \theta*I)*(I - u0*u0')t = -r 
           call jd_gmres(jdr,jdu0,theta,h1,h2,h2inv,intype,maxiter)
@@ -172,7 +174,6 @@
           call copy(jd_V(1,j+1),jdv,nt2)    ! Extend subspace V
 
 !         w = A*v
-!          call cdabdtp(jdw,jdv,h1,h2,h2inv,intype)
           call jd_Eop(jdw,jdv,h1,h2,h2inv,intype) 
           call copy(jd_W(1,j+1),jdw,nt2)    ! Extend subspace W
 
@@ -204,7 +205,8 @@
               k = i
             endif  
           enddo 
-          if (nio.eq.0) write(6,17) 'EIG0', ev_wr(k), ev_wi(k)
+          if (nio.eq.0) write(6,16) 'EIG0',istep,
+     $                               ev_wr(k), ev_wi(k)
           if (nio.eq.0) write(6,*) ' '
 
 !         Taking the eigenvector corresponding to the
@@ -226,37 +228,50 @@
 !         r = w - \theta*v      
           call add3s2(jdr,jdw,jdv,1.0,theta,nt2)
 
-          if (abs(ev_wr(k)-theta).lt.eigtol) then
+          diff = abs(ev_wr(k)-theta)
+          if (diff.lt.eigtol) then
             ifconv = .true.
-            exit
+            if (nio.eq.0) write(6,*) 'Jacobi Davison Converged, res=',
+     $                                diff             
           endif  
 
-!         Testing        
+!         Testing
+          mu = -1.0e-4
           do i=1,j+1
-            if (nio.eq.0) write(6,17) 'JDEIG', ev_wr(i), ev_wi(i)
-          enddo  
+            ev_wr(i) = (ev_wr(i)-1.0)/mu
+            ev_wi(i) = (ev_wi(i)-0.0)/mu
+            if (nio.eq.0) write(6,16) 'JDEIG',i,ev_wr(i), ev_wi(i)
+          enddo
+
+          if (ifconv) exit 
         enddo       ! j=1,jdnv
 
-!       Reinitialize matrices
-        call copy(jd_V(1,1),jdv,nt2)
-        call copy(jd_W(1,1),jdw,nt2)
+        if (.not.ifconv) then
+!         Reinitialize matrices
+          call copy(jd_V(1,1),jdv,nt2)
+          call copy(jd_W(1,1),jdw,nt2)
 
-        call rzero(jd_H,jdlv*jdlv)
+          call rzero(jd_H,jdlv*jdlv)
 
-!       h = V'*B2*w
-        if (ifwgt) then      
-          hii = glsc3(jd_V(1,1),jdw,bm2,nt2)
-        else
-          hii = glsc2(jd_V(1,1),jdw,nt2)
+!         h = V'*B2*w
+          if (ifwgt) then      
+            hii = glsc3(jd_V(1,1),jdw,bm2,nt2)
+          else
+            hii = glsc2(jd_V(1,1),jdw,nt2)
+          endif
+          jd_H(1,1) = hii
         endif
-        jd_H(1,1) = hii
+            
 
       enddo         ! while (ijd.lt.jd_restarts.and..not.ifconv)
 
 
 !     Testing
-      do i=1,j+1
-        call mxm(jd_V,lt2,ev_vr(1,i),j+1,pr,1)
+      k = jdnv
+      if (ifconv) k = j
+      do i=1,k+1
+        istep = i
+        call mxm(jd_V,lt2,ev_vr(1,i),k+1,pr,1)
         call outpost(vx,vy,vz,pr,t,'tst')
         if (ifwgt) then 
           vnorm = sqrt(glsc3(jd_V(1,i),jd_V(1,i),bm2,nt2))
@@ -267,12 +282,15 @@
 
       enddo  
 
-      do i=1,jdnv+1
-!        write(6,17) 'jd_H', (jd_H(i,j), j = 1,jdnv+1)
-         if (nio.eq.0) write(6,17) 'JDEIG', ev_wr(i), ev_wi(i)
+      do i=1,k+1
+!!        We have already scaled these      
+!         ev_wr(i) = (ev_wr(i)-1.0)/mu
+!         ev_wi(i) = (ev_wi(i)-0.0)/mu
+         if (nio.eq.0) write(6,16) 'JDEIG',i,ev_wr(i), ev_wi(i)
       enddo  
 
-17    format(A5,2x,16(E12.5,2x))
+16    format(A5,2x,I5,2x,16(E22.14,2x))
+17    format(A5,2x,16(E22.14,2x))
 
 
 
@@ -352,7 +370,8 @@ c
 
       integer maxiter
 
-      logical ifwgt
+      logical ifwgt           ! If weighted Gmres       
+      logical ifwgtortho      ! If weighted ortho
       logical ifprec
 
       integer ngs             ! No of Gram-Schmidt
@@ -364,6 +383,7 @@ c
       ifprint = .true.
 
       ifwgt       = .false.           ! Weighted Orthogonalization
+      ifwgtortho  = .false.
       ifprec      = .false.           ! Use preconditioner
       ngs         = 1
 
@@ -385,7 +405,7 @@ c
 
 !      call chktcg2(tolps,res,iconv)
 !      tolpss = tolps
-      tolpss = 1.0e-8
+      tolpss = 1.0e-14
 
       iconv = 0
       call rzero(x_gmres,ntot2)
@@ -402,14 +422,13 @@ c
             call copy(z_gmres,x_gmres,ntot2)            ! z = x
 
 !           U*z
-            call jd_ortho(z_gmres,u0,wp,1,ifwgt)
+            call jd_ortho(z_gmres,u0,wp,1,ifwgtortho)
 
 !           w = A*U*z            
-!            call cdabdtp(w_gmres,z_gmres,h1,h2,h2inv,intype)
             call jd_Ecorr(w_gmres,z_gmres,h1,h2,h2inv,intype,theta)
 
 !           w = (U^T)*A*U*x
-            call jd_ortho(w_gmres,u0,wp,0,ifwgt)
+            call jd_ortho(w_gmres,u0,wp,0,ifwgtortho)
 
             call add2s2(r_gmres,w_gmres,-1.,ntot2)    ! r = r - w
 
@@ -461,51 +480,17 @@ c
             call copy(r_gmres,z_gmres(1,j),ntot2)
 
 !           r = U*(M^-1)*w
-            call jd_ortho(r_gmres,u0,wp,1,ifwgt)
+            call jd_ortho(r_gmres,u0,wp,1,ifwgtortho)
 
 !           w = A*U*(M^-1)w    
-!            call cdabdtp(w_gmres,r_gmres,h1,h2,h2inv,intype)
             call jd_Ecorr(w_gmres,r_gmres,h1,h2,h2inv,intype,theta)
 
 !           w = (U^T)*A*U*(M^-1)*w
-            call jd_ortho(w_gmres,u0,wp,0,ifwgt)
+            call jd_ortho(w_gmres,u0,wp,0,ifwgtortho)
 
-!           Gram-Schmidt, 1st pass:
+!           Gram-Schmidt:
             call ortho_subspace(w_gmres,ntot2,h_gmres(1,j),v_gmres,
      $            lt2,j,bm2,ifwgt,ngs,wk1,wk2)
-
-
-!!           Gram-Schmidt, 1st pass:
-!            do i=1,j
-!               if (ifwgt) then
-!                 h_gmres(i,j)=vlsc3(w_gmres,v_gmres(1,i),bm2,ntot2) ! h = (Bw,V )
-!               else
-!                 h_gmres(i,j)=vlsc2(w_gmres,v_gmres(1,i),ntot2)     ! h = (w,V )
-!               endif
-!            enddo                                             
-!            call gop(h_gmres(1,j),wk1,'+  ',j)          ! sum over P procs
-!
-!            do i=1,j
-!               call add2s2(w_gmres,v_gmres(1,i),-h_gmres(i,j),ntot2) ! w = w - Vh
-!            enddo
-!
-!
-!!           Gram-Schmidt, 2nd pass:
-!            if (iftwopass) then
-!              do i=1,j
-!                if (ifwgt) then
-!                  wk1(i)=vlsc3(w_gmres,v_gmres(1,i),bm2,ntot2) ! g = (Bw,V )
-!                else
-!                  wk1(i)=vlsc2(w_gmres,v_gmres(1,i),ntot2)     ! g = (w,V )
-!                endif
-!              enddo                                             
-!              call gop(wk1,wk2,'+  ',j)          ! sum over P procs
-!
-!              do i=1,j
-!                call add2s2(w_gmres,v_gmres(1,i),-wk1(i),ntot2) ! w = w - Vg
-!                h_gmres(i,j) = h_gmres(i,j) + wk1(i)            ! h = h + g 
-!              enddo
-!            endif
 
 !           Apply Givens rotations to new column
             do i=1,j-1
@@ -699,6 +684,7 @@ c------------------------------------------------------------------------
       implicit none
 
       include 'SIZE'
+      include 'MASS'    ! BM2inv
 
       real w(1)
       real v(1)
@@ -708,10 +694,17 @@ c------------------------------------------------------------------------
       integer intype
 
       integer nt2
+      real mu
 
       nt2 = nx2*ny2*nz2*nelv
 
+!     w = Ev      
       call cdabdtp(w,v,h1,h2,h2inv,intype)
+!      call col2(w,bm2inv,nt2)
+
+!     w = (I + \mu*E)v
+      mu = -1.0e-4
+      call add2s1(w,v,mu,nt2)
 
 
       return
@@ -723,6 +716,7 @@ c------------------------------------------------------------------------
       implicit none
 
       include 'SIZE'
+      include 'MASS'          ! BM2
 
       real w(1)
       real v(1)
@@ -731,13 +725,16 @@ c------------------------------------------------------------------------
       real h2inv(1)
       integer intype
 
-      integer nt2
+      integer i,nt2
       real theta
 
       nt2 = nx2*ny2*nz2*nelv
 
       call jd_Eop(w,v,h1,h2,h2inv,intype)
 
+!      do i=1,nt2
+!        w(i) = w(i) - theta*v(i)
+!      enddo  
       call add2s2(w,v,-theta,nt2)
 
 
