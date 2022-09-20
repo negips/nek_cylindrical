@@ -278,7 +278,6 @@
         else
           vnorm = sqrt(glsc2(jd_V(1,i),jd_V(1,i),nt2))
         endif
-        write(6,*) 'vnorm', vnorm
 
       enddo  
 

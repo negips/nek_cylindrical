@@ -42,7 +42,7 @@ LSM="lsm.o lsm_heat.o clsm.o clsm_corr.o lsm_zhoge.o"                           
 STT="stat.o stat_IO.o stat_usr.o"                                                      # Statistics
 MAP="map2D.o map2D_usr.o"                                                              # Mapping tools   
 PRC="fast_reset.o h1mg_reset.o"                                                        # Preconditioner reset
-MATF="wrapper_lapack.o matrf_krylov.o matrix_functions.o"                              # Matrix functions
+MATF="wrapper_lapack.o matf_krylov.o matrix_functions.o"                               # Matrix functions
 USR+="$FRM $FSF $CHKP $LSM $STT $MAP $PRC mesh2_exchange.o laplace_testing.o rotate_cyclic.o orthonew.o gmres_solver.o subs_ifpgll.o null_space_jd.o wrapper_lapack.o"
 #echo $USR
 #USR="frame.o mntrlog_block.o mntrlog.o mntrtmr_block.o mntrtmr.o rprm_block.o rprm.o"
