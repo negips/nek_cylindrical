@@ -42,8 +42,10 @@ c
       ! INTERNALS
       include 'SIZE.inc'
 
-      integer pgs_handle
       logical ifpgll
-      common /psnpgll/ ifpgll, pgs_handle
+      parameter (ifpgll = .false.)
+
+      integer pgs_handle
+      common /psnpgll/ pgs_handle
 
 

@@ -190,6 +190,21 @@ c-----------------------------------------------------------------------
 !          call exitt
         endif
 
+!       opgradt_cyl        
+        call rone(pr,n2)
+        call opgradt_cyl(vx,vy,vz,pr)
+
+!       opdiv_cyl        
+        call rone(vx,n)
+        call rone(vy,n)
+        call rone(vz,n)
+        call opdiv_cyl(pr,vx,vy,vz)
+
+        call rone(pr,n2)
+        call col2(pr,bm2,n2)
+        call outpost(vx,vy,vz,pr,t,'cyl')
+        call exitt
+
         call theta_outpost()
 
         call jacobi_davidson_e()
@@ -355,7 +370,7 @@ c-----------------------------------------------------------------------
 
       if (if3d.and..not.ifcyclic) then
         n = lx1*ly1*lz1*nelv
-        call cmult(zm1,0.20,n)
+!        call cmult(zm1,0.20,n)
       endif  
 
       return

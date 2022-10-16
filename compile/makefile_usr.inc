@@ -65,7 +65,9 @@ $(OBJDIR)/rotate_cyclic.o       :$(SRC_USR)/rotate_cyclic.f;            $(F77) -
 $(OBJDIR)/gmres_solver.o        :$(SRC_USR)/gmres_solver.f;             $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@
 $(OBJDIR)/mesh2_exchange.o      :$(SRC_USR)/mesh2_exchange.f;           $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@
 $(OBJDIR)/subs_ifpgll.o         :$(SRC_USR)/subs_ifpgll.f;              $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@
+$(OBJDIR)/mesh1_pressure_integration.o         :$(SRC_USR)/mesh1_pressure_integration.f;              $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@
 $(OBJDIR)/null_space_jd.o       :$(SRC_USR)/null_space_jd.f;            $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@
+$(OBJDIR)/cylindrical_subs.o    :$(SRC_USR)/cylindrical_subs.f;         $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@
 
 
 
