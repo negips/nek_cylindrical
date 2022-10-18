@@ -94,6 +94,7 @@ c-----------------------------------------------------------------------
       include 'FS_ALE'
       include 'TEST'
       include 'DOMAIN'
+      include 'WZ'
 
       integer lt
       parameter (lt=lx1*ly1*lz1*lelt)
@@ -104,9 +105,7 @@ c-----------------------------------------------------------------------
       character cb*3
       integer ie,iface,nfaces
 
-      real pos(lt)
-      real wght(lt)
-      real x,y
+      real x,y,z
 
       integer lxx,levb
       parameter(lxx=lx1*lx1, levb=lelv+lbelv)
@@ -133,6 +132,37 @@ c-----------------------------------------------------------------------
       real vertex
       common /ivrtx/ vertex ((2**ldim)*lelt)
 
+!     Dense mass matrix      
+      integer lxb
+      parameter (lxb=lx1)   ! Arbitrarily set for now
+
+      real jgl(lxb,lx1)
+      real jglt(lx1,lxb)
+
+      real wght(lxb)
+
+      real wk1lxb(lxb*lxb*lxb)
+      real wk2lxb(lxb*lxb*lxb)
+      real wk3lxb(lxb*lxb*lxb)
+
+      integer ii,i1,i2,iz
+
+      real rnd
+
+      real p1,p2,p3
+      real Ep,Ep1,Ep2,Ep3
+      common /scrns/ p1  (lt)
+     $ ,             p2  (lt)
+     $ ,             p3  (lt)
+     $ ,             Ep  (lt)
+     $ ,             Ep1 (lt)
+     $ ,             Ep2 (lt)
+     $ ,             Ep3 (lt)
+
+      real tolh
+      integer nmxhi
+
+      real gl2norm,glsc2,glsc3,glsc2_full_M1
 
       n  = lx1*ly1*lz1*nelv
       n2 = lx2*ly2*lz2*nelv
@@ -174,7 +204,7 @@ c-----------------------------------------------------------------------
         param(44)=uparam(10)      ! 0: E based Schwartz (FEM), 1: A based Schwartz
        
 
-12    format(A4,2x,12(E12.5,2x))
+12    format(A4,2x,16(E12.5,2x))
 
 
         ifield = 1
@@ -190,19 +220,48 @@ c-----------------------------------------------------------------------
 !          call exitt
         endif
 
-!       opgradt_cyl        
-        call rone(pr,n2)
-        call opgradt_cyl(vx,vy,vz,pr)
+        do i=1,n
+          x = xm1(i,1,1,1)
+          y = ym1(i,1,1,1)
+          z = zm1(i,1,1,1)
+          vtrans(i,1,1,1,1) = x**3
+          call random_number(rnd) 
+          vx(i,1,1,1) = 1.0 - ((y-2.0)**2)*(x-2.0)**2  !rnd
+          vy(i,1,1,1) = 1.0         !rnd
+          vz(i,1,1,1) = 1.0         !rnd
 
-!       opdiv_cyl        
-        call rone(vx,n)
-        call rone(vy,n)
-        call rone(vz,n)
-        call opdiv_cyl(pr,vx,vy,vz)
+        enddo   
 
-        call rone(pr,n2)
-        call col2(pr,bm2,n2)
+        call col2(vx,bm1,n)
+        call col2(vy,bm1,n)
+        call col2(vz,bm1,n)
+
+        call rzero(h1,n)
+        call rone(h2,n)
+!        call copy(h2,vtrans,n)
+        call invers2(h2inv,h2,n)
+
+        tolh = 1.0e-8
+        nmxhi = 1000
+
+        call opcopy(tmp1,tmp2,tmp3,vx,vy,vz)
+
+!        call cyl_gmres(vx,h2,v1mask,nmxhi)
+        call op_gmres(vx,vy,vz,h2,nmxhi)
         call outpost(vx,vy,vz,pr,t,'cyl')
+
+        call opbinv(tmp5,tmp6,tmp7,tmp1,tmp2,tmp3,h2inv)
+
+        call copy(tmp1,tmp5,n)
+        call sub2(tmp1,vx,n)
+        call opcopy(vx,vy,vz,tmp5,tmp6,tmp1)
+        call outpost(vx,vy,vz,pr,t,'cyl')
+
+        rnd = glsc3(vz,vz,bm1,n)
+        a(1) = glsc2_full_M1(vz,vz)
+       
+        write(6,*) 'Diff Norm:', rnd,a(1)
+
         call exitt
 
         call theta_outpost()

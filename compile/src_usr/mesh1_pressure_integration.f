@@ -11,7 +11,8 @@
 !               rho_MultDM1()        : \rho*D*x  on M1 
 !               rho_opdiv()          : q*\rho*(D*v) on M2
 !               rho_MultD()          : \rho*D*x  on M2
-!      
+!               cdab_full_dtp()      : E operator with full mass matrix inversion
+!
 !======================================================================       
 C-----------------------------------------------------------------------
       subroutine cM1dabdtp (ap,wp,h1,h2,h2inv,intype)
@@ -103,6 +104,65 @@ C     INTYPE=-1  Compute the matrix-vector product    D(A+B/DT)(-1)DT*p
          endif
       endif
       call rho_opdiv (ap,tb1,tb2,tb3)
+
+      return
+      end
+C
+C-----------------------------------------------------------------------
+      subroutine cdab_full_dtp (ap,wp,h1,h2,h2inv,intype)
+
+C     INTYPE= 0  Compute the matrix-vector product    DA(-1)DT*p
+C     INTYPE= 1  Compute the matrix-vector product    D(B/DT)(-1)DT*p
+C     INTYPE=-1  Compute the matrix-vector product    D(A+B/DT)(-1)DT*p
+
+      implicit none
+
+      include 'SIZE'
+      include 'TSTEP'
+      include 'INPUT'         ! ifanls
+      include 'SOLN'          ! V?MASK
+
+      REAL           AP    (LX2,LY2,LZ2,1)
+      REAL           WP    (LX2,LY2,LZ2,1)
+      REAL           H1    (LX1,LY1,LZ1,1)
+      REAL           H2    (LX1,LY1,LZ1,1)
+      REAL           H2INV (LX1,LY1,LZ1,1)
+
+      real ta1,ta2,ta3,tb1,tb2,tb3
+      COMMON /SCRNS/ TA1 (LX1,LY1,LZ1,LELV)
+     $ ,             TA2 (LX1,LY1,LZ1,LELV)
+     $ ,             TA3 (LX1,LY1,LZ1,LELV)
+     $ ,             TB1 (LX1,LY1,LZ1,LELV)
+     $ ,             TB2 (LX1,LY1,LZ1,LELV)
+     $ ,             TB3 (LX1,LY1,LZ1,LELV)
+
+      integer intype
+      real tolhin,dtbdi
+
+      logical iffullmass
+      integer maxiter
+
+      iffullmass = .true.
+
+      call opgradt(ta1,ta2,ta3,wp)
+      if ((intype.eq.0).or.(intype.eq.-1)) then
+        tolhin=tolhs
+        call ophinv (tb1,tb2,tb3,ta1,ta2,ta3,h1,h2,tolhin,nmxv)
+      else
+        if (ifanls) then
+          dtbdi = dt/bd(1)   ! scale by dt*backwd-diff coefficient
+          CALL OPBINV1(TB1,TB2,TB3,TA1,TA2,TA3,dtbdi)
+        else
+          if (iffullmass) then
+            maxiter = 200
+            call opcopy(tb1,tb2,tb3,ta1,ta2,ta3)
+            call op_gmres(tb1,tb2,tb3,h2,maxiter)
+          else
+            CALL OPBINV (TB1,TB2,TB3,TA1,TA2,TA3,H2INV)
+          endif
+        endif
+      endif
+      call opdiv (ap,tb1,tb2,tb3)
 
       return
       end
@@ -381,8 +441,6 @@ C
       include 'INPUT'
       include 'ESOLV'
 
-      include 'CTIMER'
-
       real           dx   (lx2*ly2*lz2,lelv)
       real           x    (lx1*ly1*lz1,lelv)
       real           rm1  (lx1*ly1*lz1,lelv)
@@ -403,6 +461,7 @@ C
 
       common /fastmd/ ifdfrm(lelt), iffast(lelt), ifh2, ifsolv
       logical ifdfrm, iffast, ifh2, ifsolv
+      include 'CTIMER'
 
       integer e,i1,i2,iz
       integer nxy1,nyz1,nxy2,nxyz1,nxyz2,n1,n2
