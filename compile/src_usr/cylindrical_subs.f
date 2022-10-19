@@ -1545,6 +1545,132 @@ C     Set up diag preconditioner.
 
 c-----------------------------------------------------------------------
 
+      subroutine convect_cylindrical(bdu,u,cx,cy,cz,isd)
+
+!     Compute dealiased form:  J^T Bf *JC .Grad Ju w/ correct Jacobians
+!     Grad is the cylindrical grad operator
+
+      implicit none
+
+      include 'SIZE'
+      include 'GEOM'
+      include 'INPUT' 
+
+!      include 'TOTAL'
+
+      real bdu(1),u(1),cx(1),cy(1),cz(1)
+
+      integer lxy,ltd
+      parameter (lxy=lx1*ly1*lz1,ltd=lxd*lyd*lzd)
+
+      real fx,fy,fz
+      real ur,us,ut
+      real tr,uf
+      common /scrcv/ fx(ltd),fy(ltd),fz(ltd)
+     $             , ur(ltd),us(ltd),ut(ltd)
+     $             , tr(ltd,3),uf(ltd)
+
+      integer e,i
+      integer iu,ic,ib
+      integer nxyzu,nxyzc,nxyz1,nxyzd
+
+      real radf(ltd)
+
+      integer isd
+
+!     Geometric factors Mapping.
+!     3D:      
+!     rxm1(1,1,1,e) -->  rx(1,1,e)
+!     rym1(1,1,1,e) -->  rx(1,2,e)
+!     rzm1(1,1,1,e) -->  rx(1,3,e)
+!     sxm1(1,1,1,e) -->  rx(1,4,e)
+!     sym1(1,1,1,e) -->  rx(1,5,e)
+!     szm1(1,1,1,e) -->  rx(1,6,e)
+!     txm1(1,1,1,e) -->  rx(1,7,e)
+!     tym1(1,1,1,e) -->  rx(1,8,e)
+!     tzm1(1,1,1,e) -->  rx(1,9,e)
+
+!     2D:
+!     rxm1(1,1,1,e) -->  rx(1,1,e)
+!     rym1(1,1,1,e) -->  rx(1,2,e)
+!     sxm1(1,1,1,e) -->  rx(1,3,e)
+!     sym1(1,1,1,e) -->  rx(1,4,e)
+
+   
+   
+!     Put the geometrix factors on the fine mesh
+!     Also includes multiplication by Weights      
+      call set_dealias_rx
+
+      nxyz1 = lx1*ly1*lz1
+      nxyzd = lxd*lyd*lzd
+
+      nxyzu = nxyz1
+!      if (ifuf) nxyzu = nxyzd
+
+      nxyzc = nxyz1
+!      if (ifcf) nxyzc = nxyzd
+
+      iu = 1    ! pointer to scalar field u
+      ic = 1    ! pointer to vector field C
+      ib = 1    ! pointer to scalar field Bdu
+
+
+      do e=1,nelv
+
+!       Interpolate convecting field      
+        call intp_rstd(fx,cx(ic),lx1,lxd,if3d,0) ! 0 --> forward
+        call intp_rstd(fy,cy(ic),lx1,lxd,if3d,0) ! 0 --> forward
+        if (if3d) call intp_rstd(fz,cz(ic),lx1,lxd,if3d,0) ! 0 --> forward
+
+!       Interpolate Radius to fine mesh
+        call intp_rstd(radf,ym1(1,1,1,e),lx1,lxd,if3d,0) ! 0 --> forward
+
+        if (if3d) then  ! Convert convector F to r-s-t coordinates
+
+          do i=1,nxyzd
+            tr(i,1) = radf(i)*rx(i,1,e)*fx(i) + radf(i)*rx(i,2,e)*fy(i)
+     $                   + rx(i,3,e)*fz(i)
+            tr(i,2) = radf(i)*rx(i,4,e)*fx(i) + radf(i)*rx(i,5,e)*fy(i)
+     $                   + rx(i,6,e)*fz(i)
+            tr(i,3) = radf(i)*rx(i,7,e)*fx(i) + radf(i)*rx(i,8,e)*fy(i)
+     $                   + rx(i,9,e)*fz(i)
+          enddo
+
+        else
+
+          do i=1,nxyzd
+            tr(i,1) = radf(i)*rx(i,1,e)*fx(i) + radf(i)*rx(i,2,e)*fy(i)
+            tr(i,2) = radf(i)*rx(i,3,e)*fx(i) + radf(i)*rx(i,4,e)*fy(i)
+          enddo
+
+        endif
+
+!       Interpolate convected field      
+        call intp_rstd(uf,u(iu),lx1,lxd,if3d,0) ! 0 --> forward
+!       Gradients on the Fine Reference mesh.
+        call grad_rst(ur,us,ut,uf,lxd,if3d)
+
+        if (if3d) then
+          do i=1,nxyzd ! mass matrix included, per DFM (4.8.5)
+             uf(i) = tr(i,1)*ur(i)+tr(i,2)*us(i)+tr(i,3)*ut(i)
+          enddo
+        else
+          do i=1,nxyzd ! mass matrix included, per DFM (4.8.5)
+             uf(i) = tr(i,1)*ur(i)+tr(i,2)*us(i)
+          enddo
+        endif
+        call intp_rstd(bdu(ib),uf,lx1,lxd,if3d,1) ! Project back to coarse
+
+        ic = ic + nxyzc
+        iu = iu + nxyzu
+        ib = ib + nxyz1
+
+      enddo
+
+      return
+      end
+c-----------------------------------------------------------------------
 
 
 
