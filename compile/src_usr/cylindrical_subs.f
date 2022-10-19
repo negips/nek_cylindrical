@@ -718,7 +718,7 @@ c
       include 'GEOM'    ! JACM1
       
       integer lxb
-      parameter (lxb=2*lx1)   ! Arbitrarily set for now
+      parameter (lxb=2*lx2)   ! Arbitrarily set for now
 
 !     Interpolation matrices for dense mass matrices
       real jgl(lxb,lx1)
@@ -818,7 +818,7 @@ c     Set up interpolator from lx1 to lxb mesh
       real z(lxb)
 
 !     Gauss-Legendre Mesh 
-      call zwgll (z,wght,lxb)
+      call zwgl (z,wght,lxb)
 
 !     Interpolator from M1 mesh to lxb Mesh      
       call igllm (jgl,jglt,zgm1(1,1),z,lx1,lxb,lx1,lxb)
@@ -826,7 +826,6 @@ c     Set up interpolator from lx1 to lxb mesh
       return
       end
 c-----------------------------------------------------------------------
-
 
       subroutine intp_lxb(fldf,fld,jgl,jglt,lxb)
 
@@ -911,6 +910,7 @@ c-----------------------------------------------------------------------
       common /cgmres1_m1/ y(lgmres)
 
       real alpha, l, temp
+      real t1,t2
       integer j,m
 
       logical iflag
@@ -944,7 +944,7 @@ c-----------------------------------------------------------------------
 
       ifwgt       = .false.           ! Weighted Orthogonalization
       ifprec      = .true.           ! Use preconditioner
-      ngs         = 1
+      ngs         = 2
 
       if (ifwgt) then
         norm_fac = 1./sqrt(volvm1)
@@ -952,7 +952,9 @@ c-----------------------------------------------------------------------
         call rone(wp,ntot)
         alpha = sqrt(glsc2(wp,wp,ntot))
         norm_fac = 1.0/alpha
-      endif  
+      endif
+
+      norm_fac = 1.0 
 
 C     Set up diag preconditioner.
       if (ifprec) then
@@ -981,41 +983,41 @@ C     Set up diag preconditioner.
          if(iter.eq.0) then
             call copy(r_gmres,res,ntot)                ! r = res
          else
-            !update residual
+!           update residual
             call copy(r_gmres,res,ntot)                ! r = res
 
 !           w = A*x
-            call rho_b(w_gmres,x_gmres,h2)
+            call rho_b  (w_gmres,x_gmres,h2)
             call dssum  (w_gmres,lx1,ly1,lz1)
             call col2   (w_gmres,mask,ntot)
 
-            call add2s2(r_gmres,w_gmres,-1.,ntot)    ! r = r - w
+!           r = r - w
+            call add2s2(r_gmres,w_gmres,-1.,ntot)
 
          endif
 
          if (ifwgt) then
-!          Weighted inner product                                 !            ______
+!          Weighted inner product                                !            ______
            gamma_gmres(1) = sqrt(glsc3(r_gmres,r_gmres,bm1,ntot))! gamma  = \/(Br,r)
          else    
-!          Un-weighted inner product                          !            ______
+!          Un-weighted inner product                         !            ______
            gamma_gmres(1) = sqrt(glsc2(r_gmres,r_gmres,ntot))! gamma  = \/(r,r)
          endif   
                                                            
          if(iter.eq.0) then
-            div0 = gamma_gmres(1)*norm_fac
-            if (param(21).lt.0) tolpss=abs(param(21))*div0
+           div0 = gamma_gmres(1)*norm_fac
          endif
 
 !        check for lucky convergence
          rnorm = 0.
          if (gamma_gmres(1) .eq. 0.) goto 9000
          temp = 1./gamma_gmres(1)
-         call cmult2(v_gmres(1,1),r_gmres,temp,ntot)! v  = r / gamma
+         call cmult2(v_gmres(1,1),r_gmres,temp,ntot)  ! v  = r / gamma
 
          do j=1,m
             iter = iter+1
 
-            call copy(w_gmres,v_gmres(1,j),ntot) ! w  = v_j
+            call copy(w_gmres,v_gmres(1,j),ntot)      ! w  = v_j
  
             etime2 = dnekclock()
 !           z = (M^-1)w      
@@ -1038,16 +1040,16 @@ C     Set up diag preconditioner.
 !           Gram-Schmidt:
             call ortho_subspace(w_gmres,ntot,h_gmres(1,j),v_gmres,
      $            lt1,j,bm1,ifwgt,ngs,wk1,wk2)
+!            call ortho_subspace_fullM1(w_gmres,ntot,h_gmres(1,j),
+!     $            v_gmres,lt1,j,bm1,ifwgt,ngs,wk1,wk2,.true.)
 
 !           Apply Givens rotations to new column
             do i=1,j-1
-               temp = h_gmres(i,j)                   
-               h_gmres(i  ,j)=  c_gmres(i)*temp 
-     $                        + s_gmres(i)*h_gmres(i+1,j)  
-               h_gmres(i+1,j)= -s_gmres(i)*temp 
-     $                        + c_gmres(i)*h_gmres(i+1,j)
+              t1             = h_gmres(i,j)                   
+              t2             = h_gmres(i+1,j)                   
+              h_gmres(i  ,j) =  c_gmres(i)*t1 + s_gmres(i)*t2 
+              h_gmres(i+1,j) = -s_gmres(i)*t1 + c_gmres(i)*t2
             enddo
-
 !                      ______
 !           alpha =  \/(Bw,w) 
             if (ifwgt) then
@@ -1055,28 +1057,29 @@ C     Set up diag preconditioner.
             else
               alpha = sqrt(glsc2(w_gmres,w_gmres,ntot))        
             endif
-            rnorm = 0.
-
             if(alpha.eq.0.) goto 900  !converged
+
+!           Calculate new Givens rotation to convert H to Triangular
             l = sqrt(h_gmres(j,j)*h_gmres(j,j)+alpha*alpha)
             temp = 1./l
             c_gmres(j) = h_gmres(j,j) * temp
             s_gmres(j) = alpha  * temp
             h_gmres(j,j) = l
-            gamma_gmres(j+1) = -s_gmres(j) * gamma_gmres(j)
-            gamma_gmres(j)   =  c_gmres(j) * gamma_gmres(j)
-            
+
+!           Apply New Givens rotation to the rhs
+            t1 =  c_gmres(j) * gamma_gmres(j)
+            t2 = -s_gmres(j) * gamma_gmres(j)
+            gamma_gmres(j)   = t1 
+            gamma_gmres(j+1) = t2 
+
             rnorm = abs(gamma_gmres(j+1))*norm_fac
             ratio = rnorm/div0
             if (ifprint.and.nio.eq.0) 
      $         write (6,66) iter,tolpss,rnorm,div0,ratio,istep
    66       format(i5,1p4e12.5,i8,' (rho*B)^-1 ')
 
-#ifndef FIXITER
             if (rnorm .lt. tolpss) goto 900  !converged
-#else
-            if (iter.gt.param(151)-1) goto 900
-#endif
+
             if (j.eq.m) goto 1000 !not converged, restart
 
             temp = 1./alpha
@@ -1094,12 +1097,12 @@ C     Set up diag preconditioner.
            enddo
            c_gmres(k) = temp/h_gmres(k,k)
          enddo
+
 !        sum up Arnoldi vectors
-!        x_gmres = (M^-1)*(V*c)
-!     => x_gmres = (M^-1 * V)*c = Z*c
+!        x_gmres = x_gmres + (M^-1)*(V*c)
+!     => x_gmres = x_gmres + (M^-1 * V)*c = X + Z*c
          do i=1,j
             call add2s2(x_gmres,z_gmres(1,i),c_gmres(i),ntot) 
-                       ! x = x + Z*c
          enddo
 
       enddo
@@ -1142,6 +1145,7 @@ c-----------------------------------------------------------------------
       integer igs,i
 
       real vlsc2,vlsc3        ! Functions
+      real vlsc2_fm
 
 !     Zero projections      
       call rzero(h,k)
@@ -1151,7 +1155,7 @@ c-----------------------------------------------------------------------
         do i=1,k
           if (ifwgt) then
             if (iffull) then
-              call local_inner_prod_full_M1(wk1(i),r,V(1,i))
+              wk1(i) = vlsc2_fm(r,V(1,i))
             else  
               wk1(i)=vlsc3(r,V(1,i),wgt,nt)     ! wk1 = (Bw,V )
             endif  
@@ -1178,13 +1182,13 @@ c-----------------------------------------------------------------------
       include 'SIZE'
 
       real u(1),v(1)
-      real sc(2),tmp(2)
+      real sc,tmp
       real glsc2_full_M1
 
       call local_inner_prod_full_M1(sc,u,v)
       call gop(sc,tmp,'+  ',1)
 
-      glsc2_full_M1 = sc(1)
+      glsc2_full_M1 = sc
 
       return 
       end function 

@@ -246,21 +246,29 @@ c-----------------------------------------------------------------------
 
         call opcopy(tmp1,tmp2,tmp3,vx,vy,vz)
 
-!        call cyl_gmres(vx,h2,v1mask,nmxhi)
-        call op_gmres(vx,vy,vz,h2,nmxhi)
+        call cyl_gmres(vy,h2,v1mask,nmxhi)
+!        call op_gmres(vx,vy,vz,h2,nmxhi)
+
+        call dssum(vx,lx1,ly1,lz1)
+        call col2(vx,v1mask,n)
+
+        call copy(vz,vy,n)
+        call col2(vz,bm1,n)
+        call dssum(vz,lx1,ly1,lz1)
+        call col2(vz,v1mask,n)
+
+        call copy(t,vx,n)
+        call col2(t,v1mask,n)
+        call sub2(t,vz,n)
         call outpost(vx,vy,vz,pr,t,'cyl')
 
-        call opbinv(tmp5,tmp6,tmp7,tmp1,tmp2,tmp3,h2inv)
+        rnd = gl2norm(t,n)        
 
-        call copy(tmp1,tmp5,n)
-        call sub2(tmp1,vx,n)
-        call opcopy(vx,vy,vz,tmp5,tmp6,tmp1)
-        call outpost(vx,vy,vz,pr,t,'cyl')
+        if (nid.eq.0) write(6,*) 'Diff:', rnd
 
-        rnd = glsc3(vz,vz,bm1,n)
-        a(1) = glsc2_full_M1(vz,vz)
-       
-        write(6,*) 'Diff Norm:', rnd,a(1)
+!        call opbinv(tmp5,tmp6,tmp7,tmp1,tmp2,tmp3,h2inv)
+
+
 
         call exitt
 

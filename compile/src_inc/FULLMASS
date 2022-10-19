@@ -1,0 +1,18 @@
+!     Variables for full mass matrix evaulations
+
+      integer lxfm
+      parameter (lxfm=2*lx1)   ! Arbitrarily set for now
+
+!     Interpolation matrices for dense mass matrices
+      real fm_jgl(lxfm,lx1)
+      real fm_jglt(lx1,lxfm)
+      real fm_wght(lxfm)
+      real fm_z(lxfm)
+      common /fullmass/ fm_jgl,fm_jglt,fm_wght,fm_z
+
+      real fm_wk1(lxfm**ldim)
+      real fm_wk2(lxfm**ldim)
+      real fm_wk3(lxfm**ldim)
+      real fm_wk4(lxfm**ldim)
+      common /fullmass_wk/ fm_wk1,fm_wk2,fm_wk3,fm_wk4
+
