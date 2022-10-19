@@ -166,6 +166,7 @@
 !---------------------------------------------------------------------- 
       subroutine fs_global_sort_sp(fld1,fld2,gnum,n)
 
+!     sp - Single Processor        
 !     Get global numbering of entries
 !     When the Single processor work memory is large enough
 !     for all entries.

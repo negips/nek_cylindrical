@@ -8,7 +8,7 @@ set -a
 #NEK_SOURCE_ROOT="$HOME/Nek5000" 
 
 #NEK_SOURCE_ROOT="$smallcompute/Nek5000_3d" 
-NEK_SOURCE_ROOT="$HOME/workstation/git/nek_cylindrical/Nek5000_ifpgll" 
+NEK_SOURCE_ROOT="$HOME/workstation/git/nek_cylindrical/Nek5000" 
 #NEK_SOURCE_ROOT="$HOME/workstation/git/nek_cylindrical/Nek5000_ifpgll" 
 
 # Fortran/C compiler
@@ -28,7 +28,7 @@ FFLAGS="-I./src_inc -mcmodel=medium -g -fbacktrace"
 
 # optional linking flags
 # USR_LFLAGS="-L./ -lparpack_MPI-intel_rst -larpack_intel_rst"
-USR_LFLAGS="-L/usr/lib -lparpack -larpack"
+USR_LFLAGS="-L/usr/lib -lparpack -larpack -llapack"
 
 # auxilliary files to compile
 # NOTE: source files have to located in the same directory as makenek
@@ -42,8 +42,8 @@ LSM="lsm.o lsm_heat.o clsm.o clsm_corr.o lsm_zhoge.o"                           
 STT="stat.o stat_IO.o stat_usr.o"                                                      # Statistics
 MAP="map2D.o map2D_usr.o"                                                              # Mapping tools   
 PRC="fast_reset.o h1mg_reset.o"                                                        # Preconditioner reset
-MATF="wrapper_lapack.o"                                                                # Matrix functions
-USR+="$FRM $FSF $CHKP $LSM $STT $MAP $PRC mesh2_exchange.o laplace_testing.o rotate_cyclic.o orthonew.o gmres_solver.o subs_ifpgll.o"
+MATF="wrapper_lapack.o matf_krylov.o matrix_functions.o"                               # Matrix functions
+USR+="$FRM $FSF $CHKP $LSM $STT $MAP $PRC mesh2_exchange.o laplace_testing.o rotate_cyclic.o orthonew.o gmres_solver.o subs_ifpgll.o null_space_jd.o wrapper_lapack.o mesh1_pressure_integration.o cylindrical_subs.o full_mass.o"
 #echo $USR
 #USR="frame.o mntrlog_block.o mntrlog.o mntrtmr_block.o mntrtmr.o rprm_block.o rprm.o"
 #USR+="io_tools.o io_tools_block.o" 

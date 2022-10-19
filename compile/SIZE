@@ -43,5 +43,9 @@ c
       include 'SIZE.inc'
 
       logical ifpgll
-      common /psnpgll/ ifpgll
+      parameter (ifpgll = .false.)
+
+      integer pgs_handle
+      common /psnpgll/ pgs_handle
+
 

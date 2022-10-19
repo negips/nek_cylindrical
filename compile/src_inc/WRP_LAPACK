@@ -7,7 +7,7 @@ c     Declaration for LAPACK work arrays
 
 !     Lapack Krylov
       integer lapkryl,lapkryl1
-      parameter (lapkryl  = 50)  ! We can change this depending on usage
+      parameter (lapkryl  = 100)  ! We can change this depending on usage
       parameter (lapkryl1 = lapkryl+1)
 
 !     Switches for different arrays
@@ -17,8 +17,9 @@ c     Declaration for LAPACK work arrays
 !     DP - Double Precision
 !     SP - Single Precision      
 
+!     SW - Switch
       integer SW_LLS
-      parameter (SW_LLS       = 1)! Linear-Least-Squares (DP)
+      parameter (SW_LLS       =-1)! Linear-Least-Squares (DP)
       integer SW_SVD
       parameter (SW_SVD       =-1)! SVD (DP)
       integer SW_RSCHUR
@@ -32,7 +33,9 @@ c     Declaration for LAPACK work arrays
       integer SW_ZEIG
       parameter (SW_ZEIG      =-1)! Eigenpar Decomposition of complex matrix(DP)
       integer SW_DGEINV
-      parameter (SW_DGEINV    = 1)! Real Matrix Inversion (DP)
+      parameter (SW_DGEINV    =-1)! Real Matrix Inversion (DP)
+      integer SW_DGEEV
+      parameter (SW_DGEEV     = 1)! Real Matrix Eigen Decomposition (DP)
 
 
 !---------------------------------------------------------------------- 
@@ -167,6 +170,19 @@ c     Length of arrays
 c     Work arrays
       real        DGEINV_WKR(DGEINV_WRL)
       integer     DGEINV_WKI(DGEINV_WIL)  ! IPIV in documentation
+
+!---------------------------------------------------------------------- 
+!     Arrays for Double Precision Eigenpair Decomposition of
+!     a general real matrix
+!     DGEEV - Eigen-pair decomposition      
+
+c     Length of arrays 
+      integer DGEEV_WRL               ! Work Array Size (Real)
+      
+      parameter (DGEEV_WRL=max(SW_DGEEV*(6*LAPKRYL1),1))
+
+c     Work arrays
+      real        DGEEV_WKR(DGEEV_WRL)
 
 !---------------------------------------------------------------------- 
 

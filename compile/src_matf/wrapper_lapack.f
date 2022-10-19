@@ -9,7 +9,8 @@
 !     5) wrp_zschur:    zgees: Complex (Double) Schur Decomposition           
 !     6) wrp_zgeinv:    zgetrf->zgetri: Complex (Double) Matrix Inversion
 !     7) wrp_zgeeig:    zgeev: Complex (Double) Matrix Eigenvalue Decomposition
-!     8) wrp_dgeinv:    dgetrf->dgetri: Real (Double) Matrix Inversion 
+!     8) wrp_dgeinv:    dgetrf->dgetri: Real (Double) Matrix Inversion
+!     9) wrp_dgeev:     dgeev: Real (Double) Matrix Eigenvalue Decomposition      
 !======================================================================       
 !---------------------------------------------------------------------- 
       subroutine wrp_lls(m,n,nrhs,Amat,lda,rhs,ldb)
@@ -465,7 +466,7 @@
 
       
 
-!     Perform LU decomposition
+!     Perform Eigen decomposition
       jobvl = 'N'
       jobvr = 'N'
       call zgeev(jobvl,jobvr,n,Amat,lda,w,VL,ldvl,VR,ldvr,ZEIG_WKC,
@@ -558,6 +559,76 @@
       end subroutine wrp_dgeinv
 !----------------------------------------------------------------------       
 
+      subroutine wrp_dgeev(Amat,lda,n,wr,wi,VL,ldvl,VR,ldvr)
+
+!     LAPACK interface for Eigenpair decomposition of a general matrix.
+!     Double precision        
+
+      implicit none
+
+      include 'SIZE'
+      include 'WRP_LAPACK'
+
+      character jobvl*1 ! = 'N': Left eigenvectors are not computed
+                        ! = 'V': Compute Left eigenvectors
+
+      character jobvr*1 ! = 'N': Right eigenvectors are not computed
+                        ! = 'V': Compute Right eigenvectors
+
+
+      integer info      ! = 0:  successful exit.
+                        ! < 0:  if INFO = -i, the i-th argument had an illegal value.
+                        ! > 0:  if INFO = i, the QR algorithm failed to compute all the
+                        !       eigenvalues, and no eigenvectors have been computed;
+                        !       elements i+1:N of WR and WI contain eigenvalues which
+                        !       have converged.
+
+      integer n         ! Order of the Matrix A(lda,n)
+      integer lda       ! leading dimension of the matrix A
+      integer ldvl      ! leading dimension of the matrix VL(ldvl,n)
+      integer ldvr      ! leading dimension of the matrix VR(ldvr,n)
+
+      complex Amat(lda,n)  ! compute eigenpairs of Amat
+      complex VL(ldvl,n)  ! Left Eigenvectors
+      complex VR(ldvr,n)  ! Right Eigenvectors
+     
+      real wr(n)          ! eigenvalues real part
+      real wi(n)          ! eigenvalues imaginary part
+
+      if (SW_DGEEV.eq.-1) then
+        if (nio.eq.0) write(6,*) 
+     $    'WRP_DGEEV not switched on in WRP_LAPACK. SW_DGEEV=',SW_DGEEV
+        call exitt
+      endif  
+
+!     Perform Eigen decomposition
+      jobvl = 'N'
+      jobvr = 'V'
+      call dgeev(jobvl,jobvr,n,Amat,lda,wr,wi,VL,ldvl,VR,ldvr,
+     $           DGEEV_WKR,DGEEV_WRL,info)
+
+!     Error-check
+      if (info.lt.0) then
+        if (nid.eq.0) write(6,*)
+     $       'ERROR: the i:th argment had an illegal value.', abs(info)
+        call exitt
+      elseif (info.gt.0) then
+        if (nid.eq.0) then
+          write(6,*)
+     $     'ERROR: QR algorithm failed to compute all eigenvalues. ',
+     $     'No eigenvectors computed.'          
+     $     ,info
+        endif               
+        call exitt
+      else
+        if (nid.eq.0) write(6,*) 'DGEEV: successful exit!'
+        if (nid.eq.0) write(6,*) 'Optimal WRL=',
+     $       int(DGEEV_WKR(1)), DGEEV_WRL
+      endif
+
+      return
+      end subroutine wrp_dgeev
+!----------------------------------------------------------------------       
 
 
 

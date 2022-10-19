@@ -41,6 +41,7 @@
       file14  = "excthree0.f00001"
       file15  = "lapthree0.f00001"
       file16  = "lapthree0.f00002"
+      file17  = "cylthree0.f00001"
 
 #      wdsizi,hdr,version,nelgt,ldimr,nelgv,xc,yc,zc,ncurve,curveieg,curveiside,curveparam,curvetype,cbl,bl = JNek_IO.read_re2(re2,nid0)
       re2fld1 = JNek_IO.read_re2_struct(re2,nid0)
@@ -73,9 +74,12 @@
 
 #      fld14 = JNek_IO.read_fld_struct(file14,MPI,nid0)
 
-      fld15 = JNek_IO.read_fld_struct(file15,MPI,nid0)
+#      fld15 = JNek_IO.read_fld_struct(file15,MPI,nid0)
 
-      fld16 = JNek_IO.read_fld_struct(file16,MPI,nid0)
+#      fld16 = JNek_IO.read_fld_struct(file16,MPI,nid0)
+
+      fld17 = JNek_IO.read_fld_struct(file17,MPI,nid0)
+
 
 #      hdr,version,wdsize,nx,ny,nz,nel,nelgt,time,istep,fid0,nfileo,rdcode,p0th,ifprmesh,glnum,x2,y2,z2,u2,v2,w2,p2,t2 = JNek_IO.read_fld(file12,MPI,nid0)
 
@@ -86,12 +90,12 @@
 
       iy    = 1
       el    = 1:3
-      x15   = fld15.x[:,iy,1,el]
-      x     = x15[:]
-      p15   = fld15.p[:,iy,1,el]
-      p16   = fld16.p[:,iy,1,el]
-      plot(x,p15[:])
-      plot(x,p16[:])
+      x17   = fld17.x[:,iy,1,el]
+      x     = x17[:]
+      u17   = fld17.u[:,iy,1,el]
+      v17   = fld17.v[:,iy,1,el]
+      plot(x,u17[:])
+#      plot(x,v17[:])
 
       if rank == 0
         println("Done")

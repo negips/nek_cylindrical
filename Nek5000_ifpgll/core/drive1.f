@@ -114,7 +114,7 @@ c      COMMON /SCRCG/ DUMM10(LX1,LY1,LZ1,LELT,1)
 !     prabal
 !-----------
       if (ifflow.and.iftran) then ! Init pressure solver 
-!         if (fintim.ne.0 .or. nsteps.ne.0) call prinit
+         if (fintim.ne.0 .or. nsteps.ne.0) call prinit
       endif
 !----------- 
 

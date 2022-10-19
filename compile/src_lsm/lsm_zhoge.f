@@ -210,7 +210,7 @@ c-----------------------------------------------------------------------
             if (ndim.eq.3) s1 = s1 + ta4(i)**2
             ta2(i) = sqrt(s1)
           enddo
-          call dealias_uv(ta1,ta2,lsm_ssign)
+          call lsm_dealias_uv(ta1,ta2,lsm_ssign)
           call invcol2(ta1,bm1,n) 
         else  
           if (ndim.eq.3) then
@@ -263,7 +263,7 @@ c-----------------------------------------------------------------------
             if (ndim.eq.3) s1 = s1 + ta4(i)**2
             ta2(i) = sqrt(s1)
           enddo
-          call dealias_uv(ta1,ta2,lsm_ssign)
+          call lsm_dealias_uv(ta1,ta2,lsm_ssign)
           call invcol2(ta1,bm1,n) 
         else  
           if (ndim.eq.3) then
@@ -321,7 +321,7 @@ c-----------------------------------------------------------------------
             if (ndim.eq.3) s1 = s1 + ta4(i)**2
             ta2(i) = sqrt(s1)
           enddo
-          call dealias_uv(ta1,ta2,lsm_ssign)
+          call lsm_dealias_uv(ta1,ta2,lsm_ssign)
           call invcol2(ta1,bm1,n) 
         else  
           if (ndim.eq.3) then
@@ -615,7 +615,7 @@ c-----------------------------------------------------------------------
       end subroutine SmoothSign
 !---------------------------------------------------------------------- 
 
-      subroutine dealias_uv(cku,u,v)
+      subroutine lsm_dealias_uv(cku,u,v)
 
 !     Compute dealiased form:  J^T Bf *Jv .Ju w/ correct Jacobians
 
@@ -712,5 +712,5 @@ c-----------------------------------------------------------------------
       enddo
 
       return
-      end subroutine dealias_uv
+      end subroutine lsm_dealias_uv
 !-----------------------------------------------------------------------

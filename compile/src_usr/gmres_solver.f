@@ -405,9 +405,7 @@ c
 
       ifweighted = .true.
       iftwopass  = .false.
-      iforthowt  = .false.
-
-      if (ifweighted) iforthowt = .true.
+      iforthowt  = .true.
 
 !     Orthogonalize w.r.t constant vector      
       if (iforthowt) then
@@ -442,7 +440,7 @@ c
       iconv = 0
       call rzero(x_gmres,ntot2)
 
-      do while(iconv.eq.0.and.iter.lt.4000)            ! prabal
+      do while(iconv.eq.0.and.iter.lt.2000)            ! prabal
 
          if(iter.eq.0) then
             call col3(r_gmres,ml_gmres,res,ntot2)       ! r = (L^-1)*res
@@ -450,24 +448,21 @@ c
             !update residual
             call copy(r_gmres,res,ntot2)                ! r = res
 
-!           Using z_gmres(1,1) as temporary variable
-            call copy(z_gmres,x_gmres,ntot2)            ! z = x
-
-!           U*z
+!           U*x
             if (iforthowt) then
-              call ortho_right(z_gmres)
+              call ortho_right(x_gmres)
             else
-              call ortho_new(z_gmres)
+              call ortho_new(x_gmres)
             endif     
 
-            call cdabdtp(w_gmres,z_gmres,h1,h2,h2inv,intype)  ! w = A z
+            call cdabdtp(w_gmres,x_gmres,h1,h2,h2inv,intype)  ! w = A x
 
 !           (U^T)*A*U*x
             if (iforthowt) then
               call ortho_left(w_gmres)
             else
               call ortho_new(w_gmres)
-            endif
+            endif     
 
             call add2s2(r_gmres,w_gmres,-1.,ntot2)    ! r = r - w
 
@@ -512,7 +507,7 @@ c
 !           r = (M^-1)w      
             call copy(r_gmres,z_gmres(1,j),ntot2)
 
-!           r = U*(M^-1)*w
+!           r = U*(M^-1)*w             ! Remove constant vector
             if (iforthowt) then
               call ortho_right(r_gmres)
             else
@@ -632,14 +627,6 @@ c
 c     iter = iter - 1
       call copy(res,x_gmres,ntot2)
 
-!     res = U*x
-      if (iforthowt) then
-        call ortho_right(res)
-      else
-        call ortho_new(res)
-      endif    
-
-
       etime1 = dnekclock()-etime1
       if (nio.eq.0) write(6,9999) istep,'  U-PRES gmres  ', 
      &                            iter,divex,div0,tolpss,etime_p,etime1
@@ -716,7 +703,7 @@ c
       iconv = 0
       call rzero(x_gmres,ntot2)
 
-      do while(iconv.eq.0.and.iter.lt.4000)
+      do while(iconv.eq.0.and.iter.lt.1000)
 
          if(iter.eq.0) then
                                                         !      -1
@@ -914,7 +901,6 @@ c     intype = -1  (implicit)
 !     IGMRES:    1) (U^T)*E*(M^-1) *M*U*p               = (U^T)*f,
 !                2) (U^T)*E*U*(M^-1) *(M*p)             = (U^T)*f,
 !                3) (U^T)*E*(M^-1)*U *(M*p)             = (U^T)*f,
-!                4) (U^T)*E*U*(M^-1)*U *(M*p)           = (U^T)*f,
 
       implicit none
 
@@ -988,11 +974,11 @@ c
 
       if(.not.iflag) then
          iflag=.true.
-!         call uzawa_gmres_split0(ml_gmres,mu_gmres,bm2,bm2inv,
-!     $                           lx2*ly2*lz2*nelv)
+         call uzawa_gmres_split0(ml_gmres,mu_gmres,bm2,bm2inv,
+     $                           lx2*ly2*lz2*nelv)
 
-         call rone(ml_gmres,ntot2)
-         call rone(mu_gmres,ntot2) 
+!         call rone(ml_gmres,ntot2)
+!         call rone(mu_gmres,ntot2) 
          norm_fac = 1./sqrt(volvm2)
       endif
 c
@@ -1020,22 +1006,19 @@ c
             !update residual
             call copy(r_gmres,res,ntot2)                ! r = res
 
-!           Using z_gmres(1,1) as temporary variable
-            call copy(z_gmres,x_gmres,ntot2)            ! z = x
-
-!           igmres==1,3: z = z
-!           igmres==2,4: z = Uz
-            if (igmres.eq.2.or.igmres.eq.4) then
+!           igmres==1: x
+!           igmres==2: Ux
+            if (igmres.eq.2.or.igmres.eq.3) then
               if (iforthowt) then
-                call ortho_right(z_gmres)
+                call ortho_right(x_gmres)
               else
-                call ortho_new(z_gmres)
+                call ortho_new(x_gmres)
               endif
             endif 
 
-            call cdabdtp(w_gmres,z_gmres,h1,h2,h2inv,intype)  ! w = A z
+            call cdabdtp(w_gmres,x_gmres,h1,h2,h2inv,intype)  ! w = A x
 
-!           (U^T)*A*x
+!           (U^T)*A*U*x
             if (iforthowt) then
               call ortho_left(w_gmres)
             else
@@ -1072,7 +1055,7 @@ c
             call col3(w_gmres,mu_gmres,v_gmres(1,j),ntot2) ! w  = (U^-1)v_j
 
 !           w = U*w      
-            if (igmres.eq.3.or.igmres.eq.4) then
+            if (igmres.eq.3) then
               if (iforthowt) then
                 call ortho_right(w_gmres)
               else
@@ -1089,9 +1072,9 @@ c
             endif 
             etime_p = etime_p + dnekclock()-etime2
 
-!           r = z_j 
+!           r = (M^-1)w      
             call copy(r_gmres,z_gmres(1,j),ntot2)
-            if (igmres.eq.2.or.igmres.eq.4) then
+            if (igmres.eq.2) then
 !             r = U*(M^-1)*w 
               if (iforthowt) then
                 call ortho_right(r_gmres)
@@ -1100,11 +1083,11 @@ c
               endif
             endif 
 
-!           w = A*r 
+!           w = A*U*(M^-1)w    
             call cdabdtp(w_gmres,r_gmres,h1,h2,h2inv,intype)
 
-!           w = (U^T)*w
-            if (igmres.gt.0.and.igmres.le.4) then
+!           w = (U^T)*A*U*(M^-1)*w
+            if (igmres.eq.1.or.igmres.eq.2.or.igmres.eq.3) then
               if (iforthowt) then
                 call ortho_right(w_gmres)
               else
@@ -1207,19 +1190,19 @@ c           Gram-Schmidt, 1st pass:
             call add2s2(x_gmres,z_gmres(1,i),c_gmres(i),ntot2) 
                        ! x = x + Z*c
          enddo
+!         call ortho_right(x_gmres)              ! prabal
+
+!        x = U*x
+         if (igmres.eq.2) then   
+           if (iforthowt) then
+             call ortho_right(x_gmres)
+           else
+             call ortho_new(x_gmres)
+           endif
+         endif   
       enddo
  9000 continue
 c
-
-!     x = U*x
-      if (igmres.eq.2.or.igmres.eq.4) then   
-        if (iforthowt) then
-          call ortho_right(x_gmres)
-        else
-          call ortho_new(x_gmres)
-        endif
-      endif   
-
       divex = rnorm
 c     iter = iter - 1
       call copy(res,x_gmres,ntot2)
