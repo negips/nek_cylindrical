@@ -69,6 +69,7 @@ $(OBJDIR)/mesh1_pressure_integration.o         :$(SRC_USR)/mesh1_pressure_integr
 $(OBJDIR)/null_space_jd.o       :$(SRC_USR)/null_space_jd.f;            $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@
 $(OBJDIR)/cylindrical_subs.o    :$(SRC_USR)/cylindrical_subs.f;         $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@
 $(OBJDIR)/full_mass.o           :$(SRC_USR)/full_mass.f;                $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@
+$(OBJDIR)/plan_cyl.o            :$(SRC_USR)/plan_cyl.f;                 $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@
 
 
 

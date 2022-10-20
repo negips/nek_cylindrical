@@ -1,0 +1,598 @@
+c-----------------------------------------------------------------------
+      subroutine uservp (ix,iy,iz,ieg)
+
+      implicit none  
+  
+      include 'SIZE'
+      include 'PARALLEL'
+!      include 'TOTAL'
+      include 'INPUT'
+      include 'TSTEP'
+      include 'NEKUSE'
+
+      integer e,ix,iy,iz,ieg
+
+      real rhog         ! density of air
+      real rhow         ! density of water
+      real mug          ! dynamic viscosity of air
+      real muw          ! dynamic viscosity of water
+      real nug          ! kinematic viscosity of air
+      real nuw          ! kinematic viscosity of water
+      real alpha
+
+      real setvp
+
+      real distn, eps
+      real tau          ! relaxation time for properties
+
+!     densities      
+      rhog   = uparam(1)         ! 1.2061e-3
+      rhow   = uparam(2)         ! 1.0
+
+!     viscosities      
+      mug    = uparam(3)         ! 1.5052e-6
+      muw    = uparam(4)         ! 8.3e-5
+
+      nug    = mug/rhog
+      nuw    = muw/rhow
+
+      eps    = 2.0e-2
+
+!!     ramp
+!      if (time.lt.0) then
+!        time = 0.0
+!      endif
+!
+!      if (time.lt.0.00) then
+!        tau   = 0.25
+!        rhog  = uparam(1) + 2.0*exp(-(time/tau)**2)
+!        rhow  = uparam(2) + 1.0*exp(-(time/tau)**2)
+!
+!        mug   = uparam(3) + (1.0e-2)*exp(-(time/tau)**2)
+!        muw   = uparam(4) + (1.0e-2)*exp(-(time/tau)**2)
+!      endif
+
+
+      if (ifield.eq.1) then
+        utrans = setvp(rhow,rhog,temp,eps)
+        udiff  = setvp(muw,mug,temp,eps)
+      endif  
+
+      if (ifield .eq. 2) then
+        e = gllel(ieg)
+        utrans = 1.0   
+        udiff = 1.0 ! param(8)
+      endif
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userf  (ix,iy,iz,ieg)
+
+      implicit none  
+  
+      include 'SIZE'
+!      include 'TOTAL'
+      include 'NEKUSE'
+
+      integer ix,iy,iz,ieg
+
+      ffx = -3.04
+      ffy = 0.0
+      ffz = 0.0
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userq  (ix,iy,iz,ieg)
+
+      implicit none
+
+      include 'SIZE'
+      include 'PARALLEL'
+      include 'NEKUSE'
+      include 'TSTEP'
+
+      integer ix,iy,iz,ieg,e
+
+      integer ijketoii
+      integer ii
+
+      qvol =  0.0
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userchk
+
+      implicit none
+
+      include 'SIZE'
+      include 'GEOM'
+      include 'SOLN'
+      include 'INPUT'
+      include 'TSTEP'
+      include 'MASS'
+      include 'LSM'
+      include 'PARALLEL'
+      include 'CHKPOINTD'
+
+      include 'FS_ALE'
+
+      integer lv
+      parameter (lv=lx1*ly1*lz1*lelv)
+
+      integer n,n1,n2,ncr
+      integer i,j,ie
+
+      integer e,f,nf
+      character*3 cb
+
+      integer resetf    ! reset frequency
+
+      real nullp(lx2*ly2*lz2*lelv)
+      common /nullpressure/ nullp
+
+      real nnorm,nnormi
+      real glsc2,glsc3
+
+      n  = lx1*ly1*lz1*nelv
+      n2 = lx2*ly2*lz2*nelv
+
+      if (istep.eq.0) then
+
+!!       save null space 
+!        call copy(nullp,pr,n2)   
+!        nnorm = sqrt(glsc3(nullp,nullp,bm2,n2))
+!        if (nnorm.gt.1.0e-12) then
+!          nnormi = 1.0/nnorm
+!          call cmult(nullp,nnormi,n2)
+!        endif
+!        call rzero(pr,n2)    
+!        call blank(initc,32)
+!        call setics 
+
+        if (param(95).gt.0) then
+          param(95) = 50        ! start of projections
+        endif
+
+        call rone(vtrans(1,1,1,1,2),n)
+        call rone(vdiff(1,1,1,1,2),n)
+
+        call phi0(t)
+
+        ifield = 1
+        call vprops
+        ifield = 2
+        call vprops
+
+        ifheat = .false.
+
+        call frame_start
+
+        call outpost2(vx,vy,vz,nullp,t,1,'   ')
+        call outpost2(v1mask,v2mask,v3mask,pr,tmask,1,'msk')
+        ifield = 1
+
+!        call gen_mapping_mvb()
+
+      endif 
+
+      call frame_monitor
+
+      call chkpt_main
+
+!      call stat_avg
+
+!      if (fs_iffs) call fs_mvmesh_linear()
+
+!     Reset preconditioner
+      resetf = int(uparam(7))
+      if (mod(istep,resetf).eq.0) then
+        call reset_preconditioner()
+!       Reynolds number of the field
+        do i=1,n
+          t(i,1,1,1,2) = vtrans(i,1,1,1,1)*1.0*7.3/vdiff(i,1,1,1,1)
+        enddo       
+!        call outpost2(vtrans,vdiff,t(1,1,1,1,2),pr,
+!     $                vdiff(1,1,1,1,2),1,'vis')
+      endif
+
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userbc (ix,iy,iz,iside,ieg)
+
+      implicit none
+
+      include 'SIZE'
+      include 'NEKUSE'
+      include 'TSTEP'
+
+      integer ix,iy,iz,iside,ieg
+      real cost,sint,rad,th,ph
+      real mu
+      real x0
+      real Trise
+
+!     Geometry globals
+      real wallx(2)
+      real rady(2)
+      real omega1,omega2,a1,a2
+      common /taylor_geom/ wallx,rady,omega1,omega2,a1,a2
+
+      real radmean
+      real urad,uth
+     
+
+      th   = atan2(z,y)
+      ph   = atan2(-y,z)
+      cost = cos(th)
+      sint = sin(th)
+
+      rad  = y/cost
+
+      ux = 0.0
+      uy = 0.0
+      uz = 0.0
+
+      urad = 0.0  ! radial velocity
+!      uth  = 1.0  ! tangential velocity
+      uth  = a1*rad + a2/rad
+
+      radmean = 0.5*(rady(1)+rady(2))
+      if (rad<radmean) then
+        ux = 0.0
+        call rotate2d(uy,uz,urad,uth,-th)
+      endif
+
+!     Damping near the top/bottom walls
+      mu = 0.03
+      if (x.lt.1.23) then
+        x0 = wallx(1)
+        ux = (1.0 - exp(-((x-x0)/mu)**2))*ux
+        uy = (1.0 - exp(-((x-x0)/mu)**2))*uy
+        uz = (1.0 - exp(-((x-x0)/mu)**2))*uz
+      else
+        x0 = wallx(2)
+        ux = (1.0 - exp(-((x-x0)/mu)**2))*ux
+        uy = (1.0 - exp(-((x-x0)/mu)**2))*uy
+        uz = (1.0 - exp(-((x-x0)/mu)**2))*uz
+      endif
+
+!      Trise = 0.0
+!!     Do a slow ramp up in the beginning      
+!      if (time.lt.Trise) then
+!        ux = ux*sin((pi/2)*(time/Trise))
+!        uy = uy*sin((pi/2)*(time/Trise))
+!        uz = uz*sin((pi/2)*(time/Trise))
+!      endif  
+
+!      temp = 0.0
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine useric (ix,iy,iz,ieg)
+
+      implicit none
+
+      include 'SIZE'
+      include 'INPUT'         ! if3d
+      include 'PARALLEL'
+      include 'NEKUSE'
+      include 'GEOM'
+
+
+      integer ix,iy,iz,ieg
+
+      integer jp
+      common /ppointr/ jp
+
+      real x0,y0,R0
+      real mu
+
+      real cost,sint,rad,th,ph
+
+      real wallx(2)
+      real rady(2)
+      real omega1,omega2,a1,a2
+      common /taylor_geom/ wallx,rady,omega1,omega2,a1,a2
+
+      real urad,uth
+
+
+      th   = atan2(z,y)
+      ph   = atan2(-y,z)
+      cost = cos(th)
+      sint = sin(th)
+
+      urad = 0.0  ! radial velocity
+      uth  = 1.0  ! tangential velocity
+
+      rad  = y/cost
+
+      uth  = a1*rad + a2/rad
+      urad = 0.0
+      ux   = 0.0
+      call rotate2d(uy,uz,urad,uth,-th)
+
+!     Distance function in temperature
+      x0 = 1.23
+      temp = x - x0 
+
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat   ! This routine to modify element vertices
+
+      implicit none  
+  
+      include 'SIZE'      ! _before_ mesh is generated, which 
+      include 'INPUT'
+      include 'GEOM'
+      include 'TSTEP'
+!      include 'TOTAL'     ! guarantees GLL mapping of mesh.
+
+      integer n,i,j
+      real r0
+
+!      ifcyclic = .true.    
+      param(42)=0       ! 0: GMRES (nonsymmetric), 1: PCG w/o weights
+      param(43)=1       ! 0: Additive multilevel (param 42=0), 1: Original 2 level
+      param(44)=0       ! 0: E based Schwartz, 1: A based Schwartz
+
+!      ifpsco(1) = .true.
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat2   ! This routine to modify mesh coordinates
+
+      implicit none
+
+      include 'SIZE'
+      include 'INPUT'
+      include 'GEOM'
+
+      real rad(lx1,ly1,lz1,lelv)
+      integer i,n
+
+      real wallx(2)
+      real rady(2)
+      real omega1,omega2,a1,a2
+      common /taylor_geom/ wallx,rady,omega1,omega2,a1,a2
+
+      real glmin,glmax
+
+      n = lx1*ly1*lz1*nelv
+      wallx(1) = glmin(xm1,n)
+      wallx(2) = glmax(xm1,n)
+
+      do i=1,n
+        rad(i,1,1,1) = sqrt(ym1(i,1,1,1)**2 + zm1(i,1,1,1)**2)
+      enddo
+
+      rady(1) = glmin(rad,n)
+      rady(2) = glmax(rad,n)
+
+      omega1 = 1.0/rady(1)
+      omega2 = 0.0
+      a1 = (omega2*(rady(2)**2) - omega1*rady(1)*rady(1))
+     $            /(rady(2)**2 - rady(1)**2)
+      a2 = (omega1 - omega2)*(rady(1)**2)*(rady(2)**2)
+     $            /(rady(2)**2 - rady(1)**2)
+
+      if (nio.eq.0) write(6,10) 
+     $      'Cylindrical Params: R1,R2,a1,a2,wall1,wall2',
+     $      rady(1),rady(2),a1,a2,wallx(1),wallx(2)
+
+10    format(A43,2x,6(F8.5,2x))
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat3
+
+      implicit none        
+
+      include 'SIZE'
+      include 'SOLN'    ! tmult
+      include 'INPUT'
+      include 'GEOM'
+
+      integer n
+
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine phi0(phi)
+
+      implicit none
+
+      include 'SIZE'
+      include 'GEOM'
+
+      integer lv
+      parameter (lv=lx1*ly1*lz1*lelv)
+
+      real phi(lv)
+     
+      integer i,n
+      real x
+      real x0
+
+      n=lx1*ly1*lz1*nelv
+      
+      x0 = 1.23
+      do i=1,n
+        x = xm1(i,1,1,1)
+        phi(i) = x - x0       ! signed distance from interface
+      enddo  
+
+      return
+      end subroutine phi0
+!---------------------------------------------------------------------- 
+
+      real function heavyside(phi,eps)
+
+      real phi,eps
+      real pi
+
+      pi = 4.0*atan(1.0) 
+
+      if (phi.lt.-eps) then
+        heavyside = 0.0
+      elseif (phi.gt.eps) then
+        heavyside = 1.0
+      else
+        heavyside = 0.5*(1.0 + phi/eps + 1.0/pi*sin(pi*phi/eps))
+!        heavyside = 1.0*(1.0 + phi/eps + 0.0/pi*sin(pi*phi/eps))
+      endif  
+
+      return
+      end function heavyside
+!---------------------------------------------------------------------- 
+
+      real function setvp(vg,vl,phi,eps)
+
+      real vg     ! gas property
+      real vl     ! liquid property
+      real phi    ! disgned distance function
+      real eps    
+      real heavyside    ! heavyside function
+
+      heavy = heavyside(phi,eps)
+      setvp = vg + (vl - vg)*heavy      
+
+      return
+      end function 
+!---------------------------------------------------------------------- 
+
+      subroutine heavydist(phi,eps,off)
+
+      implicit none
+
+      include 'SIZE'
+      include 'GEOM'
+      include 'SOLN'
+
+      integer lv
+      parameter (lv=lx1*ly1*lz1*lelv)
+
+      real phi(lv)
+      real phioff
+      real heavyside          ! function
+      
+      integer i,j,k,e,n
+      real hd
+      real eps
+      real off
+
+      n=lx1*ly1*lz1*nelv
+
+      do i=1,n
+        phioff = phi(i)+off
+        hd = heavyside(phioff,eps)
+        phi(i) = hd
+      enddo  
+
+      return
+      end subroutine heavydist
+!---------------------------------------------------------------------- 
+
+      subroutine htandist(phi,eps)
+
+      implicit none
+
+      include 'SIZE'
+      include 'GEOM'
+      include 'SOLN'
+
+      integer lv
+      parameter (lv=lx1*ly1*lz1*lelv)
+
+      real phi(lv)
+      real d
+      real heavyside          ! function
+      
+      integer i,j,k,e,n
+      real htand
+      real eps
+      real off
+
+      n=lx1*ly1*lz1*nelv
+
+      do i=1,n
+        d = phi(i)/(2.0*eps)
+        htand = tanh(d)
+        phi(i) = 0.5*(htand + 1.0)
+      enddo  
+
+      return
+      end subroutine htandist
+!---------------------------------------------------------------------- 
+
+      function ijketoii(i,j,k,e)
+
+      implicit none
+
+      include 'SIZE'
+
+      integer ijketoii
+
+      integer i,j,k,e
+
+      ijketoii = (((e-1)*lz1 + (k-1))*ly1 + (j-1))*lx1 + i
+
+      return
+      end function 
+!----------------------------------------------------------------------       
+
+      subroutine reset_bcmask
+
+      implicit none
+
+      include 'SIZE'
+      include 'INPUT'
+
+      integer e,f,nf
+      character*3 cb
+      character*1 cb1(3)
+      equivalence (cb1,cb)
+      integer ifld
+
+
+      ifld = 1
+
+      nf = 2*ndim
+!     Reset BCs      
+      do e=1,nelv
+      do f=1,nf
+        cb = cbc(f,e,ifld)
+        if (cb.eq.'v  ') then
+!          call blank(cb,3)
+!          cb1(1) = 'd'
+!          cb1(2) = 'd'
+!          cb1(3) = 'd'
+        endif
+      enddo
+      enddo  
+
+!      ifstrs = .false.
+!      call bcmask
+!      ifstrs = .true.
+
+
+      return
+      end subroutine reset_bcmask
+!---------------------------------------------------------------------- 
+
+
+
+
+
+
+

@@ -41,7 +41,7 @@
       logical iffullmass
       integer maxiter
 
-      iffullmass = .true.
+      iffullmass = .false.
 
       call opgradt_cyl(ta1,ta2,ta3,wp)
       if ((intype.eq.0).or.(intype.eq.-1)) then
@@ -1555,8 +1555,6 @@ c-----------------------------------------------------------------------
       include 'SIZE'
       include 'GEOM'
       include 'INPUT' 
-
-!      include 'TOTAL'
 
       real bdu(1),u(1),cx(1),cy(1),cz(1)
 

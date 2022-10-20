@@ -1,0 +1,7 @@
+/home/prabal/workstation/git/nek_cylindrical/Nek5000/3rd_party/hypre/hypre/build/CMakeFiles/HYPRE.dir
+/home/prabal/workstation/git/nek_cylindrical/Nek5000/3rd_party/hypre/hypre/build/CMakeFiles/edit_cache.dir
+/home/prabal/workstation/git/nek_cylindrical/Nek5000/3rd_party/hypre/hypre/build/CMakeFiles/rebuild_cache.dir
+/home/prabal/workstation/git/nek_cylindrical/Nek5000/3rd_party/hypre/hypre/build/CMakeFiles/list_install_components.dir
+/home/prabal/workstation/git/nek_cylindrical/Nek5000/3rd_party/hypre/hypre/build/CMakeFiles/install.dir
+/home/prabal/workstation/git/nek_cylindrical/Nek5000/3rd_party/hypre/hypre/build/CMakeFiles/install/local.dir
+/home/prabal/workstation/git/nek_cylindrical/Nek5000/3rd_party/hypre/hypre/build/CMakeFiles/install/strip.dir
