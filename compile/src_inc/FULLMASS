@@ -1,18 +1,32 @@
-!     Variables for full mass matrix evaulations
+!     Variables for Consistent integration evaluation
 
       integer lxfm
       parameter (lxfm=2*lx1)   ! Arbitrarily set for now
 
-!     Interpolation matrices for dense mass matrices
-      real fm_jgl(lxfm,lx1)
-      real fm_jglt(lx1,lxfm)
+!     Nodes and weights      
       real fm_wght(lxfm)
       real fm_z(lxfm)
-      common /fullmass/ fm_jgl,fm_jglt,fm_wght,fm_z
 
-      real fm_wk1(lxfm**ldim)
-      real fm_wk2(lxfm**ldim)
+      common /cintg_wz/ fm_z,fm_wght
+
+!     Interpolation matrices for consistent integration
+      real fm_jgl(lxfm,lx1)
+      real fm_jglt(lx1,lxfm)
+      real fm_jgl2(lxfm,lx1)
+      real fm_jglt2(lx1,lxfm)
+      
+      common /cintg_intp/ fm_jgl,fm_jglt,fm_jgl2,fm_jglt2
+
+      real fm_dgl(lxfm,lx1)
+      real fm_dglt(lx1,lxfm)
+      real fm_dgl2(lxfm,lx2)
+      real fm_dglt2(lx2,lxfm)
+    
+      common /cintg_deriv/ fm_dgl,fm_dglt
+
+      real fm_wk1(lxfm**ldim,2)
+!      real fm_wk2(lxfm**ldim)
       real fm_wk3(lxfm**ldim)
       real fm_wk4(lxfm**ldim)
-      common /fullmass_wk/ fm_wk1,fm_wk2,fm_wk3,fm_wk4
+      common /fullmass_wk/ fm_wk1,fm_wk3,fm_wk4
 
