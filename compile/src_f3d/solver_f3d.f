@@ -389,7 +389,7 @@ c        if ( .not.ifprint )  goto 9999
 
       maxit=500
       do 1000 iter=1,maxit
-         call axhmsf_cyl(Ap1r,Ap2r,Ap3r,Ap1i,Ap2i,Ap3i,
+         call axhmsf_f3d_cyl(Ap1r,Ap2r,Ap3r,Ap1i,Ap2i,Ap3i,
      $                      p1r,p2r,p3r,p1i,p2i,p3i,h1,h2)
 
 

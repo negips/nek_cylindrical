@@ -7,7 +7,7 @@
 !====================================================================== 
 !-----------------------------------------------------------------------
 
-      subroutine axhmsf_cyl(Au1r,Au2r,Au3r,Au1i,Au2i,Au3i,
+      subroutine axhmsf_f3d_cyl(Au1r,Au2r,Au3r,Au1i,Au2i,Au3i,
      $                      u1r,u2r,u3r,u1i,u2i,u3i,h1,h2)
 
 !     Fluid (MATMOD .GE. 0) :  Hij Uj = Aij*Uj + H2*B*Ui 
@@ -37,9 +37,9 @@
 !     Common blocks are used in succession.
 
 !     Aij*Uj      
-      call stnrate_cyl(u1r,u2r,u3r,u1i,u2i,u3i,nel,matmod)
-      call stress_cyl (h1,h2,nel,matmod)
-      call div_stress_cyl(Au1r,Au2r,Au3r,Au1i,Au2i,Au3i,nel)   ! aijuj
+      call stnrate_f3d_cyl(u1r,u2r,u3r,u1i,u2i,u3i,nel,matmod)
+      call stress_f3d_cyl (h1,h2,nel,matmod)
+      call div_stress_f3d_cyl(Au1r,Au2r,Au3r,Au1i,Au2i,Au3i,nel)   ! aijuj
 
 !     Add Helmholtz contributions
 !     + H2*B*Ui      
@@ -52,10 +52,10 @@
       call addcol4 (Au3i,bm1,h2,u3i,ntot1)
 
       return
-      end subroutine axhmsf_cyl             
+      end subroutine axhmsf_f3d_cyl             
 !-----------------------------------------------------------------------
      
-      subroutine stnrate_cyl(u1r,u2r,u3r,u1i,u2i,u3i,nel,matmod)
+      subroutine stnrate_f3d_cyl(u1r,u2r,u3r,u1i,u2i,u3i,nel,matmod)
 
       implicit none
 
@@ -272,9 +272,9 @@
 
 
       return
-      end subroutine stnrate_cyl
+      end subroutine stnrate_f3d_cyl
 c-----------------------------------------------------------------------
-      subroutine stress_cyl (h1,h2,nel,matmod)
+      subroutine stress_f3d_cyl (h1,h2,nel,matmod)
 C
 C     MATMOD.GE.0        Fluid material models
 C     MATMOD.LT.0        Solid material models
@@ -359,9 +359,9 @@ c        newtonian fluids
 
 
       return
-      end subroutine stress_cyl
+      end subroutine stress_f3d_cyl
 !-----------------------------------------------------------------------
-      subroutine div_stress_cyl (Au1r,Au2r,Au3r,Au1i,Au2i,Au3i,nel)
+      subroutine div_stress_f3d_cyl (Au1r,Au2r,Au3r,Au1i,Au2i,Au3i,nel)
 
       implicit none
 
@@ -476,7 +476,7 @@ c        newtonian fluids
 !      if (ldim.eq.3) call ttxyz  (au3,txz,tyz,tzz,nel)
 
       return
-      end subroutine div_stress_cyl
+      end subroutine div_stress_f3d_cyl
 !-----------------------------------------------------------------------
 !---------------------------------------------------------------------- 
       subroutine axhmsf_cyl_real(Au1,Au2,Au3,u1,u2,u3,h1,h2)

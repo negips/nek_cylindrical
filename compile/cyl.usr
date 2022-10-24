@@ -35,7 +35,7 @@ c-----------------------------------------------------------------------
       nug    = mug/rhog
       nuw    = muw/rhow
 
-      eps    = 5.0e-2
+      eps    = 2.0e-2
 
       if (ifield.eq.1) then
         utrans = setvp(rhog,rhow,temp,eps)
@@ -60,7 +60,7 @@ c-----------------------------------------------------------------------
 
       integer ix,iy,iz,ieg
 
-      ffx = -3.00
+      ffx = 3.00
       ffy = 0.0
       ffz = 0.0
 

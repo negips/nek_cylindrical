@@ -108,7 +108,8 @@ c     call copy (dpc,binv,n)
 
       maxit=200
       do 1000 iter=1,maxit
-         call axhmsf  (ap1,ap2,ap3,p1,p2,p3,h1,h2,matmod)
+!         call axhmsf  (ap1,ap2,ap3,p1,p2,p3,h1,h2,matmod)
+         call axhmsf_cyl (ap1,ap2,ap3,p1,p2,p3,h1,h2,matmod)      ! prabal
          call rmask   (ap1,ap2,ap3,nel)
          call opdssum (ap1,ap2,ap3)
          pap   = op_glsc2_wt(p1,p2,p3,ap1,ap2,ap3,rmult)

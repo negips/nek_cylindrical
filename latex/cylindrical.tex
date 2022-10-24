@@ -466,33 +466,61 @@ Rearranging terms for convenience:
 	\end{split}\right.
 \end{eqnarray}
 
-Now taking the dot product with the gradient of the test function, $\nabla (v)\bigcdot$
+Now taking the dot product with the gradient of the test function, $\nabla (v)\bigcdot(2\mu\mathcal{S})$
 \begin{subequations}
 \begin{eqnarray}
-	\nabla(v_{x}\hat{x})\bigcdot\mathcal{S} = & \left\{
+	\nabla(v_{x}\hat{x})\bigcdot(2\mu\mathcal{S}) = & \left\{
 	\begin{split}
-	\dfrac{\partial v_{x}}{\partial x}\dfrac{\partial u_{x}}{\partial x} 
-	+ \dfrac{1}{2}\dfrac{\partial v_{x}}{\partial r}\left(\dfrac{\partial u_{x}}{\partial r} + \dfrac{\partial u_{r}}{\partial x}	\right) \\
-	+ \dfrac{1}{2r}\dfrac{\partial v_{x}}{\partial \theta}\left(\dfrac{1}{r}\dfrac{\partial u_{x}}{\partial \theta} + \dfrac{\partial u_{\theta}}{\partial x} \right) 
+	2\dfrac{\partial v_{x}}{\partial x}\dfrac{\partial u_{x}}{\partial x} 
+	+ \dfrac{\partial v_{x}}{\partial r}\left(\dfrac{\partial u_{x}}{\partial r} + \dfrac{\partial u_{r}}{\partial x}	\right) \\
+	+ \dfrac{\partial v_{x}}{\partial \theta}\left(\dfrac{1}{r}\dfrac{\partial u_{x}}{\partial \theta} + \dfrac{\partial u_{\theta}}{\partial x} \right) 
 		\end{split} \right. \\
 	%
-	\nabla(v_{r}\hat{r})\bigcdot\mathcal{S} = & \left\{
+	\nabla(v_{r}\hat{r})\bigcdot(2\mu\mathcal{S}) = & \left\{
 	\begin{split}
-	\dfrac{1}{2}\dfrac{\partial v_{r}}{\partial x}\left(\dfrac{\partial u_{x}}{\partial r} + \dfrac{\partial u_{r}}{\partial x} \right)
-	+ \dfrac{\partial v_{r}}{\partial r}\dfrac{\partial u_{r}}{\partial r} \\
-	+ \dfrac{1}{2r}\dfrac{\partial v_{r}}{\partial \theta}\left(\dfrac{1}{r}\dfrac{\partial u_{r}}{\partial \theta} + \dfrac{\partial u_{\theta}}{\partial r} - \dfrac{u_{\theta}}{r} \right) 
-	+ \dfrac{v_{r}}{r}\left(\dfrac{1}{r}\dfrac{\partial u_{\theta}}{\partial \theta} + \dfrac{u_{r}}{r}	\right)
+	\dfrac{\partial v_{r}}{\partial x}\left(\dfrac{\partial u_{x}}{\partial r} + \dfrac{\partial u_{r}}{\partial x} \right)
+	+ 2\dfrac{\partial v_{r}}{\partial r}\dfrac{\partial u_{r}}{\partial r} \\
+	+ \dfrac{1}{r}\dfrac{\partial v_{r}}{\partial \theta}\left(\dfrac{1}{r}\dfrac{\partial u_{r}}{\partial \theta} + \dfrac{\partial u_{\theta}}{\partial r} - \dfrac{u_{\theta}}{r} \right) 
+	+ \dfrac{v_{r}}{r}\left(\dfrac{2}{r}\dfrac{\partial u_{\theta}}{\partial \theta} + 2\dfrac{u_{r}}{r}	\right)
 		\end{split}\right. \\
 	%
-	\nabla(v_{\theta}\hat{\theta})\bigcdot\mathcal{S} =&  \left\{
+	\nabla(v_{\theta}\hat{\theta})\bigcdot(2\mu\mathcal{S}) =&  \left\{
 	\begin{split}
-	\dfrac{1}{2}\dfrac{\partial v_{\theta}}{\partial x}\left(\dfrac{\partial u_{\theta}}{\partial x} + \dfrac{1}{r}\dfrac{\partial u_{x}}{\partial \theta} \right) 
-	+ \dfrac{1}{2}\dfrac{\partial v_{\theta}}{\partial r}\left(\dfrac{\partial u_{\theta}}{\partial r} + \dfrac{1}{r}\dfrac{\partial u_{r}}{\partial \theta} - \dfrac{u_{\theta}}{r}	\right) \\
-	+ \dfrac{1}{r}\dfrac{\partial v_{\theta}}{\partial \theta}\left(\dfrac{1}{r}\dfrac{\partial u_{\theta}}{\partial \theta} + \dfrac{u_{r}}{r}	\right)
-	- \dfrac{v_{\theta}}{2r} \left(\dfrac{1}{r}\dfrac{\partial u_{r}}{\partial \theta} + \dfrac{\partial u_{\theta}}{\partial r} - \dfrac{u_{\theta}}{r} \right) 
+	\dfrac{\partial v_{\theta}}{\partial x}\left(\dfrac{\partial u_{\theta}}{\partial x} + \dfrac{1}{r}\dfrac{\partial u_{x}}{\partial \theta} \right) 
+	+ \dfrac{\partial v_{\theta}}{\partial r}\left(\dfrac{\partial u_{\theta}}{\partial r} + \dfrac{1}{r}\dfrac{\partial u_{r}}{\partial \theta} - \dfrac{u_{\theta}}{r}	\right) \\
+	+ \dfrac{1}{r}\dfrac{\partial v_{\theta}}{\partial \theta}\left(\dfrac{2}{r}\dfrac{\partial u_{\theta}}{\partial \theta} + 2\dfrac{u_{r}}{r}	\right)
+	- \dfrac{v_{\theta}}{r} \left(\dfrac{1}{r}\dfrac{\partial u_{r}}{\partial \theta} + \dfrac{\partial u_{\theta}}{\partial r} - \dfrac{u_{\theta}}{r} \right) 
 	\end{split}\right.
 \end{eqnarray}
 \end{subequations}
+
+%\begin{subequations}
+%	\begin{eqnarray}
+%		\nabla(v_{x}\hat{x})\bigcdot\mathcal{S} = & \left\{
+%		\begin{split}
+%			\dfrac{\partial v_{x}}{\partial x}\dfrac{\partial u_{x}}{\partial x} 
+%			+ \dfrac{1}{2}\dfrac{\partial v_{x}}{\partial r}\left(\dfrac{\partial u_{x}}{\partial r} + \dfrac{\partial u_{r}}{\partial x}	\right) \\
+%			+ \dfrac{1}{2r}\dfrac{\partial v_{x}}{\partial \theta}\left(\dfrac{1}{r}\dfrac{\partial u_{x}}{\partial \theta} + \dfrac{\partial u_{\theta}}{\partial x} \right) 
+%		\end{split} \right. \\
+%		%
+%		\nabla(v_{r}\hat{r})\bigcdot\mathcal{S} = & \left\{
+%		\begin{split}
+%			\dfrac{1}{2}\dfrac{\partial v_{r}}{\partial x}\left(\dfrac{\partial u_{x}}{\partial r} + \dfrac{\partial u_{r}}{\partial x} \right)
+%			+ \dfrac{\partial v_{r}}{\partial r}\dfrac{\partial u_{r}}{\partial r} \\
+%			+ \dfrac{1}{2r}\dfrac{\partial v_{r}}{\partial \theta}\left(\dfrac{1}{r}\dfrac{\partial u_{r}}{\partial \theta} + \dfrac{\partial u_{\theta}}{\partial r} - \dfrac{u_{\theta}}{r} \right) 
+%			+ \dfrac{v_{r}}{r}\left(\dfrac{1}{r}\dfrac{\partial u_{\theta}}{\partial \theta} + \dfrac{u_{r}}{r}	\right)
+%		\end{split}\right. \\
+%		%
+%		\nabla(v_{\theta}\hat{\theta})\bigcdot\mathcal{S} =&  \left\{
+%		\begin{split}
+%			\dfrac{1}{2}\dfrac{\partial v_{\theta}}{\partial x}\left(\dfrac{\partial u_{\theta}}{\partial x} + \dfrac{1}{r}\dfrac{\partial u_{x}}{\partial \theta} \right) 
+%			+ \dfrac{1}{2}\dfrac{\partial v_{\theta}}{\partial r}\left(\dfrac{\partial u_{\theta}}{\partial r} + \dfrac{1}{r}\dfrac{\partial u_{r}}{\partial \theta} - \dfrac{u_{\theta}}{r}	\right) \\
+%			+ \dfrac{1}{r}\dfrac{\partial v_{\theta}}{\partial \theta}\left(\dfrac{1}{r}\dfrac{\partial u_{\theta}}{\partial \theta} + \dfrac{u_{r}}{r}	\right)
+%			- \dfrac{v_{\theta}}{2r} \left(\dfrac{1}{r}\dfrac{\partial u_{r}}{\partial \theta} + \dfrac{\partial u_{\theta}}{\partial r} - \dfrac{u_{\theta}}{r} \right) 
+%		\end{split}\right.
+%	\end{eqnarray}
+%\end{subequations}
+
 
 %
 %\begin{eqnarray}

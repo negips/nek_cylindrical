@@ -1764,6 +1764,426 @@ c-----------------------------------------------------------------------
       end subroutine dealias_uv
 !-----------------------------------------------------------------------
 
+      subroutine axhmsf_cyl(Au1,Au2,Au3,u1,u2,u3,h1,h2)
+
+!     Fluid (MATMOD .GE. 0) :  Hij Uj = Aij*Uj + H2*B*Ui 
+
+      implicit none
+
+      include 'SIZE'
+      include 'TSTEP'   ! nelfld
+      include 'MASS'
+
+      real u1(1),u2(1),u3(1)
+      real Au1(1),Au2(1),Au3(1)
+      real h1(1),h2(1)
+
+      integer matmod,nel,ntot1
+
+      logical ifdfrm,iffast,ifh2,ifsolv
+      common /fastmd/ ifdfrm(lelt), iffast(lelt), ifh2, ifsolv
+
+
+      matmod = 0                ! Newtonian Fluids
+      nel    = nelfld(ifield)   ! ifield should be already set
+
+      ntot1 = lx1*ly1*lz1*nel
+
+
+!     Common blocks are used in succession.
+
+!     Aij*Uj      
+      call stnrate_cyl(u1,u2,u3,nel,matmod)
+      call stress_cyl (h1,h2,nel,matmod)
+      call div_stress_cyl(Au1,Au2,Au3,nel)   ! aijuj
+
+!     Add Helmholtz contributions
+!     + H2*B*U      
+      call addcol4 (Au1,bm1,h2,u1,ntot1)
+      call addcol4 (Au2,bm1,h2,u2,ntot1)
+      call addcol4 (Au3,bm1,h2,u3,ntot1)
+
+      return
+      end subroutine axhmsf_cyl             
+!-----------------------------------------------------------------------
+
+      subroutine stnrate_cyl (u1,u2,u3,nel,matmod)
+
+C     Compute strainrates
+C     CAUTION : Stresses and strainrates share the same scratch commons
+      
+      implicit none
+
+      include 'SIZE'
+      include 'INPUT'
+      include 'GEOM'
+      include 'TSTEP'
+
+      real exx,exy,exz,eyx
+      common /ctmp1/ exx(lx1*ly1*lz1*lelt)
+     $             , exy(lx1*ly1*lz1*lelt)
+     $             , exz(lx1*ly1*lz1*lelt)
+     $             , eyx(lx1*ly1*lz1*lelt)
+      real eyy,eyz
+      common /ctmp0/ eyy(lx1*ly1*lz1*lelt)
+     $             , eyz(lx1*ly1*lz1*lelt)
+
+      real ezx,ezy,ezz
+      common /axcyl_ez/ ezx(lx1*ly1*lz1*lelt)
+     $                , ezy(lx1*ly1*lz1*lelt)
+     $                , ezz(lx1*ly1*lz1*lelt)
+
+      real radi,wk
+      common /axcyl_wk/ radi(lx1*ly1*lz1*lelt)  ! radius inverse
+     $                , wk(lx1*ly1*lz1*lelt)    ! work array
+
+      real u1(lx1,ly1,lz1,1)
+      real u2(lx1,ly1,lz1,1)
+      real u3(lx1,ly1,lz1,1)
+
+      integer nt1,nel,matmod
+
+      nt1 = lx1*ly1*lz1*nel
+
+!     1/R      
+      call invers2(radi,ym1,nt1)
+
+      call rzero3 (exx,exy,exz,nt1)
+      call rzero3 (eyx,eyy,eyz,nt1)
+      call rzero3 (ezx,ezy,ezz,nt1)
+
+!     uxyz does not zero out variables.
+!     values are just added on
+
+!     X-Direction      
+      call uxyz  (u1,exx,exy,exz,nel)
+!     exz = 1/R*du/\theta
+      call col2(exz,radi,nt1)      
+
+      call invcol2 (exx,jacm1,nt1)
+      call invcol2 (exy,jacm1,nt1)
+      call invcol2 (exz,jacm1,nt1)
+
+!     R-Direction      
+      call uxyz  (u2,eyx,eyy,eyz,nel)
+!     eyz = 1/R*dv/\theta
+      call col2(eyz,radi,nt1)
+
+      call invcol2 (eyx,jacm1,nt1)
+      call invcol2 (eyy,jacm1,nt1)
+      call invcol2 (eyz,jacm1,nt1)
+
+
+!     \theta-Direction      
+      if (ldim.eq.3) then
+        call uxyz   (u3,ezx,ezy,ezz,nel)
+
+        call invcol2 (ezx,jacm1,nt1)
+        call invcol2 (ezy,jacm1,nt1)
+        call invcol2 (ezz,jacm1,nt1)
+
+!       ezz = 1/R*dw/\theta
+        call col2(ezz,radi,nt1)
+
+!       ezz = 1/R*dw/\theta + v/R
+        call col3(wk,u2,radi,nt1)
+        call add2(ezz,wk,nt1)
+
+!       ezy = dw/dR - w/R
+        call col3(wk,u3,radi,nt1)
+        call sub2(ezy,wk,nt1)
+      endif   
+
+!     1/2*(\grad u + (\grad u)^T)
+!     1/2*(exx + exx) = exx
+
+!     1/2*(exy + eyx)
+      call copy(wk,exy,nt1)
+      call add2(exy,eyx,nt1)
+      call add2(eyx,wk,nt1)
+      call cmult(exy,0.5,nt1)
+      call cmult(eyx,0.5,nt1)
+
+!     1/2*(exz + exz)
+      call copy(wk,exz,nt1)
+      call add2(exz,ezx,nt1)
+      call add2(ezx,wk,nt1)
+      call cmult(exz,0.5,nt1)
+      call cmult(ezx,0.5,nt1)
+
+!     1/2*(eyx + exy)
+!     Already calculated
+      
+!     1/2*(eyy + eyy) = eyy
+
+!     1/2*(eyz + ezy)      
+      call copy(wk,eyz,nt1)
+      call add2(eyz,ezy,nt1)
+      call add2(ezy,wk,nt1)
+      call cmult(eyz,0.5,nt1)
+      call cmult(ezy,0.5,nt1)
+
+!     1/2*(ezx + exz)
+!     Already calculated
+
+!     1/2*(ezy + eyz)
+!     Already calculated
+
+!     1/2*(ezz + ezz) = ezz      
+
+
+      return
+      end subroutine stnrate_cyl
+!-----------------------------------------------------------------------
+
+      subroutine stress_cyl (h1,h2,nel,matmod)
+
+C     MATMOD.GE.0        Fluid material models
+C     MATMOD.LT.0        Solid material models
+C
+C     CAUTION : Stresses and strainrates share the same scratch commons
+
+!     Tij = 2*\mu*Eij
+
+      implicit none
+
+      include 'SIZE'
+
+      real exx,exy,exz,eyx
+      common /ctmp1/ exx(lx1*ly1*lz1*lelt)
+     $             , exy(lx1*ly1*lz1*lelt)
+     $             , exz(lx1*ly1*lz1*lelt)
+     $             , eyx(lx1*ly1*lz1*lelt)
+      real eyy,eyz
+      common /ctmp0/ eyy(lx1*ly1*lz1*lelt)
+     $             , eyz(lx1*ly1*lz1*lelt)
+
+      real ezx,ezy,ezz
+      common /Axcyl_ez/ ezx(lx1*ly1*lz1*lelt)
+     $                , ezy(lx1*ly1*lz1*lelt)
+     $                , ezz(lx1*ly1*lz1*lelt)
+
+      real radi,wk
+      common /Axcyl_wk/ radi(lx1*ly1*lz1*lelt)  ! radius inverse
+     $                , wk(lx1*ly1*lz1*lelt)    ! work array
+
+      real t11,t22,t33,hii
+      common /scrsf/ t11(lx1,ly1,lz1,lelt)
+     $             , t22(lx1,ly1,lz1,lelt)
+     $             , t33(lx1,ly1,lz1,lelt)
+     $             , hii(lx1,ly1,lz1,lelt)
+
+      real h1(lx1,ly1,lz1,1),h2(lx1,ly1,lz1,1)
+
+      integer nt1,nel,matmod
+      real const
+
+      nt1 = lx1*ly1*lz1*nel
+
+      if (matmod.eq.0) then
+
+!        newtonian fluids
+         const = 2.0
+         call cmult2 (hii,h1,const,nt1)
+
+         call col2   (exx,hii,nt1)
+         call col2   (exy,hii,nt1)
+         call col2   (exz,hii,nt1)
+
+         call col2   (eyx,hii,nt1)
+         call col2   (eyy,hii,nt1)
+         call col2   (eyz,hii,nt1)
+
+         call col2   (ezx,hii,nt1)
+         call col2   (ezy,hii,nt1)
+         call col2   (ezz,hii,nt1)
+        
+
+      elseif (matmod.eq.-1) then
+!       elastic solids
+        if (nio.eq.0) then
+          write(6,*) 'Cylindrical solver not implemented for solids'
+        endif
+        call exitt
+      endif
+
+      return
+      end
+!-----------------------------------------------------------------------
+
+      subroutine div_stress_cyl (au1,au2,au3,nel)
+
+      implicit none
+
+      include 'SIZE'
+      include 'MASS'
+      include 'GEOM'
+
+      real exx,exy,exz,eyx
+      common /ctmp1/ exx(lx1*ly1*lz1*lelt)
+     $             , exy(lx1*ly1*lz1*lelt)
+     $             , exz(lx1*ly1*lz1*lelt)
+     $             , eyx(lx1*ly1*lz1*lelt)
+      real eyy,eyz
+      common /ctmp0/ eyy(lx1*ly1*lz1*lelt)
+     $             , eyz(lx1*ly1*lz1*lelt)
+
+      real ezx,ezy,ezz
+      common /Axcyl_ez/ ezx(lx1*ly1*lz1*lelt)
+     $                , ezy(lx1*ly1*lz1*lelt)
+     $                , ezz(lx1*ly1*lz1*lelt)
+
+      real radi,wk
+      common /Axcyl_wk/ radi(lx1*ly1*lz1*lelt)  ! radius inverse
+     $                , wk(lx1*ly1*lz1*lelt)    ! work array
+
+      real au1(lx1,ly1,lz1,1),
+     $     au2(lx1,ly1,lz1,1),
+     $     au3(lx1,ly1,lz1,1)
+
+      integer nel
+      integer nt1
+
+      nt1 = lx1*ly1*lz1*nel
+
+!     X-Direction      
+      call ttxyz_cyl(au1,exx,exy,exz,nel)
+!     No additional terms in x
+
+!     R-Direction      
+      call ttxyz_cyl(au2,eyx,eyy,eyz,nel)
+
+!     ezz = 1/R*dw/\theta + v/R     
+!     (v_hat/R)*(ezz)*W*Jac*R
+!     Assuming BM1 contains the factor of R
+!     (and also Jac. of course)      
+      call col3(wk,ezz,radi,nt1)    ! wk = ezz/R
+      call col2(wk,bm1,nt1)         ! wk = (ezz/R)*W*Jac*R
+
+!     + (v_hat/R)*(ezz)*W*Jac*R
+      call add2(au2,wk,nt1)
+
+!     \theta-Direction      
+      call ttxyz_cyl(au3,ezx,ezy,ezz,nel)
+
+!     eyz = (1/R*dv/d\theta + dw/dR - w/R)
+!     (v_hat/R)*(eyz)*W*Jac*R
+!     Assuming BM1 contains the factor of R
+!     (and also Jac. of course)      
+      call col3(wk,eyz,radi,nt1)    ! wk = eyz/R
+      call col2(wk,bm1,nt1)         ! wk = (eyz/R)*W*Jac*R
+
+!     - (v_hat/R)*(eyz)*W*Jac*R
+      call add2(au3,wk,nt1)
+
+      return
+      end
+!-----------------------------------------------------------------------
+
+      subroutine ttxyz_cyl (ff,tx,ty,tz,nel)
+
+      implicit none
+
+      include 'SIZE'
+      include 'DXYZ'
+      include 'GEOM'
+      include 'INPUT'
+      include 'TSTEP'
+      include 'WZ'
+
+      real tx(lx1,ly1,lz1,1),
+     $     ty(lx1,ly1,lz1,1),
+     $     tz(lx1,ly1,lz1,1),
+     $     ff(lx1*ly1*lz1,1)
+
+      real fr,fs,ft
+      common /scrsf/ fr(lx1*ly1*lz1,lelt)
+     $             , fs(lx1*ly1*lz1,lelt)
+     $             , ft(lx1*ly1*lz1,lelt)
+
+      real ys(lx1)
+
+      integer nel,isd
+      integer iel,ix,iy,iz
+      integer nxyz1,nt1
+
+      real radi,wk
+      common /Axcyl_wk/ radi(lx1*ly1*lz1*lelt)  ! radius inverse
+     $                , wk(lx1*ly1*lz1*lelt)    ! work array
+
+      nxyz1 = lx1*ly1*lz1
+      nt1   = nxyz1*nel
+
+!     1/R      
+      call invers2(radi,ym1,nt1)
+
+      call col3    (fr,rxm1,tx,nt1)
+      call addcol3 (fr,rym1,ty,nt1)
+      call col3    (fs,sxm1,tx,nt1)
+      call addcol3 (fs,sym1,ty,nt1)
+
+      if (ldim.eq.3) then
+!       wk = 1/R*dr/dz
+        call col3(wk,rzm1,tz,nt1)
+        call col2(wk,radi,nt1)
+        call addcol3 (fr,wk,tz,nt1)
+
+!       wk = 1/R*ds/dz
+        call col3(wk,szm1,tz,nt1)
+        call col2(wk,radi,nt1)
+        call addcol3 (fs,wk,tz,nt1)
+
+        call col3    (ft,txm1,tx,nt1)
+        call addcol3 (ft,tym1,ty,nt1)
+!       wk = 1/R*dt/dz
+        call col3(wk,tzm1,tz,nt1)
+        call col2(wk,radi,nt1)
+        call addcol3 (ft,wk,tz,nt1)
+      endif
+
+!     Multiply by Radius            
+      call col2(fr(1,iel),ym1,nt1)
+      call col2(fs(1,iel),ym1,nt1)
+      if (ldim.eq.3) call col2(ft(1,iel),ym1,nt1)
+
+!     Multiply by Weights          
+      do iel=1,nel
+        call col2(fr(1,iel),w3m1,nxyz1)
+        call col2(fs(1,iel),w3m1,nxyz1)
+        call col2(ft(1,iel),w3m1,nxyz1)
+      enddo
+
+!     grad(v).(tx,ty,tz)       
+      do iel=1,nel
+        call ttrst (ff(1,iel),fr(1,iel),fs(1,iel),
+     $              ft(1,iel),wk)
+      enddo
+
+!     Additional terms due to gradients of unit vectors are done
+!     outside this routine since they require cross terms 
+
+
+      return
+      end
+c-----------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

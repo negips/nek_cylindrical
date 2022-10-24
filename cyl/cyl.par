@@ -23,7 +23,7 @@ targetCFL = 5.0
 writeControl = TimeStep
 writeInterval = 10
 
-userParam01 = 1.0e-1   # Air Density                 1.2061e-3
+userParam01 = 1.0e-3   # Air Density                 1.2061e-3
 userParam02 = 1.0e-0   # Water Density               1.0
 userParam03 = 1.5e-5   # Air viscosity   (Dynamic)   1.5042e-6
 userParam04 = 7.3e-4   # Water viscosity (Dynamic)   8.3000e-5

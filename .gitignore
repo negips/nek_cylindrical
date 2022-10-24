@@ -1,5 +1,5 @@
 #List of patterns to ignore.
-**/*0.f0*
+**/*0.f*
 **/*.IC
 **/*.baseflow
 **/xyz*.fld*
