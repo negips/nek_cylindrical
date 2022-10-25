@@ -38,23 +38,19 @@
 !     Interpolator from M1 mesh to lxfm Mesh      
       call igllm  (fm_jgl,fm_jglt,zgm1(1,1),fm_z,lx1,lxfm,lx1,lxfm)
 
-!     Interpolator from M2 mesh to lxfm Mesh      
-      call igllm  (fm_jgl2,fm_jglt2,zgm2(1,1),fm_z,lx2,lxfm,lx2,lxfm)
-
 !     Derivative of M1 mesh variables on lxfm Mesh      
       call dgllgl (fm_dgl,fm_dglt,zgm1(1,1),fm_z,fm_jgl,
      $                                       lx1,lxfm,lx1,lxfm)
 
+!     Interpolator from M2 mesh to lxfm Mesh      
+      call iglm   (fm_jgl2,fm_jglt2,zgm2(1,1),fm_z,lx2,lxfm,lx2,lxfm)
+
 !     Aparently we don't seem to have a DGLGL sort of routine
-      n = lx2 - 1       ! Polynomial degree of interpolant
-      m = 1             ! Maximum order of derivative
-      do i=1,lxfm
-        call fd_weights_full(fm_z(i),zgm2,n,m,fm_wk1)
-        do j=1,lx2
-          fm_dgl2(i,j)  = fm_wk1(j+lx2,1)      ! Derivative matrix
-          fm_dglt2(j,i) = fm_wk1(j+lx2,1)      ! Transpose
-        enddo
-      enddo
+!     So we are doing it through the custom built barycentric formulas
+!     in kopriva.f      
+      call BaryCentricWeights(fm_bw2,zgm2,lx2)
+      call LagrangeDerivativeMatrix(fm_dgl2,fm_z,lxfm,zgm2,fm_bw2,lx2)
+      call transpose(fm_dglt2,lx2,fm_dgl2,lxfm)
 
       icalld = icalld+1
 

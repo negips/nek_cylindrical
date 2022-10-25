@@ -4,10 +4,12 @@
       parameter (lxfm=2*lx1)   ! Arbitrarily set for now
 
 !     Nodes and weights      
-      real fm_wght(lxfm)
-      real fm_z(lxfm)
+      real fm_wght(lxfm)      ! Weights
+      real fm_z(lxfm)         ! nodes
+      real fm_bw1(lx1)        ! BaryCentric Weights for Mesh 1
+      real fm_bw2(lx2)        ! BaryCentric Weights for Mesh 2
 
-      common /cintg_wz/ fm_z,fm_wght
+      common /cintg_wz/ fm_z,fm_wght,fm_bw1,fm_bw2
 
 !     Interpolation matrices for consistent integration
       real fm_jgl(lxfm,lx1)
