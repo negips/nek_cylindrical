@@ -232,53 +232,7 @@ c-----------------------------------------------------------------------
 
         enddo   
 
-        call col2(vx,bm1,n)
-        call col2(vy,bm1,n)
-        call col2(vz,bm1,n)
-
-        call rzero(h1,n)
-        call rone(h2,n)
-!        call copy(h2,vtrans,n)
-        call invers2(h2inv,h2,n)
-
-        tolh = 1.0e-8
-        nmxhi = 1000
-
-        call opcopy(tmp1,tmp2,tmp3,vx,vy,vz)
-
-        call cyl_gmres(vy,h2,v1mask,nmxhi)
-!        call op_gmres(vx,vy,vz,h2,nmxhi)
-
-        call dssum(vx,lx1,ly1,lz1)
-        call col2(vx,v1mask,n)
-
-        call copy(vz,vy,n)
-        call col2(vz,bm1,n)
-        call dssum(vz,lx1,ly1,lz1)
-        call col2(vz,v1mask,n)
-
-        call copy(t,vx,n)
-        call col2(t,v1mask,n)
-        call sub2(t,vz,n)
-        call outpost(vx,vy,vz,pr,t,'cyl')
-
-        rnd = gl2norm(t,n)        
-
-        if (nid.eq.0) write(6,*) 'Diff:', rnd
-
-!        call opbinv(tmp5,tmp6,tmp7,tmp1,tmp2,tmp3,h2inv)
-
-
-
-        call exitt
-
-        call theta_outpost()
-
-        call jacobi_davidson_e()
-
-        call exitt
-
-        call laplace_test()
+        call test_kopriva()
 
         call exitt
 
@@ -618,6 +572,91 @@ c-----------------------------------------------------------------------
       return
       end subroutine        
 !---------------------------------------------------------------------- 
+
+      subroutine test_kopriva()
+
+      implicit none
+
+      include 'SIZE'
+      include 'IXYZ'
+      include 'DXYZ'
+
+      integer klx1,klx2
+      parameter(klx1 = lx1)
+      parameter(klx2 = klx1-2)
+
+      real bw(klx1)
+      real x(klx1)
+      real x2(klx2)
+     
+      real intp(klx2,klx1)
+
+      real dx12(klx2,klx1)
+      real dx11(klx1,klx1)
+
+      real wk(klx1*klx1*klx1)
+
+      integer i,j,k
+      integer n1,n2
+
+      n1 = klx1
+      n2 = klx2
+
+      call zwgll (x,wk,n1)
+      call zwgl  (x2,wk,n2)
+    
+      call BaryCentricWeights(bw,x,n1)
+      call PolynomialInterpolationMatrix(intp,x2,n2,x,bw,n1)
+      call PolynomialDerivativeMatrix(dx11,x,bw,n1)
+      call LagrangeDerivativeMatrix(dx11,x,n1,x,bw,n1)
+      call LagrangeDerivativeMatrix(dx12,x2,n2,x,bw,n1)
+
+      write(6,13) 'nodes', (x(i),i=1,n1)
+      write(6,*) ''
+
+      write(6,13) 'Bary', bw
+      write(6,*) ''
+
+      do i=1,n2
+        write(6,13) 'INTP12', (intp(i,j), j=1,n1)
+      enddo  
+      write(6,*) ''
+
+      do i=1,lx2
+        write(6,13) 'IXM12', (ixm12(i,j), j=1,lx1)
+      enddo  
+      write(6,*) ''
+
+      do i=1,n1
+        write(6,13) 'DX11', (dx11(i,j), j=1,n1)
+      enddo  
+      write(6,*) ''
+
+      do i=1,lx1
+        write(6,13) 'DXM1', (dxm1(i,j), j=1,lx1)
+      enddo  
+      write(6,*) ''
+
+      do i=1,n2
+        write(6,13) 'DX12', (dx12(i,j), j=1,n1)
+      enddo  
+      write(6,*) ''
+
+      do i=1,lx2
+        write(6,13) 'DXM12', (dxm12(i,j), j=1,lx1)
+      enddo  
+      write(6,*) ''
+
+13    format(A10,2x,16(E14.8,2x))
+
+
+
+      return
+      end subroutine
+!----------------------------------------------------------------------       
+
+
+
 
 
 
