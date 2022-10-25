@@ -192,51 +192,6 @@ c-----------------------------------------------------------------------
 
 !---------------------------------------------------------------------- 
 
-      subroutine barycentric_weights(w,x,n)
-
-!     Implementing Spectral Methods for 
-!     Partial Differential Equations: 
-!     Algorithms for Scientists and Engineers (2009)       
-!           - David A. Kopriva        
-!
-!     Algorithm 30: BarycentricWeights: Weights for Lagrange Interpolation
-
-      integer n
-      real x(n)
-      real w(n)
-
-      integer j,k
-
-      do j=1,n
-        w(j) = 1.0
-      enddo  
-
-      do j=2,n
-      do k=1,j-1
-        w(k) = w(k)*(x(k) - x(j))
-        w(j) = w(j)*(x(j) - x(k))
-      enddo
-      enddo  
-
-      do j=1,n
-        w(j) = 1.0/w(j)
-      enddo  
-
-      return
-      end subroutine barycentric_weights
-!---------------------------------------------------------------------- 
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
