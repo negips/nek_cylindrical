@@ -662,21 +662,13 @@ c-----------------------------------------------------------------------
 
 !      call rone(pr,nt2)
       do i=1,nt2
-        pr(i,1,1,1) = ym2(i,1,1,1)**2
+        pr(i,1,1,1) = 1.0 ! ym2(i,1,1,1)**2
       enddo  
 
-      call fm_cdtp(vx,pr,rym1,sym1,tym1,1)
-      call cdtp(vy,pr,rym1,sym1,tym1,1)
-
+      call fm_opgradt(vx,vy,vz,pr)
       call outpost(vx,vy,vz,pr,t,'   ')
 
-      do i=1,nt1
-        vx(i,1,1,1) = ym1(i,1,1,1)**2
-      enddo  
-      call fm_multd(pr,vx,rym1,sym1,tym1,1)
-      call outpost(vx,vy,vz,pr,t,'   ')
-
-      call multd(pr,vx,rym1,sym1,tym1,1,1)
+      call fm_opdiv(pr,vx,vy,vz)
       call outpost(vx,vy,vz,pr,t,'   ')
 
 

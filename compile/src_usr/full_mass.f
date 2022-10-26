@@ -396,7 +396,6 @@ c-----------------------------------------------------------------------
       include 'MASS'
       include 'INPUT'
       include 'ESOLV'
-
       include 'CTIMER'
 
       include 'FULLMASS'
@@ -413,9 +412,6 @@ c-----------------------------------------------------------------------
      $ ,             ta1 (lx1*ly1*lz1)
      $ ,             ta2 (lx1*ly1*lz1)
      $ ,             ta3 (lx1*ly1,lz1)
-
-!      COMMON /FASTMD/ IFDFRM(LELT), IFFAST(LELT), IFH2, IFSOLV
-!      LOGICAL IFDFRM, IFFAST, IFH2, IFSOLV
 
       integer isd
       integer e
@@ -592,15 +588,75 @@ c-----------------------------------------------------------------------
 
 
       enddo
-C
+
 #ifdef TIMER
       tmltd=tmltd+(dnekclock()-etime1)
 #endif
       return
       end subroutine fm_multd
-c-----------------------------------------------------------------------
+!-----------------------------------------------------------------------
 
+      subroutine fm_opdiv(outfld,inpx,inpy,inpz)
 
+!     Compute OUTFLD = SUMi Di*INPi, 
+!     the divergence of the vector field (INPX,INPY,INPZ)
+!     Integrated on the lxfm mesh        
+
+      implicit none
+
+      include 'SIZE'
+      include 'GEOM'
+
+      real outfld (lx2,ly2,lz2,1)
+      real inpx   (lx1,ly1,lz1,1)
+      real inpy   (lx1,ly1,lz1,1)
+      real inpz   (lx1,ly1,lz1,1)
+
+      real work
+      common /ctmp0/ work (lx2,ly2,lz2,lelv)
+      
+      integer iflg,ntot2
+
+      iflg = 1
+
+      ntot2 = lx2*ly2*lz2*nelv
+      call fm_multd (work,inpx,rxm1,sxm1,txm1,1)
+      call copy  (outfld,work,ntot2)
+      call fm_multd (work,inpy,rym1,sym1,tym1,2)
+      call add2  (outfld,work,ntot2)
+      if (ldim.eq.3) then
+         call fm_multd (work,inpz,rzm1,szm1,tzm1,3)
+         call add2  (outfld,work,ntot2)
+      endif
+
+      return
+      end
+
+!-----------------------------------------------------------------------
+
+      subroutine fm_opgradt(outx,outy,outz,inpfld)
+
+!     Compute DTx, DTy, DTz of an input field INPFLD
+!     Evaluated on lxfm 
+
+      implicit none
+
+      include 'SIZE'
+      include 'GEOM'
+
+      real outx   (lx1,ly1,lz1,1)
+      real outy   (lx1,ly1,lz1,1)
+      real outz   (lx1,ly1,lz1,1)
+      real inpfld (lx2,ly2,lz2,1)
+
+      call fm_cdtp (outx,inpfld,rxm1,sxm1,txm1,1)
+      call fm_cdtp (outy,inpfld,rym1,sym1,tym1,2)
+      if (ldim.eq.3) 
+     $   call fm_cdtp (outz,inpfld,rzm1,szm1,tzm1,3)
+
+      return
+      end
+!-----------------------------------------------------------------------
 
 
 
