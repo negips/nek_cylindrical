@@ -470,7 +470,7 @@ c-----------------------------------------------------------------------
         call col3(fm_wk3,fm_wk1,fm_wk2,lxfm*lyfm*lzfm)
 !       ta1 = (dv/ds)*(W*x*ds/dx_i)
         call fm_tensor3_op(ta1,fm_wk3,lxfm,lyfm,lzfm,
-     $       fm_dglt,fm_jgl,fm_jgl,lx1,lx1,lx1)
+     $       fm_jglt,fm_dgl,fm_jgl,lx1,lx1,lx1)
         
 !       dtx = dtx + ta1
         call add2(dtx(1,e),ta1,nxyz1)
@@ -482,7 +482,7 @@ c-----------------------------------------------------------------------
           call col3(fm_wk3,fm_wk1,fm_wk2,lxfm*lyfm*lzfm)
 !         ta1 = (dv/dt)*(W*x*dt/dx_i)
           call fm_tensor3_op(ta1,fm_wk3,lxfm,lyfm,lzfm,
-     $         fm_dglt,fm_jgl,fm_jgl,lx1,lx1,lx1)
+     $         fm_jglt,fm_jgl,fm_dgl,lx1,lx1,lx1)
 
 !         dtx = dtx + ta1
           call add2(dtx(1,e),ta1,nxyz1)
