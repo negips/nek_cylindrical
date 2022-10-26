@@ -1,7 +1,9 @@
 !     Variables for Consistent integration evaluation
 
-      integer lxfm
+      integer lxfm,lyfm,lzfm
       parameter (lxfm=2*lx1)   ! Arbitrarily set for now
+      parameter (lyfm=lxfm)    
+      parameter (lzfm=max(1,(ldim-2)*lxfm))    
 
 !     Nodes and weights      
       real fm_wght(lxfm)      ! Weights
@@ -26,9 +28,10 @@
     
       common /cintg_deriv/ fm_dgl,fm_dglt
 
-      real fm_wk1(lxfm**ldim,2)
-!      real fm_wk2(lxfm**ldim)
+      real fm_wk1(lxfm**ldim)           ! Used in interpolation
+      real fm_wk2(lxfm**ldim)
       real fm_wk3(lxfm**ldim)
       real fm_wk4(lxfm**ldim)
-      common /fullmass_wk/ fm_wk1,fm_wk3,fm_wk4
+      real fm_wk5(lxfm**ldim)
+      common /fullmass_wk/ fm_wk1,fm_wk2,fm_wk3,fm_wk4,fm_wk5
 

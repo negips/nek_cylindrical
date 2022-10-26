@@ -3,8 +3,15 @@
 !     Description: Evaluations using consistent integration
 !     Routines:   setup_interp_fm     : lx1 -> lxfm setup
 !                 intp_fm             : Interpolate lx1 -> lxfm
+!                 fm_tensor_op        : Apply op as tensor product      
+!                 fm_tensor3_op       : opx,opy,opz as tensor operators
+!                 fm_tensorx_op       : opx as tensor operator
+!                 fm_tensory_op       : opy as tensor operator
+!                 fm_tensorz_op       : opz as tensor operator
+!                 fm_col_weights      : collocate with weights      
+!                 fm_cdtp             : DT*x in the lxfm mesh.
 
-!     Function:   vlsc2_fm            : Local inner product 
+!     Functions:  vlsc2_fm            : Local inner product 
 !                 glsc2_fm            : Global inner product      
 !
 !====================================================================== 
@@ -58,7 +65,46 @@
       end
 c-----------------------------------------------------------------------
 
-      subroutine intp_fm(fldf,fld,nx,ny,nz)
+      subroutine intp_fm(fldf,fld,imsh)
+
+      implicit none
+
+      include 'SIZE'
+      include 'INPUT'         ! if3d
+      include 'GEOM'
+
+      include 'FULLMASS'
+
+      real fld  (1)
+      real fldf (lxfm**ldim)
+
+      integer imsh
+
+      integer iz,i1,i2
+      integer ldw
+
+      real fm_op_wk(lxfm**ldim,2)
+      common /fm_op_work/ fm_op_wk
+
+      ldw = (lxfm**ldim)*2
+
+      if (imsh.eq.1) then
+!       Velocity to lxfm         
+        call specmpn(fldf,lxfm,fld,lx1,fm_jgl,fm_jglt,
+     $               if3d,fm_op_wk,ldw)
+      elseif (imsh.eq.2) then
+!       Pressure to lxfm        
+        call specmpn(fldf,lxfm,fld,lx2,fm_jgl2,fm_jglt2,
+     $               if3d,fm_op_wk,ldw)
+      else
+        if (nio.eq.0) write(6,*) 'intp_fm: Unknown imsh', imsh
+        call exitt  
+      endif
+
+      return
+      end subroutine intp_fm
+!---------------------------------------------------------------------- 
+      subroutine fm_tensor_op(fldf,fld,nx,ny,nz,op1d,op1dt,idir)
 
       implicit none
 
@@ -73,30 +119,154 @@ c-----------------------------------------------------------------------
       real fld  (nx*ny*nz)
       real fldf (lxfm**ldim)
 
-      integer iz,i1,i2
+!     One dimensional operator      
+      real op1d(lxfm*nx)
+!     Transpose of the one dimensional operator      
+      real op1dt(nx*lxfm)
+
+      integer idir
       integer ldw
+
+      real fm_op_wk(lxfm**ldim,2)
+      common /fm_op_work/ fm_op_wk
 
       ldw = (lxfm**ldim)*2
 
-      call specmpn(fldf,lxfm,fld,nx,fm_jgl,fm_jglt,if3d,fm_wk1,ldw)
-
-!      if (ndim.eq.2) then
-!        call mxm (fm_jgl,lxfm,fld,lx1,fm_wk1,ly1)
-!        call mxm (fm_wk1,lxfm,fm_jglt,ly1,fldf,lxfm)
-!      else        
-!        call mxm (fm_jgl,lxfm,fld,lx1,fm_wk1,ly1*lz1)
-!        i1=1
-!        i2=1
-!        do iz=1,lz1
-!          call mxm (fm_wk1(i1),lxfm,fm_jglt,ly1,fm_wk2(i2),lxfm)
-!          i1=i1+lxfm*ly1
-!          i2=i2+lxfm*lxfm
-!        enddo
-!        call mxm  (fm_wk2,lxfm*lxfm,fm_jglt,lz1,fldf,lxfm)
-!      endif        
+      if (idir.eq.0) then
+        call specmpn(fldf,lxfm,fld,nx,op1d,op1dt,if3d,fm_op_wk,ldw)
+      elseif (idir.eq.1) then
+        call specmpn(fld,nx,fldf,lxfm,op1dt,op1d,if3d,fm_op_wk,ldw)
+      else
+        if (nio.eq.0) write(6,*) 'fm_tensor_op: Invalid idir:', idir
+        call exitt 
+      endif
 
       return
-      end subroutine intp_fm
+      end subroutine fm_tensor_op
+!---------------------------------------------------------------------- 
+      subroutine fm_tensor3_op(fldf,fld,nx,ny,nz,opx,opyt,opzt,mx,my,mz)
+
+      implicit none
+
+      include 'SIZE'
+      include 'INPUT'         ! if3d
+      include 'GEOM'
+
+      include 'FULLMASS'
+
+      integer nx,ny,nz
+      integer mx,my,mz
+
+      real fld  (nx*ny*nz)
+      real fldf (mx*my*mz)
+
+!     x operator is applied direction      
+      real opx(mx*nx)
+
+!     y,z operators apply as transposed operators 
+      real opyt(ny*my)
+      real opzt(nz*mz)
+
+      real fm_op_wk(lxfm**ldim,2)
+      common /fm_op_work/ fm_op_wk
+
+      if ((mx*my*mz.gt.(lxfm**ldim)) .and. 
+     $    (nx*ny*nz.gt.(lxfm**ldim))) then
+        if (nio.eq.0) write(6,*) 
+     $    'Inadequate workspace size in fm_tensor3_op'
+        call exitt
+      endif  
+
+      call fm_tensorx_op(fm_op_wk(1,1),fld,nx,ny,nz,opx,mx)
+      if (if3d) then
+        call fm_tensory_op(fm_op_wk(1,2),fm_op_wk(1,1),mx,ny,nz,opyt,my)
+        call fm_tensorz_op(fldf,fm_op_wk(1,2),mx,my,nz,opzt,mz)
+      else
+        call fm_tensory_op(fldf,fm_op_wk(1,1),mx,ny,nz,opyt,my)
+      endif  
+
+
+      return
+      end subroutine fm_tensor3_op
+!---------------------------------------------------------------------- 
+
+      subroutine fm_tensorx_op(fldo,fld,nx,ny,nz,opx,mx)
+
+      implicit none
+
+      include 'SIZE'
+      include 'INPUT'         ! if3d
+
+      integer nx,ny,nz
+      integer mx              ! no of rows
+
+      real fld  (1)
+      real fldo (1)
+
+      real opx(mx*nx)
+
+      call mxm  (opx,mx,fld,nx,fldo,ny*nz)
+
+
+      return
+      end subroutine fm_tensorx_op
+!---------------------------------------------------------------------- 
+
+      subroutine fm_tensory_op(fldo,fld,nx,ny,nz,opy,my)
+
+      implicit none
+
+      include 'SIZE'
+      include 'INPUT'         ! if3d
+
+      integer nx,ny,nz
+      integer my              ! no of columns
+
+      real fld  (1)
+      real fldo (1)
+
+      real opy(ny*my)
+      integer i,j,k
+
+      if (if3d) then
+        i = 1
+        j = 1
+        do k = 1,nz
+          call mxm  (fld(i),nx,opy,ny,fldo(j),my)
+          i = i + nx*ny
+          j = j + nx*my
+        enddo  
+      else
+        call mxm  (fld,nx,opy,ny,fldo,my)
+      endif  
+
+
+      return
+      end subroutine fm_tensory_op
+!---------------------------------------------------------------------- 
+
+      subroutine fm_tensorz_op(fldo,fld,nx,ny,nz,opz,mz)
+
+      implicit none
+
+      include 'SIZE'
+      include 'INPUT'         ! if3d
+
+      integer nx,ny,nz
+      integer mz              ! no of columns
+
+      real fld  (1)
+      real fldo (1)
+
+      real opz(nz*mz)
+
+      if (if3d) then
+        call mxm  (fld,nx*ny,opz,nz,fldo,mz)
+      endif  
+
+
+      return
+      end subroutine fm_tensorz_op
 !---------------------------------------------------------------------- 
 
       function vlsc2_fm(u,v)
@@ -116,6 +286,7 @@ c-----------------------------------------------------------------------
 
       integer e,i,j,k,ii
       integer lxfm3
+      integer imsh
 
       real vlsum
 
@@ -124,37 +295,22 @@ c-----------------------------------------------------------------------
       lxfm3 = lxfm**ndim
 
       s = 0.0
+      imsh = 1
       do e=1,nelv
 
 !       u_lx1 -> u_lxfm          
-        call intp_fm(fm_wk3,u(1,e),lx1,ly1,lz1) 
+        call intp_fm(fm_wk3,u(1,e),imsh) 
 
 !       v_lx1 -> v_lxfm
-        call intp_fm(fm_wk4,v(1,e),lx1,ly1,lz1)
+        call intp_fm(fm_wk4,v(1,e),imsh)
         call col2(fm_wk3,fm_wk4,lxfm3)
 
 !       J_lx1 -> J_lxfm
-        call intp_fm(fm_wk4,jacm1(1,1,1,e),lx1,ly1,lz1)
+        call intp_fm(fm_wk4,jacm1(1,1,1,e),imsh)
         call col2(fm_wk3,fm_wk4,lxfm3)
 
 !       W*J*\rho*u
-        if (ndim.eq.2) then
-          do j=1,lxfm
-          do i=1,lxfm
-            ii = i + (j-1)*lxfm
-            fm_wk3(ii) = fm_wk3(ii)*fm_wght(i)*fm_wght(j)
-          enddo
-          enddo
-        else          
-          do k=1,lxfm
-          do j=1,lxfm
-          do i=1,lxfm
-            ii = i + (j-1)*lxfm + (k-1)*lxfm*lxfm
-            fm_wk3(ii) = fm_wk3(ii)*fm_wght(i)*fm_wght(j)*fm_wght(k)
-          enddo
-          enddo
-          enddo
-        endif  
+        call fm_col_weights(fm_wk3)
 
         s = s + vlsum(fm_wk3,lxfm3) 
 
@@ -187,6 +343,277 @@ c-----------------------------------------------------------------------
       end function glsc2_fm 
 
 !---------------------------------------------------------------------- 
+
+      subroutine fm_col_weights(x)
+
+      implicit none
+
+      include 'SIZE'
+      include 'FULLMASS'
+
+      real x(1)
+
+      integer i,j,k,ii
+
+!     W*x
+      ii = 0
+      if (ndim.eq.2) then
+        do j=1,lyfm
+        do i=1,lxfm
+          ii = ii + 1
+          x(ii) = x(ii)*fm_wght(i)*fm_wght(j)
+        enddo
+        enddo
+      else          
+        do k=1,lzfm
+        do j=1,lyfm
+        do i=1,lxfm
+          ii = ii + 1
+          x(ii) = x(ii)*fm_wght(i)*fm_wght(j)*fm_wght(k)
+        enddo
+        enddo
+        enddo
+      endif  
+
+      return
+      end subroutine
+
+!----------------------------------------------------------------------         
+
+      subroutine fm_cdtp (dtx,x,rm1,sm1,tm1,isd)
+
+!     Compute DT*X (entire field)
+!     Evaluated on the lxfm mesh 
+
+      implicit none
+
+      include 'SIZE'
+      include 'WZ'
+      include 'DXYZ'
+      include 'IXYZ'
+      include 'GEOM'
+      include 'MASS'
+      include 'INPUT'
+      include 'ESOLV'
+
+      include 'CTIMER'
+
+      include 'FULLMASS'
+
+      real dtx  (lx1*ly1*lz1,lelv)
+      real x    (lx2*ly2*lz2,lelv)
+
+      real rm1  (lx1*ly1*lz1,lelv)
+      real sm1  (lx1*ly1*lz1,lelv)
+      real tm1  (lx1*ly1*lz1,lelv)
+
+      real wx,ta1,ta2,ta3
+      common /ctmp1/ wx  (lx1*ly1*lz1)
+     $ ,             ta1 (lx1*ly1*lz1)
+     $ ,             ta2 (lx1*ly1*lz1)
+     $ ,             ta3 (lx1*ly1,lz1)
+
+!      COMMON /FASTMD/ IFDFRM(LELT), IFFAST(LELT), IFH2, IFSOLV
+!      LOGICAL IFDFRM, IFFAST, IFH2, IFSOLV
+
+      integer isd
+      integer e
+      integer nxyz1
+      integer imsh1,imsh2
+
+#ifdef TIMER
+      if (icalld.eq.0) tcdtp=0.0
+      icalld=icalld+1
+      ncdtp=icalld
+      etime1=dnekclock()
+#endif
+
+      if (ifaxis) then
+        if (nio.eq.0) 
+     $    write(6,*) 'FM_CDTp not implemented for ifaxis.'
+        call exitt
+      endif
+
+      if(ifsplit) then
+        if (nio.eq.0) 
+     $    write(6,*) 'FM_CDTp not implemented for ifsplit.'
+        call exitt
+      endif
+
+
+      nxyz1 = lx1*ly1*lz1
+      imsh1 = 1
+      imsh2 = 2
+
+      do e=1,nelv
+
+!       Interpolate x to lxfm Mesh
+!       wk1 = x            
+        call intp_fm(fm_wk1,x(1,e),imsh2)         
+!       Collocate with weights
+!       Jacobian goes away due to inverse jacobian of the dx/dr etc.
+!       wk1 = W*x
+        call fm_col_weights(fm_wk1)
+
+!       wk2 = dr/dx_i
+        call intp_fm(fm_wk2,rm1(1,e),imsh1)
+!       wk3 = W*x*dr/dx
+        call col3(fm_wk3,fm_wk1,fm_wk2,lxfm*lyfm*lzfm)
+!       dtx = (dv/dr)*(W*x*dr/dx_i)
+        call fm_tensor3_op(dtx(1,e),fm_wk3,lxfm,lyfm,lzfm,
+     $       fm_dglt,fm_jgl,fm_jgl,lx1,lx1,lx1)
+
+!       wk2 = ds/dx_i
+        call intp_fm(fm_wk2,sm1(1,e),imsh1)
+!       wk3 = W*x*ds/dx_i
+        call col3(fm_wk3,fm_wk1,fm_wk2,lxfm*lyfm*lzfm)
+!       ta1 = (dv/ds)*(W*x*ds/dx_i)
+        call fm_tensor3_op(ta1,fm_wk3,lxfm,lyfm,lzfm,
+     $       fm_dglt,fm_jgl,fm_jgl,lx1,lx1,lx1)
+        
+!       dtx = dtx + ta1
+        call add2(dtx(1,e),ta1,nxyz1)
+
+        if (ndim.eq.3) then
+!         wk2 = dt/dx_i
+          call intp_fm(fm_wk2,tm1(1,e),imsh1)
+!         wk3 = W*x*dt/dx_i
+          call col3(fm_wk3,fm_wk1,fm_wk2,lxfm*lyfm*lzfm)
+!         ta1 = (dv/dt)*(W*x*dt/dx_i)
+          call fm_tensor3_op(ta1,fm_wk3,lxfm,lyfm,lzfm,
+     $         fm_dglt,fm_jgl,fm_jgl,lx1,lx1,lx1)
+
+!         dtx = dtx + ta1
+          call add2(dtx(1,e),ta1,nxyz1)
+        endif  
+
+!       If axisymmetric, add an extra diagonal term in the radial 
+!       direction (only if solving the momentum equations and ISD=2)
+!       NOTE: lz1=lz2=1
+
+      enddo
+!
+#ifdef TIMER
+      tcdtp=tcdtp+(dnekclock()-etime1)
+#endif
+      return
+      end subroutine fm_cdtp
+!---------------------------------------------------------------------- 
+
+      subroutine fm_multd (du,u,rm1,sm1,tm1,isd)
+
+!     Compute D*U (on Mesh 1)
+!     U    : input variable, defined on M1
+!     DU   : output variable, defined on M2
+!     Integration done on the lxfm mesh        
+!     RM1 : RXM1, RYM1 or RZM1
+!     SM1 : SXM1, SYM1 or SZM1
+!     TM1 : TXM1, TYM1 or TZM1
+!     ISD : spatial direction (x=1,y=2,z=3)
+
+      implicit none
+
+      include 'SIZE'
+      include 'INPUT'
+      include 'ESOLV'
+      include 'CTIMER'
+
+      include 'FULLMASS'
+
+      real           du   (lx2*ly2*lz2,lelv)
+      real           u    (lx1*ly1*lz1,lelv)
+      real           rm1  (lx1*ly1*lz1,lelv)
+      real           sm1  (lx1*ly1*lz1,lelv)
+      real           tm1  (lx1*ly1*lz1,lelv)
+
+      integer isd
+
+      integer e
+      integer imsh1
+
+
+#ifdef TIMER
+      if (icalld.eq.0) tmltd=0.0
+      icalld=icalld+1
+      nmltd=icalld
+      etime1=dnekclock()
+#endif
+
+      if (ifaxis) then
+        if (nio.eq.0) write(6,*) 
+     $    'FM_MULTD not implemented for ifaxis.'
+        call exitt
+      endif
+
+      imsh1 = 1
+      do e=1,nelv
+
+!       wk1 = du/dr
+        call fm_tensor3_op(fm_wk1,u(1,e),lx1,ly1,lz1,
+     $       fm_dgl,fm_jglt,fm_jglt,lxfm,lyfm,lzfm)
+
+!       wk2 = (dr/dx_i)
+        call intp_fm(fm_wk2,rm1(1,e),imsh1)
+!       wk1 = (du/dr)*(dr/dx_i)
+        call col2(fm_wk1,fm_wk2,lxfm*lyfm*lzfm)
+
+!       wk3 = du/ds
+        call fm_tensor3_op(fm_wk3,u(1,e),lx1,ly1,lz1,
+     $       fm_jgl,fm_dglt,fm_jglt,lxfm,lyfm,lzfm)
+!       wk2 = (ds/dx_i)
+        call intp_fm(fm_wk2,sm1(1,e),imsh1)
+!       wk3 = (du/ds)*(ds/dx_i)
+        call col2(fm_wk3,fm_wk2,lxfm*lyfm*lzfm)
+
+!       wk1 = wk1 + (ds/dx_i)*(du/dt)
+        call add2(fm_wk1,fm_wk3,lxfm*lyfm*lzfm)
+
+        if (ldim.eq.3) then
+!         wk3 = du/dt
+          call fm_tensor3_op(fm_wk3,u(1,e),lx1,ly1,lz1,
+     $         fm_jgl,fm_jglt,fm_dglt,lxfm,lyfm,lzfm)
+!         wk2 = (dt/dx_i)
+          call intp_fm(fm_wk2,tm1(1,e),imsh1)
+!         wk3 = (du/dt)*(dt/dx_i)
+          call col2(fm_wk3,fm_wk2,lxfm*lyfm*lzfm)
+
+!         wk1 = wk1 + (dt/dx_i)*(du/dt)
+          call add2(fm_wk1,fm_wk3,lxfm*lyfm*lzfm)
+        endif  
+
+!       Collocate with the weights on the pressure mesh
+!       wk1 = W*(du/dx_i)
+        call fm_col_weights(fm_wk1)
+
+!       du = q*W*(du/dx_i)
+        call fm_tensor3_op(du(1,e),fm_wk1,lxfm,lyfm,lzfm,
+     $         fm_jglt2,fm_jgl2,fm_jgl2,lx2,ly2,lz2)
+
+
+      enddo
+C
+#ifdef TIMER
+      tmltd=tmltd+(dnekclock()-etime1)
+#endif
+      return
+      end subroutine fm_multd
+c-----------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
