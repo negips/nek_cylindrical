@@ -10,6 +10,7 @@
 !                 fm_tensorz_op       : opz as tensor operator
 !                 fm_col_weights      : collocate with weights      
 !                 fm_cdtp             : DT*x in the lxfm mesh.
+!                 fm_multd            : D*u in the lxfm mesh.
 
 !     Functions:  vlsc2_fm            : Local inner product 
 !                 glsc2_fm            : Global inner product      

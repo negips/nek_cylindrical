@@ -580,6 +580,8 @@ c-----------------------------------------------------------------------
       include 'SIZE'
       include 'IXYZ'
       include 'DXYZ'
+      include 'GEOM'    ! RXM1 ETC.
+      include 'SOLN'
 
       integer klx1,klx2
       parameter(klx1 = lx1)
@@ -599,6 +601,8 @@ c-----------------------------------------------------------------------
       integer i,j,k
       integer n1,n2
 
+      integer nt1,nt2
+
       n1 = klx1
       n2 = klx2
 
@@ -610,6 +614,7 @@ c-----------------------------------------------------------------------
       call PolynomialDerivativeMatrix(dx11,x,bw,n1)
       call LagrangeDerivativeMatrix(dx11,x,n1,x,bw,n1)
       call LagrangeDerivativeMatrix(dx12,x2,n2,x,bw,n1)
+
 
       write(6,13) 'nodes', (x(i),i=1,n1)
       write(6,*) ''
@@ -649,6 +654,30 @@ c-----------------------------------------------------------------------
 
 13    format(A10,2x,16(E14.8,2x))
 
+
+      nt1 = lx1*ly1*lz1*nelv
+      nt2 = lx2*ly2*lz2*nelv
+
+      call setup_fm()
+
+!      call rone(pr,nt2)
+      do i=1,nt2
+        pr(i,1,1,1) = ym2(i,1,1,1)**2
+      enddo  
+
+      call fm_cdtp(vx,pr,rxm1,sxm1,txm1,1)
+      call cdtp(vy,pr,rxm1,sxm1,txm1,1)
+
+      call outpost(vx,vy,vz,pr,t,'   ')
+
+      do i=1,nt1
+        vx(i,1,1,1) = xm1(i,1,1,1)**2
+      enddo  
+      call fm_multd(pr,vx,rxm1,sxm1,txm1,1)
+      call outpost(vx,vy,vz,pr,t,'   ')
+
+      call multd(pr,vx,rxm1,sxm1,txm1,1,1)
+      call outpost(vx,vy,vz,pr,t,'   ')
 
 
       return
