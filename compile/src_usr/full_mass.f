@@ -89,7 +89,7 @@ c-----------------------------------------------------------------------
       real fm_op_wk(lxwk**ldim,2)
       common /fm_op_work/ fm_op_wk
 
-      ldw = (lxfm**ldim)*2
+      ldw = (lxwk**ldim)*2
 
       if (imsh.eq.1) then
 !       Velocity to lxfm         

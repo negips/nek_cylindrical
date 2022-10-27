@@ -680,6 +680,7 @@ c-----------------------------------------------------------------------
       call rone(h2,nt1)
       call rone(h2inv,nt1)
 
+      call opzero(vx,vy,vz)
       call outpost(vx,vy,vz,pr,t,'   ')
 
 
@@ -688,6 +689,7 @@ c-----------------------------------------------------------------------
       call outpost(vx,vy,vz,pr,t,'   ')
 
 
+      call opzero(vx,vy,vz)
 
 !      call fm_cdabdtp(tmp8,pr,h1,h2,h2inv,1)
       call fm_opgradt(vx,vy,vz,pr) 
