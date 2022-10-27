@@ -669,7 +669,7 @@ c-----------------------------------------------------------------------
       call fm_setup()
 
       do i=1,nt2
-        pr(i,1,1,1) = ym2(i,1,1,1)**2
+        pr(i,1,1,1) = zm2(i,1,1,1)**2
       enddo
 
 !      do i=1,nt1
@@ -684,16 +684,20 @@ c-----------------------------------------------------------------------
       call outpost(vx,vy,vz,pr,t,'   ')
 
 
-!      call cdabdtp(tmp4,pr,h1,h2,h2inv,1)
-      call opgradt(vx,vy,vz,pr)
-      call outpost(vx,vy,vz,pr,t,'   ')
+      call cdabdtp(tmp4,pr,h1,h2,h2inv,1)
+!      call opgradt(vx,vy,vz,pr)
+!      call opbinv(tmp1,tmp2,tmp3,vx,vy,vz,h2inv)
+!      call opdiv(tmp4,tmp1,tmp2,tmp3)
+      call outpost(tmp1,tmp2,tmp3,tmp4,t,'   ')
 
 
       call opzero(vx,vy,vz)
 
-!      call fm_cdabdtp(tmp8,pr,h1,h2,h2inv,1)
-      call fm_opgradt(vx,vy,vz,pr) 
-      call outpost(vx,vy,vz,tmp8,t,'   ')
+      call fm_cdabdtp(tmp8,pr,h1,h2,h2inv,1)
+!      call fm_opgradt(vx,vy,vz,pr)
+!      call opbinv(tmp1,tmp2,tmp3,vx,vy,vz,h2inv)
+!      call fm_opdiv(tmp8,tmp1,tmp2,tmp3)
+      call outpost(tmp1,tmp2,tmp3,tmp8,t,'   ')
 
 !!      call opdiv(pr,vx,vy,vz)
 !      call opgradt(vx,vy,vz,pr)

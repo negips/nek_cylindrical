@@ -1,7 +1,7 @@
 !     Variables for Consistent integration evaluation
 
       integer lxfm,lyfm,lzfm
-      parameter (lxfm=lx2)   ! Arbitrarily set for now
+      parameter (lxfm=2*lx2)   ! Arbitrarily set for now
       parameter (lyfm=lxfm)    
       parameter (lzfm=max(1,(ldim-2)*lxfm))    
 
