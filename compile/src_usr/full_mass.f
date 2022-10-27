@@ -45,20 +45,44 @@
 !     Gauss-Legendre Mesh 
       call zwgl (fm_z,fm_wght,lxfm)
 
-!     Interpolator from M1 mesh to lxfm Mesh      
-      call igllm  (fm_jgl,fm_jglt,zgm1(1,1),fm_z,lx1,lxfm,lx1,lxfm)
+!!     Interpolator from M1 mesh to lxfm Mesh      
+!      call igllm  (fm_jgl,fm_jglt,zgm1(1,1),fm_z,lx1,lxfm,lx1,lxfm)
+!
+!!     Derivative of M1 mesh variables on lxfm Mesh      
+!      call dgllgl (fm_dgl,fm_dglt,zgm1(1,1),fm_z,fm_jgl,
+!     $                                       lx1,lxfm,lx1,lxfm)
+!!     Interpolator from M2 mesh to lxfm Mesh      
+!      call iglm   (fm_jgl2,fm_jglt2,zgm2(1,1),fm_z,lx2,lxfm,lx2,lxfm)
+!
+!      Can't build Mesh 2 -> lxfm derivatives from speclib
 
-!     Derivative of M1 mesh variables on lxfm Mesh      
-      call dgllgl (fm_dgl,fm_dglt,zgm1(1,1),fm_z,fm_jgl,
-     $                                       lx1,lxfm,lx1,lxfm)
 
-!     Interpolator from M2 mesh to lxfm Mesh      
-      call iglm   (fm_jgl2,fm_jglt2,zgm2(1,1),fm_z,lx2,lxfm,lx2,lxfm)
+!     Mesh 1 -> lxfm
+      call BaryCentricWeights(fm_bw1,zgm1,lx1)
+
+!     Interpolation Mesh 1 -> lxfm
+      call PolynomialInterpolationMatrix
+     $            (fm_jgl,fm_z,lxfm,zgm1,fm_bw1,lx1)
+      call transpose(fm_jglt,lx1,fm_jgl,lxfm)
+
+!     Derivative Mesh 1 -> lxfm 
+      call LagrangeDerivativeMatrix(fm_dgl,fm_z,lxfm,zgm1,fm_bw1,lx1)
+      call transpose(fm_dglt,lx1,fm_dgl,lxfm)
+
 
 !     Aparently we don't seem to have a DGLGL sort of routine
 !     So we are doing it through the barycentric algorithms
-!     in kopriva.f      
+!     in kopriva.f
+
+!     Mesh 2 -> lxfm      
       call BaryCentricWeights(fm_bw2,zgm2,lx2)
+
+!     Interpolation Mesh 2 -> lxfm
+      call PolynomialInterpolationMatrix
+     $            (fm_jgl2,fm_z,lxfm,zgm2,fm_bw2,lx2)
+      call transpose(fm_jglt2,lx2,fm_jgl2,lxfm)
+
+!     Derivative Mesh 2 -> lxfm 
       call LagrangeDerivativeMatrix(fm_dgl2,fm_z,lxfm,zgm2,fm_bw2,lx2)
       call transpose(fm_dglt2,lx2,fm_dgl2,lxfm)
 
