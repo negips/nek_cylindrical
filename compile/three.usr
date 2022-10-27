@@ -583,6 +583,8 @@ c-----------------------------------------------------------------------
       include 'GEOM'    ! RXM1 ETC.
       include 'SOLN'
 
+      include 'TEST'
+
       integer klx1,klx2
       parameter(klx1 = lx1)
       parameter(klx2 = klx1-2)
@@ -602,6 +604,12 @@ c-----------------------------------------------------------------------
       integer n1,n2
 
       integer nt1,nt2
+
+      real h1,h2,h2inv
+      common /scrvh/ h1    (lx1,ly1,lz1,lelv)
+     $ ,             h2    (lx1,ly1,lz1,lelv)
+      common /scrhi/ h2inv (lx1,ly1,lz1,lelv)
+
 
       n1 = klx1
       n2 = klx2
@@ -658,18 +666,36 @@ c-----------------------------------------------------------------------
       nt1 = lx1*ly1*lz1*nelv
       nt2 = lx2*ly2*lz2*nelv
 
-      call setup_fm()
+      call fm_setup()
 
-!      call rone(pr,nt2)
       do i=1,nt2
-        pr(i,1,1,1) = 1.0 ! ym2(i,1,1,1)**2
-      enddo  
+        pr(i,1,1,1) = ym2(i,1,1,1)**2
+      enddo
 
-      call fm_opgradt(vx,vy,vz,pr)
+!      do i=1,nt1
+!        vz(i,1,1,1) = zm1(i,1,1,1)**2
+!      enddo  
+
+      call rzero(h1,nt1)
+      call rone(h2,nt1)
+      call rone(h2inv,nt1)
+
       call outpost(vx,vy,vz,pr,t,'   ')
 
-      call fm_opdiv(pr,vx,vy,vz)
+
+!      call cdabdtp(tmp4,pr,h1,h2,h2inv,1)
+      call opgradt(vx,vy,vz,pr)
       call outpost(vx,vy,vz,pr,t,'   ')
+
+
+
+!      call fm_cdabdtp(tmp8,pr,h1,h2,h2inv,1)
+      call fm_opgradt(vx,vy,vz,pr) 
+      call outpost(vx,vy,vz,tmp8,t,'   ')
+
+!!      call opdiv(pr,vx,vy,vz)
+!      call opgradt(vx,vy,vz,pr)
+!      call outpost(vx,vy,vz,pr,t,'   ')
 
 
       return

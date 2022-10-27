@@ -1,8 +1,8 @@
 !======================================================================
 !     Author: Prabal Negi      
 !     Description: Evaluations using consistent integration
-!     Routines:   setup_interp_fm     : lx1 -> lxfm setup
-!                 intp_fm             : Interpolate lx1 -> lxfm
+!     Routines:   fm_setup            : lx1 -> lxfm setup
+!                 fm_intp             : Interpolate lx1 -> lxfm
 !                 fm_tensor_op        : Apply op as tensor product      
 !                 fm_tensor3_op       : opx,opy,opz as tensor operators
 !                 fm_tensorx_op       : opx as tensor operator
@@ -11,13 +11,15 @@
 !                 fm_col_weights      : collocate with weights      
 !                 fm_cdtp             : DT*x in the lxfm mesh.
 !                 fm_multd            : D*u in the lxfm mesh.
-
+!
+!      
 !     Functions:  vlsc2_fm            : Local inner product 
 !                 glsc2_fm            : Global inner product      
 !
+!     Dependency: kopriva.f      
 !====================================================================== 
 
-      subroutine setup_fm()
+      subroutine fm_setup()
 
       implicit none
 
@@ -54,7 +56,7 @@
       call iglm   (fm_jgl2,fm_jglt2,zgm2(1,1),fm_z,lx2,lxfm,lx2,lxfm)
 
 !     Aparently we don't seem to have a DGLGL sort of routine
-!     So we are doing it through the custom built barycentric formulas
+!     So we are doing it through the barycentric algorithms
 !     in kopriva.f      
       call BaryCentricWeights(fm_bw2,zgm2,lx2)
       call LagrangeDerivativeMatrix(fm_dgl2,fm_z,lxfm,zgm2,fm_bw2,lx2)
@@ -66,7 +68,7 @@
       end
 c-----------------------------------------------------------------------
 
-      subroutine intp_fm(fldf,fld,imsh)
+      subroutine fm_intp(fldf,fld,imsh)
 
       implicit none
 
@@ -84,7 +86,7 @@ c-----------------------------------------------------------------------
       integer iz,i1,i2
       integer ldw
 
-      real fm_op_wk(lxfm**ldim,2)
+      real fm_op_wk(lxwk**ldim,2)
       common /fm_op_work/ fm_op_wk
 
       ldw = (lxfm**ldim)*2
@@ -98,12 +100,12 @@ c-----------------------------------------------------------------------
         call specmpn(fldf,lxfm,fld,lx2,fm_jgl2,fm_jglt2,
      $               if3d,fm_op_wk,ldw)
       else
-        if (nio.eq.0) write(6,*) 'intp_fm: Unknown imsh', imsh
+        if (nio.eq.0) write(6,*) 'fm_intp: Unknown imsh', imsh
         call exitt  
       endif
 
       return
-      end subroutine intp_fm
+      end subroutine fm_intp
 !---------------------------------------------------------------------- 
       subroutine fm_tensor_op(fldf,fld,nx,ny,nz,op1d,op1dt,idir)
 
@@ -128,7 +130,7 @@ c-----------------------------------------------------------------------
       integer idir
       integer ldw
 
-      real fm_op_wk(lxfm**ldim,2)
+      real fm_op_wk(lxwk**ldim,2)
       common /fm_op_work/ fm_op_wk
 
       ldw = (lxfm**ldim)*2
@@ -156,7 +158,9 @@ c-----------------------------------------------------------------------
       include 'FULLMASS'
 
       integer nx,ny,nz
-      integer mx,my,mz
+      integer mx  ! No. of rows of opx
+      integer my  ! No. of columns of opyt
+      integer mz  ! No. of columns of opzt
 
       real fld  (nx*ny*nz)
       real fldf (mx*my*mz)
@@ -168,11 +172,11 @@ c-----------------------------------------------------------------------
       real opyt(ny*my)
       real opzt(nz*mz)
 
-      real fm_op_wk(lxfm**ldim,2)
+      real fm_op_wk(lxwk**ldim,2)
       common /fm_op_work/ fm_op_wk
 
-      if ((mx*my*mz.gt.(lxfm**ldim)) .and. 
-     $    (nx*ny*nz.gt.(lxfm**ldim))) then
+      if ((mx*my*mz.gt.(lxwk**ldim)) .and. 
+     $    (nx*ny*nz.gt.(lxwk**ldim))) then
         if (nio.eq.0) write(6,*) 
      $    'Inadequate workspace size in fm_tensor3_op'
         call exitt
@@ -207,7 +211,6 @@ c-----------------------------------------------------------------------
       real opx(mx*nx)
 
       call mxm  (opx,mx,fld,nx,fldo,ny*nz)
-
 
       return
       end subroutine fm_tensorx_op
@@ -291,7 +294,7 @@ c-----------------------------------------------------------------------
 
       real vlsum
 
-      call setup_fm()
+      call fm_setup()
 
       lxfm3 = lxfm**ndim
 
@@ -300,14 +303,14 @@ c-----------------------------------------------------------------------
       do e=1,nelv
 
 !       u_lx1 -> u_lxfm          
-        call intp_fm(fm_wk3,u(1,e),imsh) 
+        call fm_intp(fm_wk3,u(1,e),imsh) 
 
 !       v_lx1 -> v_lxfm
-        call intp_fm(fm_wk4,v(1,e),imsh)
+        call fm_intp(fm_wk4,v(1,e),imsh)
         call col2(fm_wk3,fm_wk4,lxfm3)
 
 !       J_lx1 -> J_lxfm
-        call intp_fm(fm_wk4,jacm1(1,1,1,e),imsh)
+        call fm_intp(fm_wk4,jacm1(1,1,1,e),imsh)
         call col2(fm_wk3,fm_wk4,lxfm3)
 
 !       W*J*\rho*u
@@ -446,14 +449,14 @@ c-----------------------------------------------------------------------
 
 !       Interpolate x to lxfm Mesh
 !       wk1 = x            
-        call intp_fm(fm_wk1,x(1,e),imsh2)         
+        call fm_intp(fm_wk1,x(1,e),imsh2)         
 !       Collocate with weights
 !       Jacobian goes away due to inverse jacobian of the dx/dr etc.
 !       wk1 = W*x
         call fm_col_weights(fm_wk1)
 
 !       wk2 = dr/dx_i
-        call intp_fm(fm_wk2,rm1(1,e),imsh1)
+        call fm_intp(fm_wk2,rm1(1,e),imsh1)
 !       wk3 = W*x*dr/dx
         call col3(fm_wk3,fm_wk1,fm_wk2,lxfm*lyfm*lzfm)
 !       dtx = (dv/dr)*(W*x*dr/dx_i)
@@ -461,7 +464,7 @@ c-----------------------------------------------------------------------
      $       fm_dglt,fm_jgl,fm_jgl,lx1,lx1,lx1)
 
 !       wk2 = ds/dx_i
-        call intp_fm(fm_wk2,sm1(1,e),imsh1)
+        call fm_intp(fm_wk2,sm1(1,e),imsh1)
 !       wk3 = W*x*ds/dx_i
         call col3(fm_wk3,fm_wk1,fm_wk2,lxfm*lyfm*lzfm)
 !       ta1 = (dv/ds)*(W*x*ds/dx_i)
@@ -473,7 +476,7 @@ c-----------------------------------------------------------------------
 
         if (ndim.eq.3) then
 !         wk2 = dt/dx_i
-          call intp_fm(fm_wk2,tm1(1,e),imsh1)
+          call fm_intp(fm_wk2,tm1(1,e),imsh1)
 !         wk3 = W*x*dt/dx_i
           call col3(fm_wk3,fm_wk1,fm_wk2,lxfm*lyfm*lzfm)
 !         ta1 = (dv/dt)*(W*x*dt/dx_i)
@@ -550,7 +553,7 @@ c-----------------------------------------------------------------------
      $       fm_dgl,fm_jglt,fm_jglt,lxfm,lyfm,lzfm)
 
 !       wk2 = (dr/dx_i)
-        call intp_fm(fm_wk2,rm1(1,e),imsh1)
+        call fm_intp(fm_wk2,rm1(1,e),imsh1)
 !       wk1 = (du/dr)*(dr/dx_i)
         call col2(fm_wk1,fm_wk2,lxfm*lyfm*lzfm)
 
@@ -558,7 +561,7 @@ c-----------------------------------------------------------------------
         call fm_tensor3_op(fm_wk3,u(1,e),lx1,ly1,lz1,
      $       fm_jgl,fm_dglt,fm_jglt,lxfm,lyfm,lzfm)
 !       wk2 = (ds/dx_i)
-        call intp_fm(fm_wk2,sm1(1,e),imsh1)
+        call fm_intp(fm_wk2,sm1(1,e),imsh1)
 !       wk3 = (du/ds)*(ds/dx_i)
         call col2(fm_wk3,fm_wk2,lxfm*lyfm*lzfm)
 
@@ -570,7 +573,7 @@ c-----------------------------------------------------------------------
           call fm_tensor3_op(fm_wk3,u(1,e),lx1,ly1,lz1,
      $         fm_jgl,fm_jglt,fm_dglt,lxfm,lyfm,lzfm)
 !         wk2 = (dt/dx_i)
-          call intp_fm(fm_wk2,tm1(1,e),imsh1)
+          call fm_intp(fm_wk2,tm1(1,e),imsh1)
 !         wk3 = (du/dt)*(dt/dx_i)
           call col2(fm_wk3,fm_wk2,lxfm*lyfm*lzfm)
 
@@ -657,6 +660,53 @@ c-----------------------------------------------------------------------
       return
       end
 !-----------------------------------------------------------------------
+      subroutine fm_cdabdtp (ap,wp,h1,h2,h2inv,intype)
+
+C     INTYPE= 0  Compute the matrix-vector product    DA(-1)DT*p
+C     INTYPE= 1  Compute the matrix-vector product    D(B/DT)(-1)DT*p
+C     INTYPE=-1  Compute the matrix-vector product    D(A+B/DT)(-1)DT*p
+
+      implicit none
+
+      include 'SIZE'
+      include 'TSTEP'
+      include 'INPUT'         ! ifanls
+
+      real           ap    (lx2,ly2,lz2,1)
+      real           wp    (lx2,ly2,lz2,1)
+      real           h1    (lx1,ly1,lz1,1)
+      real           h2    (lx1,ly1,lz1,1)
+      real           h2inv (lx1,ly1,lz1,1)
+
+      real ta1,ta2,ta3,tb1,tb2,tb3
+      common /scrns/ ta1 (lx1,ly1,lz1,lelv)
+     $ ,             ta2 (lx1,ly1,lz1,lelv)
+     $ ,             ta3 (lx1,ly1,lz1,lelv)
+     $ ,             tb1 (lx1,ly1,lz1,lelv)
+     $ ,             tb2 (lx1,ly1,lz1,lelv)
+     $ ,             tb3 (lx1,ly1,lz1,lelv)
+
+      integer intype
+      real tolhin,dtbdi
+
+      call fm_opgradt(ta1,ta2,ta3,wp)
+      if ((intype.eq.0).or.(intype.eq.-1)) then
+        tolhin=tolhs
+        call ophinv (tb1,tb2,tb3,ta1,ta2,ta3,h1,h2,tolhin,nmxv)
+      else
+        if (ifanls) then
+          dtbdi = dt/bd(1)   ! scale by dt*backwd-diff coefficient
+          call opbinv1(tb1,tb2,tb3,ta1,ta2,ta3,dtbdi)
+        else
+          call opbinv (tb1,tb2,tb3,ta1,ta2,ta3,h2inv)
+        endif
+      endif
+      call fm_opdiv (ap,tb1,tb2,tb3)
+
+      return
+      end
+C
+C-----------------------------------------------------------------------
 
 
 
