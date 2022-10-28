@@ -142,7 +142,7 @@ C     INTYPE=-1  Compute the matrix-vector product    D(A+B/DT)(-1)DT*p
       logical iffullmass
       integer maxiter
 
-      iffullmass = .true.
+      iffullmass = .false.
 
       call opgradt(ta1,ta2,ta3,wp)
       if ((intype.eq.0).or.(intype.eq.-1)) then
@@ -156,7 +156,7 @@ C     INTYPE=-1  Compute the matrix-vector product    D(A+B/DT)(-1)DT*p
           if (iffullmass) then
             maxiter = 200
             call opcopy(tb1,tb2,tb3,ta1,ta2,ta3)
-            call op_gmres(tb1,tb2,tb3,h2,maxiter)
+!            call op_gmres(tb1,tb2,tb3,h2,maxiter)
           else
             CALL OPBINV (TB1,TB2,TB3,TA1,TA2,TA3,H2INV)
           endif

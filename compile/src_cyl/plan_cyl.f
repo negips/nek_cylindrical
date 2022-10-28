@@ -121,7 +121,13 @@ C              current time step is completed.
       etime1 = dnekclock()
                                                 call makeuf
       if (filterType.eq.2)                      call make_hpf
-      if (ifnav .and..not.ifchar)               call advab_cyl
+      if (ifnav .and..not.ifchar) then
+        if (uservp) then
+          call advab_rho_cyl()
+        else
+          call advab_cyl()
+        endif
+      endif
       if (ifmvbd.and..not.ifchar)               call admeshv
       if (iftran)                               call makeabf
       if ((iftran.and..not.ifchar).or.
@@ -132,6 +138,72 @@ C              current time step is completed.
 
       return
       end
+!---------------------------------------------------------------------- 
+      subroutine advab_rho_cyl()
+
+!     Eulerian scheme, add convection term to forcing function 
+!     at current time step.
+!     with variable density        
+
+      implicit none
+
+      include 'SIZE'
+      include 'SOLN'
+      include 'MASS'
+      include 'TSTEP'
+
+      real ta1,ta2,ta3
+      common /scruz/ ta1 (lx1,ly1,lz1,lelv)
+     $ ,             ta2 (lx1,ly1,lz1,lelv)
+     $ ,             ta3 (lx1,ly1,lz1,lelv)
+
+      real rhoi         ! density inverse
+      common /scrcg/ rhoi(lx1,ly1,lz1,lelt)
+
+      integer ntot1
+
+      ntot1 = lx1*ly1*lz1*nelv
+
+!     bfx,bfy,bfz get multiplied by vtrans later in makeabf.
+!     So I do an inverse rho multiplication here
+
+!     rhoi = 1/\rho      
+      call invers2(rhoi,vtrans(1,1,1,1,ifield),ntot1)
+
+      call convect_cylindrical_rho (ta1,vtrans(1,1,1,1,ifield),vx,
+     $                              vx,vy,vz)
+      call convect_cylindrical_rho (ta2,vtrans(1,1,1,1,ifield),vy,
+     $                              vx,vy,vz)
+      if (ldim.eq.3) then
+        call convect_cylindrical_rho (ta3,vtrans(1,1,1,1,ifield),vz,
+     $                                vx,vy,vz)
+      endif  
+
+      call col2(ta1,rhoi,ntot1)
+      call sub2 (bfx,ta1,ntot1)
+
+      call col2(ta2,rhoi,ntot1)      
+      call sub2 (bfy,ta2,ntot1)
+      if (ldim.eq.3) then
+        call co2(ta3,rhoi,ntot1)
+        call sub2 (bfz,ta3,ntot1)
+      endif
+
+!     Additional terms in cylindrical formulation
+!     Division by R gets cancelled by the multiplication by R
+!     from the Jacobian
+      if (ldim.eq.3) then      
+        call dealias_rho_uv(ta2,vtrans(1,1,1,1,ifield),vz,vz)
+        call col2(ta2,rhoi,ntot1)      
+        call add2(bfy,ta2,ntot1)
+        
+        call dealias_rho_uv(ta3,vtrans(1,1,1,1,ifield),vy,vz)
+        call col2(ta3,rhoi,ntot1)      
+        call sub2(bfz,ta3,ntot1)
+      endif  
+
+      return
+      end subroutine
 !---------------------------------------------------------------------- 
 
       subroutine advab_cyl()

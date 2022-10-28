@@ -11,6 +11,7 @@ SRC_LSM     := ./src_lsm
 SRC_STT     := ./stat
 SRC_MAP     := ./map2D
 SRC_CHP     := ./checkpoint
+SRC_CYL     := ./src_cyl
 
 $(OBJDIR)/frame_usr.o           :$(SRC_FRAME)/frame_usr.f;              $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@
 $(OBJDIR)/frame.o               :$(SRC_FRAME)/frame.f;                  $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@
@@ -67,10 +68,9 @@ $(OBJDIR)/mesh2_exchange.o      :$(SRC_USR)/mesh2_exchange.f;           $(F77) -
 $(OBJDIR)/subs_ifpgll.o         :$(SRC_USR)/subs_ifpgll.f;              $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@
 $(OBJDIR)/mesh1_pressure_integration.o         :$(SRC_USR)/mesh1_pressure_integration.f;              $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@
 $(OBJDIR)/null_space_jd.o       :$(SRC_USR)/null_space_jd.f;            $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@
-$(OBJDIR)/cylindrical_subs.o    :$(SRC_USR)/cylindrical_subs.f;         $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@
 $(OBJDIR)/full_mass.o           :$(SRC_USR)/full_mass.f;                $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@
-$(OBJDIR)/plan_cyl.o            :$(SRC_USR)/plan_cyl.f;                 $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@
 $(OBJDIR)/kopriva.o             :$(SRC_USR)/kopriva.f;                  $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@
 
-
+$(OBJDIR)/cylindrical_subs.o    :$(SRC_CYL)/cylindrical_subs.f;         $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@
+$(OBJDIR)/plan_cyl.o            :$(SRC_CYL)/plan_cyl.f;                 $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@
 

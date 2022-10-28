@@ -14,11 +14,12 @@
       include 'SIZE'
       include 'MASS'
       include 'SOLN'          ! vtrans
-      include 'TSTEP'         ! ifield
-      include 'GEOM'          ! testing
+      include 'TSTEP'         ! ifield,DT
+
+      include 'TEST'
 
       integer jdlv
-      parameter (jdlv = 20)
+      parameter (jdlv = 30)
 
       integer lt2
       parameter(lt2=lx2*ly2*lz2*lelv)
@@ -38,6 +39,8 @@
       real ev_vl(jdlv,jdlv)
       real ev_wr(jdlv)
       real ev_wi(jdlv)
+
+      real e0r,e0i
 
       real diff
 
@@ -64,7 +67,7 @@
       logical ifwgt           ! If Weighted orthogonalization
       integer ngs             ! No of Gram-Schmidts
 
-      integer i,j,k,ijd
+      integer i,j,k,ijd,e0
       integer maxiter         ! Max. GMRES iterations
 
       integer jd_restarts     ! Max Jacobi Davidson restarts
@@ -78,9 +81,11 @@
 
       ifwgt       = .true.
       ngs         = 2
-      maxiter     = 90
-      jd_restarts = 50
+      maxiter     = 1000
+      jd_restarts = 200
       eigtol      = 1.0e-12
+
+      mu          = -dt
 
       ifield = 1
       intype = 1
@@ -197,21 +202,23 @@
      $                   ev_vr,jdlv)
 
           diff = 1e+5
-          k = 1
+          e0 = 1
           do i=1,j+1
             wk1(i) = sqrt(ev_wr(i)**2 + ev_wi(i)**2)
             if (abs(wk1(i) - theta).lt.diff) then
               diff = abs(wk1(i)-theta)
-              k = i
+              e0 = i
             endif  
-          enddo 
+          enddo
+          e0r = (ev_wr(e0) - 1.0)/mu
+          e0i = (ev_wi(e0) - 0.0)/mu 
           if (nio.eq.0) write(6,16) 'EIG0',istep,
-     $                               ev_wr(k), ev_wi(k)
+     $                               ev_wr(e0), ev_wi(e0),e0r,e0i
           if (nio.eq.0) write(6,*) ' '
 
 !         Taking the eigenvector corresponding to the
 !         nearest eigenvalue as u0. 
-          call mxm(jd_V,lt2,ev_vr(1,k),j+1,jdu0,1)
+          call mxm(jd_V,lt2,ev_vr(1,e0),j+1,jdu0,1)
 
 !         Normalize new eigenvector
           if (ifwgt) then 
@@ -228,15 +235,14 @@
 !         r = w - \theta*v      
           call add3s2(jdr,jdw,jdv,1.0,theta,nt2)
 
-          diff = abs(ev_wr(k)-theta)
+          diff = abs(ev_wr(e0)-theta)
           if (diff.lt.eigtol) then
             ifconv = .true.
             if (nio.eq.0) write(6,*) 'Jacobi Davison Converged, res=',
      $                                diff             
           endif  
 
-!         Testing
-          mu = -1.0e-4
+!         Transform Eigenvalues.
           do i=1,j+1
             ev_wr(i) = (ev_wr(i)-1.0)/mu
             ev_wi(i) = (ev_wi(i)-0.0)/mu
@@ -245,6 +251,11 @@
 
           if (ifconv) exit 
         enddo       ! j=1,jdnv
+
+!       Outpost current null space estimate
+        time  = ev_wr(i)
+        istep = ijd
+        call outpost(vx,vy,vz,jdu0,t,'est')
 
         if (.not.ifconv) then
 !         Reinitialize matrices
@@ -260,26 +271,27 @@
             hii = glsc2(jd_V(1,1),jdw,nt2)
           endif
           jd_H(1,1) = hii
-        endif
-            
+        endif       ! if (.not.ifconv)
 
       enddo         ! while (ijd.lt.jd_restarts.and..not.ifconv)
 
 
-!     Testing
+!     Output eigenvectors
       k = jdnv
-      if (ifconv) k = j
-      do i=1,k+1
+      if (ifconv) then
+        k = j 
         istep = i
-        call mxm(jd_V,lt2,ev_vr(1,i),k+1,pr,1)
+        call mxm(jd_V,lt2,ev_vr(1,e0),k+1,pr,1)
         call outpost(vx,vy,vz,pr,t,'tst')
-        if (ifwgt) then 
-          vnorm = sqrt(glsc3(jd_V(1,i),jd_V(1,i),bm2,nt2))
-        else
-          vnorm = sqrt(glsc2(jd_V(1,i),jd_V(1,i),nt2))
-        endif
-
-      enddo  
+      else
+        k = jdnv
+        do i=1,k+1
+          istep = i
+          time  = ev_wr(i)
+          call mxm(jd_V,lt2,ev_vr(1,i),k+1,pr,1)
+          call outpost(vx,vy,vz,pr,t,'tst')
+        enddo
+      endif 
 
       do i=1,k+1
 !!        We have already scaled these      
@@ -310,7 +322,7 @@ c     intype = -1  (implicit)
 !              => (U^T)*E*U*(M^-1)q    = f,
 !              => p = (M^-1)q.
 !     Where,      U = (I - u0*(u0^T)*B),
-!     is the Subspace without the constant pressure field.
+!     is the subspace orthogonal to u0.
 !
 !     ortho_left(r)  = (U^T)*r
 !     ortho_right(r) = U*r
@@ -381,7 +393,7 @@ c
 
       ifprint = .true.
 
-      ifwgt       = .false.           ! Weighted Orthogonalization
+      ifwgt       = .false.            ! Weighted Ortho for GMRES
       ifwgtortho  = .false.
       ifprec      = .false.           ! Use preconditioner
       ngs         = 1
@@ -395,16 +407,25 @@ c
         call rone(wp,ntot2)
         alpha = sqrt(glsc2(wp,wp,ntot2))
         norm_fac = 1.0/alpha
-      endif  
+      endif
 
       etime1 = dnekclock()
       etime_p = 0.
       iter  = 0
       m = min(maxiter,lgmres)
 
+      if (ifwgt) then
+!       Weighted inner product                                 !            ______
+        div0 = sqrt(glsc3(res,res,bm2,ntot2))! gamma  = \/(Br,r)
+      else    
+!       Un-weighted inner product                          !            ______
+        div0 = sqrt(glsc2(res,res,ntot2))! gamma  = \/(r,r)
+      endif   
+      div0 = div0*norm_fac
+
 !      call chktcg2(tolps,res,iconv)
 !      tolpss = tolps
-      tolpss = 1.0e-14
+      tolpss = 1.0e-8*div0
 
       iconv = 0
       call rzero(x_gmres,ntot2)
@@ -442,8 +463,8 @@ c
          endif   
                                                            
          if(iter.eq.0) then
-            div0 = gamma_gmres(1)*norm_fac
-            if (param(21).lt.0) tolpss=abs(param(21))*div0
+           div0 = gamma_gmres(1)*norm_fac
+           if (param(21).lt.0) tolpss=abs(param(21))*div0
          endif
 
 !        check for lucky convergence
@@ -683,6 +704,7 @@ c------------------------------------------------------------------------
       implicit none
 
       include 'SIZE'
+      include 'TSTEP'   ! dt
       include 'MASS'    ! BM2inv
 
       real w(1)
@@ -698,11 +720,13 @@ c------------------------------------------------------------------------
       nt2 = nx2*ny2*nz2*nelv
 
 !     w = Ev      
-      call cdabdtp(w,v,h1,h2,h2inv,intype)
+!      call cdabdtp(w,v,h1,h2,h2inv,intype)
+      call fm_cdabdtp(w,v,h1,h2,h2inv,intype)
+
 !      call col2(w,bm2inv,nt2)
 
 !     w = (I + \mu*E)v
-      mu = -1.0e-4
+      mu = -dt
       call add2s1(w,v,mu,nt2)
 
 
@@ -731,9 +755,6 @@ c------------------------------------------------------------------------
 
       call jd_Eop(w,v,h1,h2,h2inv,intype)
 
-!      do i=1,nt2
-!        w(i) = w(i) - theta*v(i)
-!      enddo  
       call add2s2(w,v,-theta,nt2)
 
 
