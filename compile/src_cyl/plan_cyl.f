@@ -122,7 +122,7 @@ C              current time step is completed.
                                                 call makeuf
       if (filterType.eq.2)                      call make_hpf
       if (ifnav .and..not.ifchar) then
-        if (uservp) then
+        if (ifuservp) then
           call advab_rho_cyl()
         else
           call advab_cyl()
@@ -185,7 +185,7 @@ C              current time step is completed.
       call col2(ta2,rhoi,ntot1)      
       call sub2 (bfy,ta2,ntot1)
       if (ldim.eq.3) then
-        call co2(ta3,rhoi,ntot1)
+        call col2(ta3,rhoi,ntot1)
         call sub2 (bfz,ta3,ntot1)
       endif
 

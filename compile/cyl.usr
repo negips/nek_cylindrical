@@ -35,7 +35,7 @@ c-----------------------------------------------------------------------
       nug    = mug/rhog
       nuw    = muw/rhow
 
-      eps    = 2.0e-2
+      eps    = 3.0e-2
 
       if (ifield.eq.1) then
         utrans = setvp(rhog,rhow,temp,eps)
@@ -60,7 +60,7 @@ c-----------------------------------------------------------------------
 
       integer ix,iy,iz,ieg
 
-      ffx = 3.00
+      ffx = 0.00
       ffy = 0.0
       ffz = 0.0
 
@@ -101,10 +101,6 @@ c-----------------------------------------------------------------------
 
       integer i,j,k,e,n,n2
 
-      integer igeom
-      character cb*3
-      integer ie,iface,nfaces
-
       real x,y,z
 
       real gl2norm,glsc2,glsc3
@@ -118,6 +114,13 @@ c-----------------------------------------------------------------------
         if (param(95).gt.0) then
           param(95) = 50        ! start of projections
         endif
+
+!       For cylindrical solver
+!       I probably need to do this in the core
+!       After the geometry has been regenerated
+        call col2(bm1,ym1,n)
+        call col2(bm2,ym2,n2)
+        call invers2(bm2inv,bm2,n)
 
         call rone(vtrans(1,1,1,1,2),n)
         call rone(vdiff(1,1,1,1,2),n)
@@ -136,6 +139,8 @@ c-----------------------------------------------------------------------
         ifto = .true.
 
         call outpost(v1mask,v2mask,v3mask,pr,tmask,'msk')
+
+        call outpost(vx,vy,vz,pr,t,'   ')
 
 !       Reynolds number of the field
         do i=1,n
@@ -219,20 +224,20 @@ c-----------------------------------------------------------------------
         uz = omega(2)*rady(2)
       endif
 
-!     Damping near the top/bottom walls
-      mu = 0.05
-      xmid = (wallx(1)+wallx(2))/2.0
-      if (x.lt.xmid) then
-        x0 = wallx(1)
-        ux = (1.0 - exp(-((x-x0)/mu)**2))*ux
-        uy = (1.0 - exp(-((x-x0)/mu)**2))*uy
-        uz = (1.0 - exp(-((x-x0)/mu)**2))*uz
-      else
-        x0 = wallx(2)
-        ux = (1.0 - exp(-((x-x0)/mu)**2))*ux
-        uy = (1.0 - exp(-((x-x0)/mu)**2))*uy
-        uz = (1.0 - exp(-((x-x0)/mu)**2))*uz
-      endif
+!!     Damping near the top/bottom walls
+!      mu = 0.05
+!      xmid = (wallx(1)+wallx(2))/2.0
+!      if (x.lt.xmid) then
+!        x0 = wallx(1)
+!        ux = (1.0 - exp(-((x-x0)/mu)**2))*ux
+!        uy = (1.0 - exp(-((x-x0)/mu)**2))*uy
+!        uz = (1.0 - exp(-((x-x0)/mu)**2))*uz
+!      else
+!        x0 = wallx(2)
+!        ux = (1.0 - exp(-((x-x0)/mu)**2))*ux
+!        uy = (1.0 - exp(-((x-x0)/mu)**2))*uy
+!        uz = (1.0 - exp(-((x-x0)/mu)**2))*uz
+!      endif
 
 
       return
@@ -262,26 +267,31 @@ c-----------------------------------------------------------------------
       real rmid,xmid,y0,z0
       real mu,x0
 
+      real rnd
+
+      call random_number(rnd)
+
       pi = 4.0*atan(1.0)
 
-      ux = 0.0 ! sin(pi*(y-1.0)/0.8)
+      ux = 0.0
       uy = 0.
-      uz = tc_a(1)*y + tc_a(2)/y
+      uz = tc_a(1)*y + tc_a(2)/y + 0.001*rnd
 
-!     Damping near the top/bottom walls
-      mu = 0.01
-      xmid = (wallx(1)+wallx(2))/2.0
-      if (x.lt.xmid) then
-        x0 = wallx(1)
-        ux = (1.0 - exp(-((x-x0)/mu)**2))*ux
-        uy = (1.0 - exp(-((x-x0)/mu)**2))*uy
-        uz = (1.0 - exp(-((x-x0)/mu)**2))*uz
-      else
-        x0 = wallx(2)
-        ux = (1.0 - exp(-((x-x0)/mu)**2))*ux
-        uy = (1.0 - exp(-((x-x0)/mu)**2))*uy
-        uz = (1.0 - exp(-((x-x0)/mu)**2))*uz
-      endif
+
+!!     Damping near the top/bottom walls
+!      mu = 0.01
+!      xmid = (wallx(1)+wallx(2))/2.0
+!      if (x.lt.xmid) then
+!        x0 = wallx(1)
+!        ux = (1.0 - exp(-((x-x0)/mu)**2))*ux
+!        uy = (1.0 - exp(-((x-x0)/mu)**2))*uy
+!        uz = (1.0 - exp(-((x-x0)/mu)**2))*uz
+!      else
+!        x0 = wallx(2)
+!        ux = (1.0 - exp(-((x-x0)/mu)**2))*ux
+!        uy = (1.0 - exp(-((x-x0)/mu)**2))*uy
+!        uz = (1.0 - exp(-((x-x0)/mu)**2))*uz
+!      endif
 
       return
       end
@@ -292,16 +302,24 @@ c-----------------------------------------------------------------------
   
       include 'SIZE'      ! _before_ mesh is generated, which 
       include 'INPUT'
-      include 'GEOM'
       include 'TSTEP'
       include 'PARALLEL'
-!      include 'TOTAL'     ! guarantees GLL mapping of mesh.
 
-!      ifaxis = .true.   ! just for initialization
+      integer e,i,nc
+
       param(42)=0       ! 0: GMRES (nonsymmetric), 1: PCG w/o weights
       param(43)=1       ! 0: Additive multilevel (param 42=0), 1: Original 2 level
       param(44)=0       ! 0: E based Schwartz (FEM), 1: A based Schwartz
 
+      nc = 2**ndim
+
+      pi = 4.0*atan(1.0)
+
+      do e=1,nelv
+      do i=1,nc
+        xc(i,e) = 2.0*pi*xc(i,e)
+      enddo
+      enddo
 
 
       return
