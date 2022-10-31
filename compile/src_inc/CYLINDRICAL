@@ -1,0 +1,37 @@
+!     Variables for Consistent integration evaluation
+
+      logical cyl_ifcyl             ! If we are doing Cylindrical Formulation
+
+      common /cylindrical_ls/ cyl_ifcyl
+
+      real cyl_radius(lx1,ly1,lz1,lelv)   ! Radius (Just stored)
+      common /cylindrical_rv/ cyl_radius
+
+
+!     Variables needed for the KTH Framework
+!---------------------------------------------------------------------- 
+!     Necessary variables (ids) 
+      integer cyl_id                ! Module id
+      integer cyl_sec_id            ! Section id
+      integer cyl_tmr_tot_id        ! total time id
+      integer cyl_tmr_ini_id        ! initialisation time id
+      integer cyl_log_id            ! Log id
+
+      common /cyl_frame_id/ cyl_id, cyl_sec_id, cyl_tmr_tot_id,
+     $                     cyl_tmr_ini_id, cyl_log_id
+
+!     Variable ids      
+      integer cyl_ifcyl_id          ! If Cylindrical id
+      
+      common /cyl_frame_varid/ cyl_ifcyl_id 
+
+      integer cyl_log               ! Log Level
+
+      common /cyl_frame_log/ cyl_log
+
+
+
+      character*(5) cyl_name
+      parameter (cyl_name='CYLIN')
+
+

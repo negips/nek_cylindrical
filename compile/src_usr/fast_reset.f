@@ -98,75 +98,107 @@ c
 c-----------------------------------------------------------------------
 
       subroutine gen_fast_again(df,sr,ss,st,x,y,z)
-c
+
 c     Generate fast diagonalization matrices for each element
-c
+
+      implicit none
+
       include 'SIZE'
       include 'INPUT'
+      include 'GEOM'          ! YM1
       include 'PARALLEL'
       include 'SOLN'
       include 'WZ'
-c
+
+      include 'CYLINDRICAL'
+
+      integer lxx 
       parameter(lxx=lx1*lx1)
       real df(lx1*ly1*lz1,1),sr(lxx*2,1),ss(lxx*2,1),st(lxx*2,1)
-c
-      common /ctmpf/  lr(2*lx1+4),ls(2*lx1+4),lt(2*lx1+4)
-     $              , llr(lelt),lls(lelt),llt(lelt)
-     $              , lmr(lelt),lms(lelt),lmt(lelt)
-     $              , lrr(lelt),lrs(lelt),lrt(lelt)
+
       real lr ,ls ,lt 
       real llr,lls,llt
       real lmr,lms,lmt
       real lrr,lrs,lrt
-c
+      common /ctmpf/  lr(2*lx1+4),ls(2*lx1+4),lt(2*lx1+4)
+     $              , llr(lelt),lls(lelt),llt(lelt)
+     $              , lmr(lelt),lms(lelt),lmt(lelt)
+     $              , lrr(lelt),lrs(lelt),lrt(lelt)
+
       integer lbr,rbr,lbs,rbs,lbt,rbt,e
-c
+
       real x(lx1,ly1,lz1,nelv)
       real y(lx1,ly1,lz1,nelv)
       real z(lx1,ly1,lz1,nelv)
       real axwt(lx2)
 
       real fldr(lx1,lelv),flds(lx1,lelv),fldt(lx1,lelv)
-      real fld(lx1,ly1,lz1,lelv)
-      common /ctmpf_rho/ fldr,flds,fldt,fld
+      real fld(lx1,ly1,lz1,lelv),rad(ly1,lelv)
+      common /ctmpf_rho/ rad,fldr,flds,fldt,fld
 
-      integer ifld
-      integer n
+      integer i,j,k,l,ifld,ierr,ierrmx
+      integer n,nr,ns,nt
 
       real vlsc2
       real rhoavg
+      logical ifinterior
+      integer f,nfaces
+
+      character*3 cb
+      real diag,eps
+
+      real yavg,xsum
+      real vlsum,vlmax
+      integer iglmax
 
       ierr = 0
 
       if (param(44).eq.1) then
-        if (nio.eq.0) then
-          write(6,*) 'Density in FEM local solves not implemented'
-          write(6,*) 'Exitting in gen_fast_again()'
-        endif  
+
+        if (cyl_ifcyl) then
+          if (nio.eq.0) write(6,*) 
+     $      'Cylindrical in FEM local solves not implemented'
+           write(6,*) 'Exitting in gen_fast_again()'
+        endif
+
+        if (ifuservp) then
+          if (nio.eq.0) write(6,*)
+     $        'Variable Density in FEM local solves not implemented'
+            write(6,*) 'Exitting in gen_fast_again()'
+        endif
 
         call exitt
       endif
 
       ifld = 1
       n = lx1*ly1*lz1*nelv
+
+!     Get 1D radius
+      if (cyl_ifcyl) then
+        call exchange_m1(fld,ym1) 
+        nfaces = 2*ndim
+        do e=1,nelv
+        do f=1,nfaces
+!         Put original radius back on the boundaries         
+          cb = cbc(f,e,ifld)
+          if  (cb.ne.'E  ' .and. cb.ne.'P  ') then
+!           copy iface from ym1 to df at the boundaries 
+            call ftovec(fld,ym1,e,f,nx1,ny1,nz1)
+          endif  
+        enddo
+        enddo      
+
+        ifinterior = .true.      
+        call get_1D_fld(fldr,flds,fldt,fld,ifinterior)
+        call copy(rad,flds,ly1*nelv)
+      else
+        call rone(rad,ly1*nelv)  
+      endif  
+
+!     Get 1D density
+      ifinterior = .false. 
       call copy(fld,vtrans(1,1,1,1,ifld),n)
-      call get_1D_fld(fldr,flds,fldt,fld)
-
-!      do e=1,nelv
-!        rhoavg = vlsc2(fldr(1,e),wzm1,lx1)/2.0
-!        call cfill(fldr(1,e),rhoavg,lx1)
-!        rhoavg = vlsc2(flds(1,e),wzm1,ly1)/2.0
-!        call cfill(flds(1,e),rhoavg,ly1)
-!        if (if3d) then
-!          rhoavg = vlsc2(fldt(1,e),wzm1,ly1)/2.0
-!          call cfill(fldt(1,e),rhoavg,lz1)
-!        endif
-!      enddo
-
-
-!      call rone(fldr,lx1*lelv)
-!      call rone(flds,lx1*lelv)
-!      call rone(fldt,lx1*lelv)
+      call get_1D_fld(fldr,flds,fldt,fld,ifinterior)
 
       do e=1,nelv
 c
@@ -182,8 +214,13 @@ c
            call set_up_fast_1D_fem( sr(1,e),lr,nr ,lbr,rbr
      $                      ,llr(e),lmr(e),lrr(e),zgm2(1,1),lx2,e)
          else
-           call set_up_fast_1D_sem_again( sr(1,e),lr,nr ,lbr,rbr
+           if (cyl_ifcyl) then
+             call set_up_fast_1D_sem_cyl( sr(1,e),lr,nr ,lbr,rbr
+     $             ,llr(e),lmr(e),lrr(e),fldr(1,e),rad(1,e),e,1)
+           else
+             call set_up_fast_1D_sem_again( sr(1,e),lr,nr ,lbr,rbr
      $                      ,llr(e),lmr(e),lrr(e),fldr(1,e),e)
+           endif  
          endif
          if (ifaxis) then
             xsum = vlsum(wxm2,lx2)
@@ -198,8 +235,13 @@ c
                call set_up_fast_1D_fem( ss(1,e),ls,ns ,lbs,rbs
      $                      ,lls(e),lms(e),lrs(e),zgm2(1,2),ly2,e)
             else
-               call set_up_fast_1D_sem_again( ss(1,e),ls,ns ,lbs,rbs
+              if (cyl_ifcyl) then
+                 call set_up_fast_1D_sem_cyl( ss(1,e),ls,ns ,lbs,rbs
+     $                ,lls(e),lms(e),lrs(e),flds(1,e),rad(1,e),e,2)
+              else
+                 call set_up_fast_1D_sem_again( ss(1,e),ls,ns ,lbs,rbs
      $                      ,lls(e),lms(e),lrs(e),flds(1,e),e)
+              endif
             endif
          endif
          if (if3d) then
@@ -207,13 +249,18 @@ c
                call set_up_fast_1D_fem( st(1,e),lt,nt ,lbt,rbt
      $                      ,llt(e),lmt(e),lrt(e),zgm2(1,3),lz2,e)
             else
-               call set_up_fast_1D_sem_again( st(1,e),lt,nt ,lbt,rbt
+              if (cyl_ifcyl) then
+                 call set_up_fast_1D_sem_cyl( st(1,e),lt,nt ,lbt,rbt
+     $                ,llt(e),lmt(e),lrt(e),fldt(1,e),rad(1,e),e,3)
+              else  
+                call set_up_fast_1D_sem_again( st(1,e),lt,nt ,lbt,rbt
      $                      ,llt(e),lmt(e),lrt(e),fldt(1,e),e)
+              endif   
             endif
          endif
-c
-c        Set up diagonal inverse
-c
+
+!        Set up diagonal inverse
+
          if (if3d) then
             eps = 1.e-5 * (vlmax(lr(2),nr-2)
      $                  +  vlmax(ls(2),ns-2) + vlmax(lt(2),nt-2))
@@ -225,9 +272,6 @@ c
                if (diag.gt.eps) then
                   df(l,e) = 1.0/diag
                else
-c                 write(6,3) e,'Reset Eig in gen fast:',i,j,k,l
-c    $                         ,eps,diag,lr(i),ls(j),lt(k)
-c   3             format(i6,1x,a21,4i5,1p5e12.4)
                   df(l,e) = 0.0
                endif
                l = l+1
@@ -243,9 +287,6 @@ c   3             format(i6,1x,a21,4i5,1p5e12.4)
                if (diag.gt.eps) then
                   df(l,e) = 1.0/diag
                else
-c                 write(6,2) e,'Reset Eig in gen fast:',i,j,l
-c    $                         ,eps,diag,lr(i),ls(j)
-c   2             format(i6,1x,a21,3i5,1p4e12.4)
                   df(l,e) = 0.0
                endif
                l = l+1
@@ -322,10 +363,6 @@ c     calculate E tilde operator
       call set_up_fast_1D_sem_op_again(s,eb0,eb1,l,r,ll,lm,lr,bh,dgl,
      $                                 rho,0)
 
-!     Already included rho scaling in rhobh
-!      call set_up_fast_1D_sem_op(s,eb0,eb1,l,r,ll,lm,lr,rhobh,dgl,0)
-
-c     call outmat(s,n+1,n+1,'  Et  ',ie)
 c     calculate B tilde operator
 !      call rone(dummy,lx1)
 !      call set_up_fast_1D_sem_op_again(g,bb0,bb1,l,r,ll,lm,lr,bh,jgl,
@@ -488,7 +525,7 @@ c        or maybe i should go from 0 to n-1
       end
 c-----------------------------------------------------------------------
 
-      subroutine get_1D_fld(fldr,flds,fldt,fld)
+      subroutine get_1D_fld(fldr,flds,fldt,fld,ifinterior)
 
 !     Get 1D version of Density to use in local fdm solver
 
@@ -508,10 +545,30 @@ c-----------------------------------------------------------------------
       integer ie,i,j,k
       real fldr(lx1,lelv),flds(lx1,lelv),fldt(lx1,lelv)
 
+      logical ifinterior
+      integer i1,i2,j1,j2,k1,k2
 
       nx = lx1
       ny = ly1
       nz = lz1
+
+      if (ifinterior) then
+!       Do averages only in the interior of the element        
+        i1=2
+        i2=nx-1
+        j1=2
+        j2=ny-1
+        k1=2
+        k2=nz-1
+      else
+!       Include faces in the averages        
+        i1=1
+        i2=nx
+        j1=1
+        j2=ny
+        k1=1
+        k2=nz
+      endif
 
 !      call dssum(fld,nx,ny,nz)
       call rzero(fldr,lx1*nelv)
@@ -525,8 +582,8 @@ c-----------------------------------------------------------------------
            do i=1,nx
              lr2  = 0.
              wsum = 0.
-             do k=1,nz
-             do j=1,ny
+             do k=k1,k2
+             do j=j1,j2
                 weight = w(j)*w(k)
                 lr2  = lr2  +   weight*fld(i,j,k,ie)
                 wsum = wsum + weight
@@ -539,8 +596,8 @@ c
            do j=1,ny
              ls2 = 0.
              wsum = 0.
-             do k=1,nz
-             do i=1,nx
+             do k=k1,k2
+             do i=i1,i2
                 weight = w(i)*w(k)
                 ls2  = ls2  +   weight*fld(i,j,k,ie)
                 wsum = wsum + weight
@@ -553,8 +610,8 @@ c
            do k=1,nz
              lt2 = 0.
              wsum = 0.
-             do j=1,ny
-             do i=1,nx
+             do j=j1,j2
+             do i=i1,i2
                 weight = w(i)*w(j)
                 lt2  = lt2  +   weight*fld(i,j,k,ie)
                 wsum = wsum + weight
@@ -569,7 +626,7 @@ c
            do i=1,nx
              lr2 = 0.
              wsum = 0.
-             do j=1,ny
+             do j=j1,j2
                 weight = w(j)
                 lr2  = lr2  + weight*fld(i,j,1,ie)
                 wsum = wsum + weight
@@ -581,7 +638,7 @@ c
            do j=1,ny
              ls2 = 0.
              wsum = 0.
-             do i=1,nx
+             do i=i1,i2
                 weight = w(i)
                 ls2  = ls2  + weight*fld(i,j,1,ie)
                 wsum = wsum + weight
@@ -591,6 +648,7 @@ c
            enddo
         endif           ! if3d
       enddo
+
       return
       end
 c-----------------------------------------------------------------------

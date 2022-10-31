@@ -35,7 +35,7 @@ c-----------------------------------------------------------------------
       nug    = mug/rhog
       nuw    = muw/rhow
 
-      eps    = 3.0e-2
+      eps    = 1.0e-1
 
       if (ifield.eq.1) then
         utrans = setvp(rhog,rhow,temp,eps)
@@ -60,7 +60,7 @@ c-----------------------------------------------------------------------
 
       integer ix,iy,iz,ieg
 
-      ffx = 0.00
+      ffx = -3.00
       ffy = 0.0
       ffz = 0.0
 
@@ -101,10 +101,68 @@ c-----------------------------------------------------------------------
 
       integer i,j,k,e,n,n2
 
+      integer igeom
+      character cb*3
+      integer ie,iface,nfaces
+
       real x,y,z
 
-      real gl2norm,glsc2,glsc3
-      integer resetf
+      integer lxx,levb
+      parameter(lxx=lx1*lx1, levb=lelv+lbelv)
+      real df,sr,ss,st
+      common /fastd/  df(lx1*ly1*lz1,levb)
+     $             ,  sr(lxx*2,levb),ss(lxx*2,levb),st(lxx*2,levb)
+
+!     coarse grid
+      real a,acopy                                                
+      common /h1crsa/ a(lcr*lcr*lelv)      ! Could use some common
+     $              , acopy(lcr*lcr*lelv)  ! block for this
+
+      real h1,h2,h2inv
+      common /scrvh/ h1    (lx1,ly1,lz1,lelv)
+     $ ,             h2    (lx1,ly1,lz1,lelv)
+      common /scrhi/ h2inv (lx1,ly1,lz1,lelv)
+
+      integer nit
+
+      integer lxyz
+      parameter (lxyz=(lx1+2)*(ly1+2)*(lz1+2))
+      integer*8 glo_num
+      common /c_is1/ glo_num(lxyz*lelv)
+      real vertex
+      common /ivrtx/ vertex ((2**ldim)*lelt)
+
+!     Dense mass matrix      
+      integer lxb
+      parameter (lxb=lx1)   ! Arbitrarily set for now
+
+      real jgl(lxb,lx1)
+      real jglt(lx1,lxb)
+
+      real wght(lxb)
+
+      real wk1lxb(lxb*lxb*lxb)
+      real wk2lxb(lxb*lxb*lxb)
+      real wk3lxb(lxb*lxb*lxb)
+
+      integer ii,i1,i2,iz
+
+      real rnd
+
+      real p1,p2,p3
+      real Ep,Ep1,Ep2,Ep3
+      common /scrns/ p1  (lt)
+     $ ,             p2  (lt)
+     $ ,             p3  (lt)
+     $ ,             Ep  (lt)
+     $ ,             Ep1 (lt)
+     $ ,             Ep2 (lt)
+     $ ,             Ep3 (lt)
+
+      real tolh
+      integer nmxhi
+
+      real gl2norm,glsc2,glsc3,glsc2_full_M1
 
       n  = lx1*ly1*lz1*nelv
       n2 = lx2*ly2*lz2*nelv
@@ -114,13 +172,6 @@ c-----------------------------------------------------------------------
         if (param(95).gt.0) then
           param(95) = 50        ! start of projections
         endif
-
-!       For cylindrical solver
-!       I probably need to do this in the core
-!       After the geometry has been regenerated
-        call col2(bm1,ym1,n)
-        call col2(bm2,ym2,n2)
-        call invers2(bm2inv,bm2,n)
 
         call rone(vtrans(1,1,1,1,2),n)
         call rone(vdiff(1,1,1,1,2),n)
@@ -132,15 +183,13 @@ c-----------------------------------------------------------------------
         ifield = 2
         call vprops
 
-        ifheat = .false.
+        ifheat = .true.
 
         call frame_start
 
         ifto = .true.
 
         call outpost(v1mask,v2mask,v3mask,pr,tmask,'msk')
-
-        call outpost(vx,vy,vz,pr,t,'   ')
 
 !       Reynolds number of the field
         do i=1,n
@@ -157,7 +206,37 @@ c-----------------------------------------------------------------------
 
 12    format(A4,2x,16(E12.5,2x))
 
-!        call gen_mapping_mvb()
+
+        ifield = 1
+
+        time = 1.0
+        istep = 1
+
+        if (ifpgll) then
+
+          call get_vert()
+          call setupds(pgs_handle,lx2,ly2,lz2,nelv,nelgv,vertex,glo_num)
+      
+!          call exitt
+        endif
+
+        do i=1,n
+          x = xm1(i,1,1,1)
+          y = ym1(i,1,1,1)
+          z = zm1(i,1,1,1)
+          vtrans(i,1,1,1,1) = x**3
+          call random_number(rnd) 
+          vx(i,1,1,1) = 1.0 - ((y-2.0)**2)*(x-2.0)**2  !rnd
+          vy(i,1,1,1) = 1.0         !rnd
+          vz(i,1,1,1) = 1.0         !rnd
+
+        enddo   
+
+        call test_kopriva()
+
+        call exitt
+
+        call gen_mapping_mvb()
 
       endif 
 
@@ -166,20 +245,10 @@ c-----------------------------------------------------------------------
       call chkpt_main
 
       ifto = .true.
+
+      call copy(t(1,1,1,1,2),vz,n)
         
 !      if (fs_iffs) call fs_mvmesh_linear()
-
-!     Reset preconditioner
-      resetf = int(uparam(7))
-      if (mod(istep,resetf).eq.0) then
-        call reset_preconditioner()
-!!       Reynolds number of the field
-!        do i=1,n
-!          t(i,1,1,1,2) = vtrans(i,1,1,1,1)*1.0*7.3/vdiff(i,1,1,1,1)
-!        enddo       
-!        call outpost2(vtrans,vdiff,t(1,1,1,1,2),pr,
-!     $                vdiff(1,1,1,1,2),1,'vis')
-      endif
 
       if (istep.eq.nsteps.or.lastep.eq.1) then
         call frame_end
@@ -203,42 +272,21 @@ c-----------------------------------------------------------------------
       integer jp
       common /ppointr/ jp
 
-      real rmid,xmid
+      real rmid
 
-      real wallx(2)
-      real rady(2)
-      real omega(2)
-      real tc_a(2)
-      common /taylor_geom/ wallx,rady,omega,tc_a
+      real glmin,glmax
+      integer n
 
-      real mu,x0
+      real rad1,rad2,omega1,omega2
+      real a1,a2
+      common /cylindrical/ rad1,rad2,omega1,omega2,a1,a2
 
       ux   = 0.0
       uy   = 0.0
       uz   = 0.0
 
-      rmid = (rady(1)+rady(2))/2.0
-      if (y.lt.(rmid)) then
-        uz = omega(1)*rady(1)
-      else
-        uz = omega(2)*rady(2)
-      endif
-
-!!     Damping near the top/bottom walls
-!      mu = 0.05
-!      xmid = (wallx(1)+wallx(2))/2.0
-!      if (x.lt.xmid) then
-!        x0 = wallx(1)
-!        ux = (1.0 - exp(-((x-x0)/mu)**2))*ux
-!        uy = (1.0 - exp(-((x-x0)/mu)**2))*uy
-!        uz = (1.0 - exp(-((x-x0)/mu)**2))*uz
-!      else
-!        x0 = wallx(2)
-!        ux = (1.0 - exp(-((x-x0)/mu)**2))*ux
-!        uy = (1.0 - exp(-((x-x0)/mu)**2))*uy
-!        uz = (1.0 - exp(-((x-x0)/mu)**2))*uz
-!      endif
-
+      rmid = (rad1+rad2)/2
+      if (y.lt.(rmid)) uz = omega1*rad1
 
       return
       end
@@ -258,40 +306,52 @@ c-----------------------------------------------------------------------
       integer ix,iy,iz,ieg
       real pi
 
-      real wallx(2)
-      real rady(2)
-      real omega(2)
-      real tc_a(2)
-      common /taylor_geom/ wallx,rady,omega,tc_a
+      integer jp
+      common /ppointr/ jp
 
-      real rmid,xmid,y0,z0
-      real mu,x0
+      real fcoeff(3)
+      real xl(3)
+      real mth_ran_dst
 
-      real rnd
+      logical ifcouette
+      logical ifpoiseuille
+      logical iftaylor
+      logical iftestmvb
 
-      call random_number(rnd)
+      real rad1,rad2,omega1,omega2
+      real a1,a2
+      common /cylindrical/ rad1,rad2,omega1,omega2,a1,a2
+
+      real rmid,y0,z0
+      real rad
+
+      ifcouette         = .false.
+      ifpoiseuille      = .false.
+      iftaylor          = .true.
+      iftestmvb         = .false.
 
       pi = 4.0*atan(1.0)
 
-      ux = 0.0
-      uy = 0.
-      uz = tc_a(1)*y + tc_a(2)/y + 0.001*rnd
 
+      if (ifpoiseuille) then
+        ux = 1.0 - y**2
+        uy = 0.
+        uz = 0.0 + 0.0
+      elseif (ifcouette) then
+        ux = 0.0 + 1.0*y
+        uy = 0.
+        uz = 0.0 + 0.0
+      elseif (iftaylor) then
+        ux = 0.0 ! sin(pi*(y-1.0)/0.8)
+        uy = 0.
+        uz = a1*y + a2/y
+      elseif (iftestmvb) then
+        rmid = (rad1+rad2)/2.0
+        ux   = -uparam(1)*exp(-((y-rmid)/0.25)**2)
+        uy   = -0.1*uparam(1)*exp(-((y-rmid)/0.25)**2)
+        uz   = 0.1*(a1*y + a2/y)
+      endif  
 
-!!     Damping near the top/bottom walls
-!      mu = 0.01
-!      xmid = (wallx(1)+wallx(2))/2.0
-!      if (x.lt.xmid) then
-!        x0 = wallx(1)
-!        ux = (1.0 - exp(-((x-x0)/mu)**2))*ux
-!        uy = (1.0 - exp(-((x-x0)/mu)**2))*uy
-!        uz = (1.0 - exp(-((x-x0)/mu)**2))*uz
-!      else
-!        x0 = wallx(2)
-!        ux = (1.0 - exp(-((x-x0)/mu)**2))*ux
-!        uy = (1.0 - exp(-((x-x0)/mu)**2))*uy
-!        uz = (1.0 - exp(-((x-x0)/mu)**2))*uz
-!      endif
 
       return
       end
@@ -302,24 +362,16 @@ c-----------------------------------------------------------------------
   
       include 'SIZE'      ! _before_ mesh is generated, which 
       include 'INPUT'
+      include 'GEOM'
       include 'TSTEP'
       include 'PARALLEL'
+!      include 'TOTAL'     ! guarantees GLL mapping of mesh.
 
-      integer e,i,nc
-
+!      ifaxis = .true.   ! just for initialization
       param(42)=0       ! 0: GMRES (nonsymmetric), 1: PCG w/o weights
       param(43)=1       ! 0: Additive multilevel (param 42=0), 1: Original 2 level
       param(44)=0       ! 0: E based Schwartz (FEM), 1: A based Schwartz
 
-      nc = 2**ndim
-
-      pi = 4.0*atan(1.0)
-
-      do e=1,nelv
-      do i=1,nc
-        xc(i,e) = 2.0*pi*xc(i,e)
-      enddo
-      enddo
 
 
       return
@@ -355,41 +407,26 @@ c-----------------------------------------------------------------------
       include 'GEOM'
 
       integer i,n
-      real rad
-      common /scrcg/ rad(lx1,ly1,lz1,lelt)
-     
-      real wallx(2)
-      real rady(2)
-      real omega(2)
-      real tc_a(2)
-      common /taylor_geom/ wallx,rady,omega,tc_a
+      real rad1,rad2,omega1,omega2
+      real a1,a2
+      common /cylindrical/ rad1,rad2,omega1,omega2,a1,a2
+
+      real x,y,z
+
+      real radius
+      common /scrcg/ radius(lx1,ly1,lz1,lelt)
 
       real glmin,glmax
 
       n = lx1*ly1*lz1*nelv
-      wallx(1) = glmin(xm1,n)
-      wallx(2) = glmax(xm1,n)
+      rad1 = glmin(ym1,n)
+      rad2 = glmax(ym1,n)
+      omega1 = 1.0/rad1
+      omega2 = 0.0
+      a1 = (omega2*(rad2**2) - omega1*rad1*rad1)/(rad2**2 - rad1**2)
+      a2 = (omega1 - omega2)*(rad1**2)*(rad2**2)/(rad2**2 - rad1**2)
 
-      do i=1,n
-!        rad(i,1,1,1) = sqrt(ym1(i,1,1,1)**2 + zm1(i,1,1,1)**2)
-        rad(i,1,1,1) = ym1(i,1,1,1)
-      enddo
-
-      rady(1) = glmin(rad,n)
-      rady(2) = glmax(rad,n)
-
-      omega(1) = 1.0/rady(1)
-      omega(2) = 0.0
-      tc_a(1) = (omega(2)*(rady(2)**2) - omega(1)*rady(1)*rady(1))
-     $            /(rady(2)**2 - rady(1)**2)
-      tc_a(2) = (omega(1) - omega(2))*(rady(1)**2)*(rady(2)**2)
-     $            /(rady(2)**2 - rady(1)**2)
-
-      if (nio.eq.0) write(6,10) 
-     $      'Cylindrical Params: R1,R2,a1,a2,wall1,wall2',
-     $      rady(1),rady(2),tc_a(1),tc_a(2),wallx(1),wallx(2)
-
-10    format(A43,2x,6(F8.5,2x))
+      if (nio.eq.0) write(6,*) 'Cylindrical Params:', rad1,rad2,a1,a2
 
       return
       end
@@ -409,19 +446,23 @@ c-----------------------------------------------------------------------
       integer i,n
       real x,y
       real r,r0
-      real x0
+
+      real wallx(2)
+      real rady(2)
+      common /taylor_geom/ wallx,rady
 
       real pi
 
       n=lx1*ly1*lz1*nelv
       
       pi = 4.0*atan(1.0)
-      x0 = 1.50
+!      r0 = (rady(1) + rady(2))*0.5
+      r0 = 1.00
       do i=1,n
         x = xm1(i,1,1,1)
         y = ym1(i,1,1,1)
         r = sqrt(x**2 + y**2)
-        phi(i) = x - x0        ! signed distance from interface
+        phi(i) = x - r0        ! signed distance from interface
 !        phi(i) = x - (r0+ 0.025*sin(2.0*pi*(y-1.0)/0.8))        ! wavy interface 
       enddo  
 
@@ -531,6 +572,144 @@ c-----------------------------------------------------------------------
       return
       end subroutine        
 !---------------------------------------------------------------------- 
+
+      subroutine test_kopriva()
+
+      implicit none
+
+      include 'SIZE'
+      include 'IXYZ'
+      include 'DXYZ'
+      include 'GEOM'    ! RXM1 ETC.
+      include 'SOLN'
+
+      include 'TEST'
+
+      integer klx1,klx2
+      parameter(klx1 = lx1)
+      parameter(klx2 = klx1-2)
+
+      real bw(klx1)
+      real x(klx1)
+      real x2(klx2)
+     
+      real intp(klx2,klx1)
+
+      real dx12(klx2,klx1)
+      real dx11(klx1,klx1)
+
+      real wk(klx1*klx1*klx1)
+
+      integer i,j,k
+      integer n1,n2
+
+      integer nt1,nt2
+
+      real h1,h2,h2inv
+      common /scrvh/ h1    (lx1,ly1,lz1,lelv)
+     $ ,             h2    (lx1,ly1,lz1,lelv)
+      common /scrhi/ h2inv (lx1,ly1,lz1,lelv)
+
+
+      n1 = klx1
+      n2 = klx2
+
+      call zwgll (x,wk,n1)
+      call zwgl  (x2,wk,n2)
+    
+      call BaryCentricWeights(bw,x,n1)
+      call PolynomialInterpolationMatrix(intp,x2,n2,x,bw,n1)
+      call PolynomialDerivativeMatrix(dx11,x,bw,n1)
+      call LagrangeDerivativeMatrix(dx11,x,n1,x,bw,n1)
+      call LagrangeDerivativeMatrix(dx12,x2,n2,x,bw,n1)
+
+
+      write(6,13) 'nodes', (x(i),i=1,n1)
+      write(6,*) ''
+
+      write(6,13) 'Bary', bw
+      write(6,*) ''
+
+      do i=1,n2
+        write(6,13) 'INTP12', (intp(i,j), j=1,n1)
+      enddo  
+      write(6,*) ''
+
+      do i=1,lx2
+        write(6,13) 'IXM12', (ixm12(i,j), j=1,lx1)
+      enddo  
+      write(6,*) ''
+
+      do i=1,n1
+        write(6,13) 'DX11', (dx11(i,j), j=1,n1)
+      enddo  
+      write(6,*) ''
+
+      do i=1,lx1
+        write(6,13) 'DXM1', (dxm1(i,j), j=1,lx1)
+      enddo  
+      write(6,*) ''
+
+      do i=1,n2
+        write(6,13) 'DX12', (dx12(i,j), j=1,n1)
+      enddo  
+      write(6,*) ''
+
+      do i=1,lx2
+        write(6,13) 'DXM12', (dxm12(i,j), j=1,lx1)
+      enddo  
+      write(6,*) ''
+
+13    format(A10,2x,16(E14.8,2x))
+
+
+      nt1 = lx1*ly1*lz1*nelv
+      nt2 = lx2*ly2*lz2*nelv
+
+      call fm_setup()
+
+      do i=1,nt2
+        pr(i,1,1,1) = cos(zm2(i,1,1,1)*4.0)*sin(ym2(i,1,1,1)*4.0)
+      enddo
+
+!      do i=1,nt1
+!        vz(i,1,1,1) = zm1(i,1,1,1)**2
+!      enddo  
+
+      call rzero(h1,nt1)
+      call rone(h2,nt1)
+      call rone(h2inv,nt1)
+
+      call opzero(vx,vy,vz)
+      call outpost(vx,vy,vz,pr,t,'   ')
+
+
+      call cdabdtp(tmp4,pr,h1,h2,h2inv,1)
+!      call opgradt(vx,vy,vz,pr)
+!      call opbinv(tmp1,tmp2,tmp3,vx,vy,vz,h2inv)
+!      call opdiv(tmp4,tmp1,tmp2,tmp3)
+      call outpost(tmp1,tmp2,tmp3,tmp4,t,'   ')
+
+
+      call opzero(vx,vy,vz)
+
+      call fm_cdabdtp(tmp8,pr,h1,h2,h2inv,1)
+!      call fm_opgradt(vx,vy,vz,pr)
+!      call opbinv(tmp1,tmp2,tmp3,vx,vy,vz,h2inv)
+!      call fm_opdiv(tmp8,tmp1,tmp2,tmp3)
+      call outpost(tmp1,tmp2,tmp3,tmp8,t,'   ')
+
+!!      call opdiv(pr,vx,vy,vz)
+!      call opgradt(vx,vy,vz,pr)
+!      call outpost(vx,vy,vz,pr,t,'   ')
+
+
+      return
+      end subroutine
+!----------------------------------------------------------------------       
+
+
+
 
 
 

@@ -1,7 +1,8 @@
 !======================================================================
 !     Author: Prabal Negi      
 !     Description: Routines for 3D cylindrical solve implementation
-!     Routines:   cdabdtp_cyl()           : Pressure Pseudolaplacian
+!     Routines:   init_cyl()              : Cylindrical Coordinates initialization
+!                 cdabdtp_cyl()           : Pressure Pseudolaplacian
 !                 opdiv_cyl()             : Cylindrical Divergence
 !                 multd_cyl()             : D*u = q*(D*u)
 !                 opgradt_cyl()           : Pressure gradient term
@@ -16,7 +17,23 @@
 !                 div_stress_cyl          : Grad(v)\dot Sij
 !                 ttxyz_cyl               : Grad(v)\dot      
 !
-!====================================================================== 
+!======================================================================
+      subroutine cyl_init()
+      
+      implicit none
+
+      include 'SIZE'
+      include 'GEOM'
+      include 'CYLINDRICAL'
+
+      integer i,n
+
+      n = lx1*ly1*lz1*nelv
+      call copy(cyl_radius,ym1,n)       ! Radial coordinate
+
+      return
+      end subroutine
+!---------------------------------------------------------------------- 
       subroutine cdabdtp_cyl (ap,wp,h1,h2,h2inv,intype)
 
 !     INTYPE= 0  Compute the matrix-vector product    DA(-1)DT*p
