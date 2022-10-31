@@ -583,6 +583,8 @@ c-----------------------------------------------------------------------
       include 'GEOM'    ! RXM1 ETC.
       include 'SOLN'
 
+      include 'CYLINDRICAL'
+
       include 'TEST'
 
       integer klx1,klx2
@@ -613,76 +615,6 @@ c-----------------------------------------------------------------------
 
       n1 = klx1
       n2 = klx2
-
-      call zwgll (x,wk,n1)
-      call zwgl  (x2,wk,n2)
-    
-      call BaryCentricWeights(bw,x,n1)
-      call PolynomialInterpolationMatrix(intp,x2,n2,x,bw,n1)
-      call PolynomialDerivativeMatrix(dx11,x,bw,n1)
-      call LagrangeDerivativeMatrix(dx11,x,n1,x,bw,n1)
-      call LagrangeDerivativeMatrix(dx12,x2,n2,x,bw,n1)
-
-
-      write(6,13) 'nodes', (x(i),i=1,n1)
-      write(6,*) ''
-
-      write(6,13) 'Bary', bw
-      write(6,*) ''
-
-      do i=1,n2
-        write(6,13) 'INTP12', (intp(i,j), j=1,n1)
-      enddo  
-      write(6,*) ''
-
-      do i=1,lx2
-        write(6,13) 'IXM12', (ixm12(i,j), j=1,lx1)
-      enddo  
-      write(6,*) ''
-
-      do i=1,n1
-        write(6,13) 'DX11', (dx11(i,j), j=1,n1)
-      enddo  
-      write(6,*) ''
-
-      do i=1,lx1
-        write(6,13) 'DXM1', (dxm1(i,j), j=1,lx1)
-      enddo  
-      write(6,*) ''
-
-      do i=1,n2
-        write(6,13) 'DX12', (dx12(i,j), j=1,n1)
-      enddo  
-      write(6,*) ''
-
-      do i=1,lx2
-        write(6,13) 'DXM12', (dxm12(i,j), j=1,lx1)
-      enddo  
-      write(6,*) ''
-
-13    format(A10,2x,16(E14.8,2x))
-
-
-      nt1 = lx1*ly1*lz1*nelv
-      nt2 = lx2*ly2*lz2*nelv
-
-      call fm_setup()
-
-      do i=1,nt2
-        pr(i,1,1,1) = cos(zm2(i,1,1,1)*4.0)*sin(ym2(i,1,1,1)*4.0)
-      enddo
-
-!      do i=1,nt1
-!        vz(i,1,1,1) = zm1(i,1,1,1)**2
-!      enddo  
-
-      call rzero(h1,nt1)
-      call rone(h2,nt1)
-      call rone(h2inv,nt1)
-
-      call opzero(vx,vy,vz)
-      call outpost(vx,vy,vz,pr,t,'   ')
-
 
       call cdabdtp(tmp4,pr,h1,h2,h2inv,1)
 !      call opgradt(vx,vy,vz,pr)

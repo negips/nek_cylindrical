@@ -109,5 +109,9 @@ NEGV              = 10                     # Number of eigenvalues
 IFPR              = yes                    # If pressure in arnoldi vector
 IFCOMPLEX         = yes                    # Use complex arithmetic (znaupd)
 
+#
+[_CYLIN]                # Runtime parameter Cylindrical
+CYL_IFCYL         = yes                    # If Cylindrical
+CYL_LOG           = 1                      # Log levek
 
 

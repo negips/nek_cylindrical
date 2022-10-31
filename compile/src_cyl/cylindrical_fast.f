@@ -26,7 +26,7 @@ c
       real rad(lx1)     ! radius
       real rmean        ! mean radius
       real mri          ! mean radius inverse
-      real vlsum
+      real vlsc2
 
       real dummy(lx1)
       integer isd
@@ -87,7 +87,7 @@ c     calculate B tilde operator
 c-----------------------------------------------------------------------
 
       subroutine set_up_fast_1D_sem_op_cyl(s,e0,e1,l,r,
-     $           ll,lm,lr,bh,jgl,dgl,rho,rad,isd)
+     $           ll,lm,lr,bh,jgl,dgl,rho,radm,isd)
 
 !                  -1 T
 !     S = D (rho*B)  D
@@ -105,43 +105,54 @@ c-----------------------------------------------------------------------
       real bh(lx1)                  ! Reference mass matrix
       real jgl(lx2,lx1)             ! Interpolation operator
       real dgl(lx2,lx1)             ! Differential operator
-      real ll                       ! Length of left element
-      real lm                       ! Length of current element
-      real lr                       ! Length of right element
       integer e0,e1                 ! The range for Bhat indices for
                                     ! s (enforces b.c.)
       logical l                     ! If connected to left element
       logical r                     ! If connected to right element
+      real ll                       ! Length of left element
+      real lm                       ! Length of middle element
+      real lr                       ! Length of right element
+
+      real rho(lx1)                 ! density
+      real radm(lx1)                ! Radius (middle element) on Mesh 1
+
+      integer isd                   ! Direction
 
       real bl(lx1)                  ! Mass matrix (inverse) of left element
-      real bm(lx1)                  ! Mass matrix (inverse) of current element
+      real bm(lx1)                  ! Mass matrix (inverse) of middle element
       real br(lx1)                  ! Mass matrix (inverse) of right element
+
+!     Radii Mesh 2      
+      real radm2(lx2)               ! Radius (middle element) on Mesh 2
+      real radl2(lx2)               ! Radius (left element)   on Mesh 2
+      real radr2(lx2)               ! Radius (right element)  on Mesh 2
+
 !     Geometric factors      
       real gl                       ! Geometric factor left 
-      real gm                       ! Geometric factor middle/current
+      real gm                       ! Geometric factor middle
       real gr                       ! Geometric factor right
       real gll                      ! Geometric factor left*left
       real glm                      ! Geometric factor left*middle
       real gmm                      ! Geometric factor middle*middle
       real gmr                      ! Geometric factor middle*right
       real grr                      ! Geometric factor right*right
-      real rho(lx1)                 ! density
-      real rhobh(lx1)               ! density*mass
-      real rad(lx1)                 ! Radius
 
-      integer isd                   ! Direction
+      common /fast1dwork/ bl,bm,br,radl2,radm2,radr2,
+     $                    gl,gm,gr,gll,glm,gmm,gmr,grr 
+
 
       integer n
       integer i0,i1,i,j,k
 
-      real sm    
+      real sm
+      real zr
+      real rmean
+      real vlsc2
 
       real d,dt                     ! pointwise values of D,DT
 
-      n=lx1
 
-!     (middle element density)*(reference mass)
-      call col3(rhobh,bh,rho,lx1)
+      n=lx1
 
 c     compute the scale factors for J      
       gl=0.5*ll
@@ -161,32 +172,31 @@ c     compute the scale factors for J
 !     compute the summed inverse mass matrices for
 !     the middle, left, and right elements
       do i=2,lx1-1
-        bm(i) = 1.0/(gm*rhobh(i))
+        bm(i) = 2.0/(lm*rho(i)*bh(i))
       enddo
       if (i0.eq.1) then
         if (l) then
-          bm(1) = gl*rhobh(lx1) + gm*rhobh(1)
+          bm(1) = rho(1)*0.5*(ll*bh(lx1) + lm*bh(1))
         else
-          bm(1) = gm*rhobh(1)
+          bm(1) = 0.5*lm*bh(1)
         endif  
         bm(1)   = 1.0/bm(1)
       endif
 
       if (i1.eq.lx1) then
-        bm(lx1) = gm*rhobh(n)
         if (r) then
-          bm(lx1)= gr*rhobh(1) + gm*rhobh(lx1)
+          bm(lx1)= rho(lx1)*0.5*(lr*bh(1) + lm*bh(lx1))
         else
-          bm(lx1)= gm*rhobh(lx1)
+          bm(lx1)= rho(lx1)*0.5*lm*bh(lx1)
         endif
-        bm(lx1)  =1.0/bm(lx1)
+        bm(lx1)  = 1.0/bm(lx1)
       endif
 
 !     note that in computing bl for the left element,
 !     bl(1) is missing the contribution from its left neighbor
       if (l) then
         do i=1,lx1-1
-          bl(i)=1.0/(gl*rhobh(i))
+          bl(i)=2.0/(ll*rho(i)*bh(i))
         enddo
         bl(lx1)=bm(1)
       endif
@@ -195,9 +205,35 @@ c     compute the scale factors for J
       if (r) then
         br(1)=bm(lx1)
         do i=2,lx1
-          br(i)=1.0/(gr*rhobh(i))
+          br(i)=2.0/(lr*rho(i)*bh(i))
         enddo
       endif
+
+!     Mass Matrix scaled by R for isd=2
+!     I use 's' as a work array here      
+      if (isd.eq.2) then
+        rmean = vlsc2(radm,bh,lx1)/2.0 
+        do i=1,lx1
+          bm(i) = bm(i)/radm(i)
+          zr    = (radm(i)-rmean)*2.0/lm               ! reference coordinate
+
+!         Scale left element entries            
+          s(i,1)  = radm(1) - ((1.0 - zr)*0.5)*ll        ! left element radius(i)
+          bl(i)   = bl(i)/s(i,1)
+
+!         Scale right element entries  
+          s(i,2)  = radm(lx1) + ((1.0 + zr)*0.5)*lr      ! right element radius(i)
+          br(i)   = bl(i)/s(i,2)
+        enddo
+!       Interpolate middle Radius to Mesh 2        
+        call mxm(jgl,lx2,radm,lx1,radm2,1)
+
+!       Interpolate Left Radius to Mesh 2        
+        call mxm(jgl,lx2,s(1,1),lx1,radl2,1)
+
+!       Interpolate Right Radius to Mesh 2        
+        call mxm(jgl,lx2,s(1,2),lx1,radr2,1)
+      endif  
 
 !     Initialize operator      
       call rzero(s,lx1*lx1)
@@ -210,8 +246,8 @@ c     compute the scale factors for J
             dt = dgl(j,k)
             d  = dgl(i,k)
           elseif (isd.eq.2) then 
-            dt = (rad(j)*dgl(j,k) + jgl(j,k)*gm)
-            d  = (rad(i)*dgl(i,k) + jgl(i,k)*gm)
+            dt = (radm2(j)*dgl(j,k) + jgl(j,k)*gm)
+            d  = (radm2(i)*dgl(i,k) + jgl(i,k)*gm)
           else
             dt = dgl(j,k)
             d  = dgl(i,k)
@@ -230,8 +266,8 @@ c     compute the scale factors for J
             dt = dgl(lx2,lx1)
             d  = dgl(i,1)
           elseif (isd.eq.2) then
-            dt = (rad(lx2)*dgl(lx2,lx1) + jgl(lx2,lx1)*gl)
-            d  = (rad(i)*dgl(i,1) + jgl(i,1)*gm)
+            dt = (radl2(lx2)*dgl(lx2,lx1) + jgl(lx2,lx1)*gl)
+            d  = (radm2(i)*dgl(i,1)       + jgl(i,1)*gm)
           else
             dt = dgl(lx2,lx1)
             d  = dgl(i,1)
@@ -249,8 +285,9 @@ c     compute the scale factors for J
             dt = dgl(lx2,i)
             d  = dgl(lx2,i)
           elseif (isd.eq.2) then
-            dt = (rad(lx2)*dgl(lx2,i) + jgl(lx2,i)*gl)
-            d  = (rad(lx2)*dgl(lx2,i) + jgl(lx2,i)*gl)
+!           rad(lx2)_left = rad(1)_middle            
+            dt = (radl2(lx2)*dgl(lx2,i) + jgl(lx2,i)*gl)
+            d  = (radl2(lx2)*dgl(lx2,i) + jgl(lx2,i)*gl)
           else
             dt = dgl(lx2,i)
             d  = dgl(lx2,i)
@@ -269,8 +306,9 @@ c     compute the scale factors for J
             dt = dgl(1,1)
             d  = dgl(i,lx1)
           elseif (isd.eq.2) then
-            dt = (rad(1)*dgl(1,1) + jgl(1,1)*gr)
-            d  = (rad(i)*dgl(i,lx1) + jgl(i,lx1)*gm)
+!           rad(1)_right = rad(lx1)_middle            
+            dt = (radr2(1)*dgl(1,1) + jgl(1,1)*gr)
+            d  = (radm2(i)*dgl(i,lx1) + jgl(i,lx1)*gm)
           else  
             dt = dgl(1,1)
             d  = dgl(i,lx1)
@@ -288,8 +326,9 @@ c     compute the scale factors for J
             dt = dgl(1,i)
             d  = dgl(1,i)
           elseif (isd.eq.2) then
-            dt = (rad(1)*dgl(1,i) + jgl(1,i)*gr)
-            d  = (rad(1)*dgl(1,i) + jgl(1,i)*gr)
+!           rad(1)_right = rad(lx1)_middle            
+            dt = (radr2(1)*dgl(1,i) + jgl(1,i)*gr)
+            d  = (radr2(1)*dgl(1,i) + jgl(1,i)*gr)
           else
             dt = dgl(1,i)
             d  = dgl(1,i)
@@ -305,7 +344,7 @@ c     compute the scale factors for J
       end
 c-----------------------------------------------------------------------
       subroutine set_up_fast_1D_sem_mass_cyl(s,b0,b1,l,r,
-     $           ll,lm,lr,bh,jgl,rad,isd)
+     $           ll,lm,lr,bh,jgl,radm,isd)
 
 c              -1 T
 c     S = J (B)  J
@@ -314,45 +353,56 @@ c
 c     gives the inexact restriction of this matrix to
 c     an element plus one node on either side
 
-!     rho - density
-
       implicit none
 
       include 'SIZE'
 
-      real s(lx1,lx1)               ! Mass Matrix
+      real s(lx1,lx1)               ! Pseudo Laplacian
 
       real bh(lx1)                  ! Reference mass matrix
       real jgl(lx2,lx1)             ! Interpolation operator
-      real dgl(lx2,lx1)             ! Differential operator
-      real ll                       ! Length of left element
-      real lm                       ! Length of current element
-      real lr                       ! Length of right element
-
       integer b0,b1                 ! The range for Bhat indices for
                                     ! g (enforces b.c.)
       logical l                     ! If connected to left element
       logical r                     ! If connected to right element
+      real ll                       ! Length of left element
+      real lm                       ! Length of middle element
+      real lr                       ! Length of right element
+
+      real rho(lx1)                 ! density
+      real radm(lx1)                ! Radius (middle element) on Mesh 1
+
+      integer isd                   ! Direction
 
       real bl(lx1)                  ! Mass matrix (inverse) of left element
-      real bm(lx1)                  ! Mass matrix (inverse) of current element
+      real bm(lx1)                  ! Mass matrix (inverse) of middle element
       real br(lx1)                  ! Mass matrix (inverse) of right element
+
+!     Radii Mesh 2      
+      real radm2(lx2)               ! Radius (middle element) on Mesh 2
+      real radl2(lx2)               ! Radius (left element)   on Mesh 2
+      real radr2(lx2)               ! Radius (right element)  on Mesh 2
+
 !     Geometric factors      
       real gl                       ! Geometric factor left 
-      real gm                       ! Geometric factor middle/current
+      real gm                       ! Geometric factor middle
       real gr                       ! Geometric factor right
       real gll                      ! Geometric factor left*left
       real glm                      ! Geometric factor left*middle
       real gmm                      ! Geometric factor middle*middle
       real gmr                      ! Geometric factor middle*right
       real grr                      ! Geometric factor right*right
-      real rad(lx1)                 ! Radius
-      integer isd                   ! Direction
+
+      common /fast1dwork/ bl,bm,br,radl2,radm2,radr2,
+     $                    gl,gm,gr,gll,glm,gmm,gmr,grr 
 
       integer n
       integer i0,i1,i,j,k
 
       real sm    
+      real zr
+      real rmean
+      real vlsc2
 
       real d,dt                     ! pointwise values of J,JT
 
@@ -376,32 +426,31 @@ c     compute the scale factors for J
 !     compute the summed inverse mass matrices for
 !     the middle, left, and right elements
       do i=2,lx1-1
-        bm(i) = 1.0/(gm*bh(i))
+        bm(i) = 2.0/(lm*rho(i)*bh(i))
       enddo
       if (i0.eq.1) then
         if (l) then
-          bm(1) = gl*bh(lx1) + gm*bh(1)
+          bm(1) = rho(1)*0.5*(ll*bh(lx1) + lm*bh(1))
         else
-          bm(1) = gm*bh(1)
+          bm(1) = 0.5*lm*bh(1)
         endif  
         bm(1)   = 1.0/bm(1)
       endif
 
       if (i1.eq.lx1) then
-        bm(lx1) = gm*bh(n)
         if (r) then
-          bm(lx1)= gr*bh(1) + gm*bh(lx1)
+          bm(lx1)= rho(lx1)*0.5*(lr*bh(1) + lm*bh(lx1))
         else
-          bm(lx1)= gm*bh(lx1)
+          bm(lx1)= rho(lx1)*0.5*lm*bh(lx1)
         endif
-        bm(lx1)  =1.0/bm(lx1)
+        bm(lx1)  = 1.0/bm(lx1)
       endif
 
 !     note that in computing bl for the left element,
 !     bl(1) is missing the contribution from its left neighbor
       if (l) then
         do i=1,lx1-1
-          bl(i)=1.0/(gl*bh(i))
+          bl(i)=2.0/(ll*rho(i)*bh(i))
         enddo
         bl(lx1)=bm(1)
       endif
@@ -410,9 +459,36 @@ c     compute the scale factors for J
       if (r) then
         br(1)=bm(lx1)
         do i=2,lx1
-          br(i)=1.0/(gr*bh(i))
+          br(i)=2.0/(lr*rho(i)*bh(i))
         enddo
       endif
+
+!     Mass Matrix scaled by R for isd=2
+!     I use 's' as a work array here      
+      if (isd.eq.2) then
+        rmean = vlsc2(radm,bh,lx1)/2.0 
+        do i=1,lx1
+          bm(i) = bm(i)/radm(i)
+          zr    = (radm(i)-rmean)*2.0/lm               ! reference coordinate
+
+!         Scale left element entries            
+          s(i,1)  = radm(1) - ((1.0 - zr)*0.5)*ll        ! left element radius(i)
+          bl(i)   = bl(i)/s(i,1)
+
+!         Scale right element entries  
+          s(i,2)  = radm(lx1) + ((1.0 + zr)*0.5)*lr      ! right element radius(i)
+          br(i)   = bl(i)/s(i,2)
+        enddo
+!       Interpolate middle Radius to Mesh 2        
+        call mxm(jgl,lx2,radm,lx1,radm2,1)
+
+!       Interpolate Left Radius to Mesh 2        
+        call mxm(jgl,lx2,s(1,1),lx1,radl2,1)
+
+!       Interpolate Right Radius to Mesh 2        
+        call mxm(jgl,lx2,s(1,2),lx1,radr2,1)
+      endif  
+
 
 !     Initialize operator      
       call rzero(s,lx1*lx1)
@@ -425,8 +501,8 @@ c     compute the scale factors for J
             dt = jgl(j,k)*gm
             d  = jgl(i,k)*gm
           elseif (isd.eq.2) then 
-            dt = (rad(j)*jgl(j,k)*gm)
-            d  = (rad(i)*jgl(i,k)*gm)
+            dt = (radm2(j)*jgl(j,k)*gm)
+            d  = (radm2(i)*jgl(i,k)*gm)
           else
             dt = jgl(j,k)*gm
             d  = jgl(i,k)*gm
@@ -445,8 +521,8 @@ c     compute the scale factors for J
             dt = jgl(lx2,lx1)*gl
             d  = jgl(i,1)*gm
           elseif (isd.eq.2) then
-            dt = rad(lx2)*jgl(lx2,lx1)*gl
-            d  = rad(i)*jgl(i,1)*gm
+            dt = radl2(lx2)*jgl(lx2,lx1)*gl
+            d  = radm2(i)*jgl(i,1)*gm
           else
             dt = jgl(lx2,lx1)*gl
             d  = jgl(i,1)*gm
@@ -464,8 +540,8 @@ c     compute the scale factors for J
             dt = jgl(lx2,i)*gl
             d  = jgl(lx2,i)*gl
           elseif (isd.eq.2) then
-            dt = rad(lx2)*jgl(lx2,i)*gl
-            d  = rad(lx2)*jgl(lx2,i)*gl
+            dt = radl2(lx2)*jgl(lx2,i)*gl
+            d  = radl2(lx2)*jgl(lx2,i)*gl
           else
             dt = jgl(lx2,i)*gl
             d  = jgl(lx2,i)*gl
@@ -484,8 +560,8 @@ c     compute the scale factors for J
             dt = jgl(1,1)*gr
             d  = jgl(i,lx1)*gm
           elseif (isd.eq.2) then
-            dt = rad(1)*jgl(1,1)*gr
-            d  = rad(i)*jgl(i,lx1)*gm
+            dt = radr2(1)*jgl(1,1)*gr
+            d  = radm2(i)*jgl(i,lx1)*gm
           else  
             dt = jgl(1,1)*gr
             d  = jgl(i,lx1)*gm
@@ -503,8 +579,8 @@ c     compute the scale factors for J
             dt = jgl(1,i)*gr
             d  = jgl(1,i)*gr
           elseif (isd.eq.2) then
-            dt = rad(1)*jgl(1,i)*gr
-            d  = rad(1)*jgl(1,i)*gr
+            dt = radr2(1)*jgl(1,i)*gr
+            d  = radr2(1)*jgl(1,i)*gr
           else
             dt = jgl(1,i)*gr
             d  = jgl(1,i)*gr
@@ -519,4 +595,33 @@ c     compute the scale factors for J
       return
       end
 c-----------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

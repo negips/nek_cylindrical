@@ -151,6 +151,8 @@ c     Generate fast diagonalization matrices for each element
       real vlsum,vlmax
       integer iglmax
 
+      integer isd
+
       ierr = 0
 
       if (param(44).eq.1) then
@@ -207,21 +209,25 @@ c
          else
            call get_fast_bc(lbr,rbr,lbs,rbs,lbt,rbt,e,3,ierr)
          endif
-c
-c        Set up matrices for each element.
-c
+
+!        Set up matrices for each element.
+!        X-Direction         
+         isd = 1
          if (param(44).eq.1) then
            call set_up_fast_1D_fem( sr(1,e),lr,nr ,lbr,rbr
      $                      ,llr(e),lmr(e),lrr(e),zgm2(1,1),lx2,e)
          else
            if (cyl_ifcyl) then
              call set_up_fast_1D_sem_cyl( sr(1,e),lr,nr ,lbr,rbr
-     $             ,llr(e),lmr(e),lrr(e),fldr(1,e),rad(1,e),e,1)
+     $             ,llr(e),lmr(e),lrr(e),fldr(1,e),rad(1,e),e,isd)
            else
              call set_up_fast_1D_sem_again( sr(1,e),lr,nr ,lbr,rbr
-     $                      ,llr(e),lmr(e),lrr(e),fldr(1,e),e)
+     $                      ,llr(e),lmr(e),lrr(e),fldr(1,e),e,isd)
            endif  
          endif
+
+!        Y-Direction         
+         isd = 2
          if (ifaxis) then
             xsum = vlsum(wxm2,lx2)
             do i=1,ly2
@@ -236,27 +242,30 @@ c
      $                      ,lls(e),lms(e),lrs(e),zgm2(1,2),ly2,e)
             else
               if (cyl_ifcyl) then
-                 call set_up_fast_1D_sem_cyl( ss(1,e),ls,ns ,lbs,rbs
-     $                ,lls(e),lms(e),lrs(e),flds(1,e),rad(1,e),e,2)
+                call set_up_fast_1D_sem_cyl( ss(1,e),ls,ns ,lbs,rbs
+     $                ,lls(e),lms(e),lrs(e),flds(1,e),rad(1,e),e,isd)
               else
-                 call set_up_fast_1D_sem_again( ss(1,e),ls,ns ,lbs,rbs
-     $                      ,lls(e),lms(e),lrs(e),flds(1,e),e)
+                call set_up_fast_1D_sem_again( ss(1,e),ls,ns ,lbs,rbs
+     $                      ,lls(e),lms(e),lrs(e),flds(1,e),e,isd)
               endif
             endif
          endif
+
+!        Z-Direction         
+         isd = 3
          if (if3d) then
-            if (param(44).eq.1) then
-               call set_up_fast_1D_fem( st(1,e),lt,nt ,lbt,rbt
-     $                      ,llt(e),lmt(e),lrt(e),zgm2(1,3),lz2,e)
-            else
-              if (cyl_ifcyl) then
-                 call set_up_fast_1D_sem_cyl( st(1,e),lt,nt ,lbt,rbt
-     $                ,llt(e),lmt(e),lrt(e),fldt(1,e),rad(1,e),e,3)
-              else  
-                call set_up_fast_1D_sem_again( st(1,e),lt,nt ,lbt,rbt
-     $                      ,llt(e),lmt(e),lrt(e),fldt(1,e),e)
-              endif   
-            endif
+           if (param(44).eq.1) then
+              call set_up_fast_1D_fem( st(1,e),lt,nt ,lbt,rbt
+     $                     ,llt(e),lmt(e),lrt(e),zgm2(1,3),lz2,e)
+           else
+             if (cyl_ifcyl) then
+               call set_up_fast_1D_sem_cyl( st(1,e),lt,nt ,lbt,rbt
+     $               ,llt(e),lmt(e),lrt(e),fldt(1,e),rad(1,e),e,isd)
+             else  
+               call set_up_fast_1D_sem_again( st(1,e),lt,nt ,lbt,rbt
+     $                     ,llt(e),lmt(e),lrt(e),fldt(1,e),e,isd)
+             endif   
+           endif
          endif
 
 !        Set up diagonal inverse
@@ -309,7 +318,7 @@ c
       end
 c-----------------------------------------------------------------------
       subroutine set_up_fast_1D_sem_again(s,lam,n,lbc,rbc,ll,lm,lr,
-     $                                    rho,ie)
+     $                                    rho,ie,isd)
 
       implicit none
 
@@ -325,7 +334,7 @@ c
       integer bb0,bb1,eb0,eb1,n,n1
       logical l,r
 
-      integer ie
+      integer ie,isd
       real rho(lx1),dummy(lx1)
       real rhobh(lx1)     ! density*mass
 
@@ -361,7 +370,7 @@ c
 c
 c     calculate E tilde operator
       call set_up_fast_1D_sem_op_again(s,eb0,eb1,l,r,ll,lm,lr,bh,dgl,
-     $                                 rho,0)
+     $                                 rho,0,isd)
 
 c     calculate B tilde operator
 !      call rone(dummy,lx1)
@@ -381,149 +390,379 @@ c     call exitt
       return
       end
 c-----------------------------------------------------------------------
+      subroutine set_up_fast_1D_sem_op_again(s,b0,b1,l,r,
+     $           ll,lm,lr,bh,jgl,rho,jscl,isd)
 
-      subroutine set_up_fast_1D_sem_op_again
-     $                  (g,b0,b1,l,r,ll,lm,lr,bh,jgl,rho,jscl)
-c                  -1 T
-c     G = J (rho*B)  J
+c              -1 T
+c     S = J (B)  J
+
 c
 c     gives the inexact restriction of this matrix to
 c     an element plus one node on either side
-c
-c     g - the output matrix
-c     b0, b1 - the range for Bhat indices for the element
-c              (enforces boundary conditions)
-c     l, r - whether there is a left or right neighbor
-c     ll,lm,lr - lengths of left, middle, and right elements
-c     bh - hat matrix for B
-c     jgl - hat matrix for J (should map vel to pressure)
-c     jscl - how J scales
-c            0: J = Jh
-c            1: J = (L/2) Jh
-c
-c     result is inexact because:
-c        neighbor's boundary condition at far end unknown
-c        length of neighbor's neighbor unknown
-c        (these contribs should be small for large N and
-c         elements of nearly equal size)
-c
 
 !     rho - density
 
+      implicit none
+
       include 'SIZE'
-      real g(0:lx1-1,0:lx1-1)
-      real bh(0:lx1-1),jgl(1:lx2,0:lx1-1)
-      real ll,lm,lr
-      integer b0,b1
-      logical l,r
-      integer jscl
-c
-      real bl(0:lx1-1),bm(0:lx1-1),br(0:lx1-1)
-      real gl,gm,gr,gll,glm,gmm,gmr,grr
-      real fac
+
+      real s(lx1,lx1)               ! Pseudo Laplacian
+
+      real bh(lx1)                  ! Reference mass matrix
+      real jgl(lx2,lx1)             ! Interpolation operator
+      integer b0,b1                 ! The range for Bhat indices for
+                                    ! g (enforces b.c.)
+      logical l                     ! If connected to left element
+      logical r                     ! If connected to right element
+      real ll                       ! Length of left element
+      real lm                       ! Length of middle element
+      real lr                       ! Length of right element
+
+      real rho(lx1)                 ! density
+
+      integer jscl                  ! Scaling of jgl operator
+      integer isd                   ! Direction (In case of different operators)
+
+      real bl(lx1)                  ! Mass matrix (inverse) of left element
+      real bm(lx1)                  ! Mass matrix (inverse) of middle element
+      real br(lx1)                  ! Mass matrix (inverse) of right element
+
+!     Mesh 2      
+      real radm2(lx2)               ! Not used here. 
+      real radl2(lx2)               ! Not used here. 
+      real radr2(lx2)               ! Not used here. 
+
+!     Geometric factors      
+      real gl                       ! Geometric factor left 
+      real gm                       ! Geometric factor middle
+      real gr                       ! Geometric factor right
+      real gll                      ! Geometric factor left*left
+      real glm                      ! Geometric factor left*middle
+      real gmm                      ! Geometric factor middle*middle
+      real gmr                      ! Geometric factor middle*right
+      real grr                      ! Geometric factor right*right
+
+      common /fast1dwork/ bl,bm,br,radl2,radm2,radr2,
+     $                    gl,gm,gr,gll,glm,gmm,gmr,grr 
+
       integer n
+      integer i0,i1,i,j,k
 
-      real rho(0:lx1-1)       ! density
-      real rhobh(0:lx1-1)     ! density*mass
+      real sm    
 
-      n=lx1-1
+      real d,dt                     ! pointwise values of J,JT
 
-      call col3(rhobh,bh,rho,lx1)
+      n=lx1
 
-c     compute the scale factors for J      
+c     Compute the Geometric factors for J
       if (jscl.eq.0) then
-         gl=1.
-         gm=1.
-         gr=1.
+        gl=1.0
+        gm=1.0
+        gr=1.0
       elseif (jscl.eq.1) then
-         gl=0.5*ll
-         gm=0.5*lm
-         gr=0.5*lr
-      endif
+        gl=0.5*ll
+        gm=0.5*lm
+        gr=0.5*lr
+      endif  
+
       gll = gl*gl
       glm = gl*gm
       gmm = gm*gm
       gmr = gm*gr
       grr = gr*gr
-c
-c     compute the summed inverse mass matrices for
-c     the middle, left, and right elements
-      do i=1,n-1
-         bm(i)=2. /(lm*rhobh(i))
+
+!     Since I have shifted array indicies by 1      
+      i0 = b0+1
+      i1 = b1+1
+
+!     compute the summed inverse mass matrices for
+!     the middle, left, and right elements
+      do i=2,lx1-1
+        bm(i) = 2.0/(lm*rho(i)*bh(i))
       enddo
-      if (b0.eq.0) then
-         bm(0)=0.5*lm*rhobh(0)
-         if(l) bm(0)=bm(0)+0.5*ll*rhobh(n)
-         bm(0)=1. /bm(0)
+      if (i0.eq.1) then
+        if (l) then
+          bm(1) = rho(1)*0.5*(ll*bh(lx1) + lm*bh(1))
+        else
+          bm(1) = 0.5*lm*bh(1)
+        endif  
+        bm(1)   = 1.0/bm(1)
       endif
-      if (b1.eq.n) then
-         bm(n)=0.5*lm*rhobh(n)
-         if(r) bm(n)=bm(n)+0.5*lr*rhobh(0)
-         bm(n)=1. /bm(n)
+
+      if (i1.eq.lx1) then
+        if (r) then
+          bm(lx1)= rho(lx1)*0.5*(lr*bh(1) + lm*bh(lx1))
+        else
+          bm(lx1)= rho(lx1)*0.5*lm*bh(lx1)
+        endif
+        bm(lx1)  = 1.0/bm(lx1)
       endif
-c     note that in computing bl for the left element,
-c     bl(0) is missing the contribution from its left neighbor
+
+!     note that in computing bl for the left element,
+!     bl(1) is missing the contribution from its left neighbor
       if (l) then
-         do i=0,n-1
-            bl(i)=2. /(ll*rhobh(i))
-         enddo
-         bl(n)=bm(0)
+        do i=1,lx1-1
+          bl(i)=2.0/(ll*rho(i)*bh(i))
+        enddo
+        bl(lx1)=bm(1)
       endif
-c     note that in computing br for the right element,
-c     br(n) is missing the contribution from its right neighbor
+!     note that in computing br for the right element,
+!     br(n) is missing the contribution from its right neighbor
       if (r) then
-         do i=1,n
-            br(i)=2. /(lr*rhobh(i))
-         enddo
-         br(0)=bm(n)
+        br(1)=bm(lx1)
+        do i=2,lx1
+          br(i)=2.0/(lr*rho(i)*bh(i))
+        enddo
       endif
-c      
-      call rzero(g,(n+1)*(n+1))
-      do j=1,n-1
-         do i=1,n-1
-            do k=b0,b1
-               g(i,j) = g(i,j) + gmm*jgl(i,k)*bm(k)*jgl(j,k)
-            enddo
-         enddo
+
+!     Initialize operator      
+      call rzero(s,lx1*lx1)
+!     Here we build the interior of the matrix      
+      do j=1,lx2
+      do i=1,lx2
+        sm = 0.0
+        do k=i0,i1
+          if (isd.eq.1) then
+            dt = jgl(j,k)*gm
+            d  = jgl(i,k)*gm
+          elseif (isd.eq.2) then 
+            dt = jgl(j,k)*gm
+            d  = jgl(i,k)*gm
+          else
+            dt = jgl(j,k)*gm
+            d  = jgl(i,k)*gm
+          endif
+!         J*(B^-1)*(J^T)
+          sm = sm + d*bm(k)*dt
+        enddo
+        s(i+1,j+1) = sm
       enddo
-c      
+      enddo
+
+!     Left element contributions      
       if (l) then
-         do i=1,n-1
-            g(i,0) = glm*jgl(i,0)*bm(0)*jgl(n-1,n)
-            g(0,i) = g(i,0)
-         enddo
-c        the following is inexact
-c        the neighbors bc's are ignored, and the contribution
-c        from the neighbor's neighbor is left out
-c        that is, bl(0) could be off as noted above
-c        or maybe i should go from 1 to n
-         do i=0,n
-            g(0,0) = g(0,0) + gll*jgl(n-1,i)*bl(i)*jgl(n-1,i)
-         enddo
+        do i=2,lx1-1
+          if (isd.eq.1) then  
+            dt = jgl(lx2,lx1)*gl
+            d  = jgl(i,1)*gm
+          elseif (isd.eq.2) then
+            dt = jgl(lx2,lx1)*gl
+            d  = jgl(i,1)*gm
+          else
+            dt = jgl(lx2,lx1)*gl
+            d  = jgl(i,1)*gm
+          endif
+          s(i,1) = d*bm(1)*dt
+          s(1,i) = s(i,1)
+        enddo
+!       the following is inexact
+!       the neighbors bc's are ignored, and the contribution
+!       from the neighbor's neighbor is left out
+!       that is, bl(0) could be off as noted above
+!       or maybe i should go from 1 to n
+        do i=1,lx1
+          if (isd.eq.1) then
+            dt = jgl(lx2,i)*gl
+            d  = jgl(lx2,i)*gl
+          elseif (isd.eq.2) then
+            dt = jgl(lx2,i)*gl
+            d  = jgl(lx2,i)*gl
+          else
+            dt = jgl(lx2,i)*gl
+            d  = jgl(lx2,i)*gl
+          endif
+!         J*(B^-1)*(J^T)
+          s(1,1) = s(1,1) + d*bl(i)*dt
+        enddo
       else
-         g(0,0)=1.
+        s(1,1)=1.
       endif
-c      
+
+!     Right element contributions      
       if (r) then
-         do i=1,n-1
-            g(i,n) = gmr*jgl(i,n)*bm(n)*jgl(1,0)
-            g(n,i) = g(i,n)
-         enddo
-c        the following is inexact
-c        the neighbors bc's are ignored, and the contribution
-c        from the neighbor's neighbor is left out
-c        that is, br(n) could be off as noted above
-c        or maybe i should go from 0 to n-1
-         do i=0,n
-            g(n,n) = g(n,n) + grr*jgl(1,i)*br(i)*jgl(1,i)
-         enddo
+        do i=2,lx1-1
+          if (isd.eq.1) then
+            dt = jgl(1,1)*gr
+            d  = jgl(i,lx1)*gm
+          elseif (isd.eq.2) then
+            dt = jgl(1,1)*gr
+            d  = jgl(i,lx1)*gm
+          else  
+            dt = jgl(1,1)*gr
+            d  = jgl(i,lx1)*gm
+          endif
+          s(i,lx1) = d*bm(lx1)*dt
+          s(lx1,i) = s(i,lx1)
+        enddo
+!       the following is inexact
+!       the neighbors bc's are ignored, and the contribution
+!       from the neighbor's neighbor is left out
+!       that is, br(lx1) could be off as noted above
+!       or maybe i should go from 0 to n-1
+        do i=1,lx1
+          if (isd.eq.1) then
+            dt = jgl(1,i)*gr
+            d  = jgl(1,i)*gr
+          elseif (isd.eq.2) then
+            dt = jgl(1,i)*gr
+            d  = jgl(1,i)*gr
+          else
+            dt = jgl(1,i)*gr
+            d  = jgl(1,i)*gr
+          endif
+!         J*(B^-1)*(J^T)
+          s(lx1,lx1) = s(lx1,lx1) + d*br(i)*dt
+        enddo
       else
-         g(n,n)=1.
+        s(lx1,lx1)=1.
       endif
      
       return
       end
-c-----------------------------------------------------------------------
+!-----------------------------------------------------------------------
+!
+!      subroutine set_up_fast_1D_sem_op_again
+!     $                  (g,b0,b1,l,r,ll,lm,lr,bh,jgl,rho,jscl)
+!c                  -1 T
+!c     G = J (rho*B)  J
+!c
+!c     gives the inexact restriction of this matrix to
+!c     an element plus one node on either side
+!c
+!c     g - the output matrix
+!c     b0, b1 - the range for Bhat indices for the element
+!c              (enforces boundary conditions)
+!c     l, r - whether there is a left or right neighbor
+!c     ll,lm,lr - lengths of left, middle, and right elements
+!c     bh - hat matrix for B
+!c     jgl - hat matrix for J (should map vel to pressure)
+!c     jscl - how J scales
+!c            0: J = Jh
+!c            1: J = (L/2) Jh
+!c
+!c     result is inexact because:
+!c        neighbor's boundary condition at far end unknown
+!c        length of neighbor's neighbor unknown
+!c        (these contribs should be small for large N and
+!c         elements of nearly equal size)
+!c
+!
+!!     rho - density
+!
+!      include 'SIZE'
+!      real g(0:lx1-1,0:lx1-1)
+!      real bh(0:lx1-1),jgl(1:lx2,0:lx1-1)
+!      real ll,lm,lr
+!      integer b0,b1
+!      logical l,r
+!      integer jscl
+!c
+!      real bl(0:lx1-1),bm(0:lx1-1),br(0:lx1-1)
+!      real gl,gm,gr,gll,glm,gmm,gmr,grr
+!      real fac
+!      integer n
+!
+!      real rho(0:lx1-1)       ! density
+!      real rhobh(0:lx1-1)     ! density*mass
+!
+!      n=lx1-1
+!
+!      call col3(rhobh,bh,rho,lx1)
+!
+!c     compute the scale factors for J      
+!      if (jscl.eq.0) then
+!         gl=1.
+!         gm=1.
+!         gr=1.
+!      elseif (jscl.eq.1) then
+!         gl=0.5*ll
+!         gm=0.5*lm
+!         gr=0.5*lr
+!      endif
+!      gll = gl*gl
+!      glm = gl*gm
+!      gmm = gm*gm
+!      gmr = gm*gr
+!      grr = gr*gr
+!c
+!c     compute the summed inverse mass matrices for
+!c     the middle, left, and right elements
+!      do i=1,n-1
+!         bm(i)=2. /(lm*rhobh(i))
+!      enddo
+!      if (b0.eq.0) then
+!         bm(0)=0.5*lm*rhobh(0)
+!         if(l) bm(0)=bm(0)+0.5*ll*rhobh(n)
+!         bm(0)=1. /bm(0)
+!      endif
+!      if (b1.eq.n) then
+!         bm(n)=0.5*lm*rhobh(n)
+!         if(r) bm(n)=bm(n)+0.5*lr*rhobh(0)
+!         bm(n)=1. /bm(n)
+!      endif
+!c     note that in computing bl for the left element,
+!c     bl(0) is missing the contribution from its left neighbor
+!      if (l) then
+!         do i=0,n-1
+!            bl(i)=2. /(ll*rhobh(i))
+!         enddo
+!         bl(n)=bm(0)
+!      endif
+!c     note that in computing br for the right element,
+!c     br(n) is missing the contribution from its right neighbor
+!      if (r) then
+!         do i=1,n
+!            br(i)=2. /(lr*rhobh(i))
+!         enddo
+!         br(0)=bm(n)
+!      endif
+!c      
+!      call rzero(g,(n+1)*(n+1))
+!      do j=1,n-1
+!         do i=1,n-1
+!            do k=b0,b1
+!               g(i,j) = g(i,j) + gmm*jgl(i,k)*bm(k)*jgl(j,k)
+!            enddo
+!         enddo
+!      enddo
+!c      
+!      if (l) then
+!         do i=1,n-1
+!            g(i,0) = glm*jgl(i,0)*bm(0)*jgl(n-1,n)
+!            g(0,i) = g(i,0)
+!         enddo
+!c        the following is inexact
+!c        the neighbors bc's are ignored, and the contribution
+!c        from the neighbor's neighbor is left out
+!c        that is, bl(0) could be off as noted above
+!c        or maybe i should go from 1 to n
+!         do i=0,n
+!            g(0,0) = g(0,0) + gll*jgl(n-1,i)*bl(i)*jgl(n-1,i)
+!         enddo
+!      else
+!         g(0,0)=1.
+!      endif
+!c      
+!      if (r) then
+!         do i=1,n-1
+!            g(i,n) = gmr*jgl(i,n)*bm(n)*jgl(1,0)
+!            g(n,i) = g(i,n)
+!         enddo
+!c        the following is inexact
+!c        the neighbors bc's are ignored, and the contribution
+!c        from the neighbor's neighbor is left out
+!c        that is, br(n) could be off as noted above
+!c        or maybe i should go from 0 to n-1
+!         do i=0,n
+!            g(n,n) = g(n,n) + grr*jgl(1,i)*br(i)*jgl(1,i)
+!         enddo
+!      else
+!         g(n,n)=1.
+!      endif
+!     
+!      return
+!      end
+!c-----------------------------------------------------------------------
 
       subroutine get_1D_fld(fldr,flds,fldt,fld,ifinterior)
 
