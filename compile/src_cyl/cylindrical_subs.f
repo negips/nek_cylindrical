@@ -24,14 +24,47 @@
 
       include 'SIZE'
       include 'GEOM'
+      include 'MASS'
+      include 'TSTEP'         ! ifield
+      include 'INPUT'
+
       include 'CYLINDRICAL'
 
       integer i,n,n2
 
       n = lx1*ly1*lz1*nelv
       call copy(cyl_radius,ym1,n)       ! Radial coordinate (M1)
+
       n2 = lx2*ly2*lz2*nelv
       call copy(cyl_radius,ym2,n2)      ! Radial coordinate (M2)
+
+!     For cylindrical solver
+!     I probably need to do this in the core
+!     After the geometry has been regenerated
+      call col2(bm1,cyl_radius,n)
+      call col2(bm2,cyl_radius2,n2)
+      call invers2(bm2inv,bm2,n)
+
+      ifield = 1
+      call copy    (binvm1,bm1,n)
+      call dssum   (binvm1,lx1,ly1,lz1)
+      call invcol1 (binvm1,n)
+
+      if (ifheat) then ! temperature mass matrix
+        ifield = 2
+        n      = lx1*ly1*lz1*nelt
+        call copy    (bintm1,bm1,n)
+        call dssum   (bintm1,lx1,ly1,lz1)
+        call invcol1 (bintm1,n)
+      endif
+
+      ifield = 1
+
+!     Preconditioner
+      param(42)=0       ! 0: GMRES (nonsymmetric), 1: PCG w/o weights
+      param(43)=1       ! 0: Additive multilevel (param 42=0), 1: Original 2 level
+      param(44)=0       ! 0: E based Schwartz (SEM), 1: A based Schwartz (FEM)
+
 
       return
       end subroutine
