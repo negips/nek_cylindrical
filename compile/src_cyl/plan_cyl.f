@@ -3,6 +3,10 @@
 !     Author: Prabal Negi
 !     Description: Cylindrical coordinates solver
 !
+!     Outside dependencies: 
+!     generic_subs.f          : ortho_subspace()     
+!
+!      
 !======================================================================
 !---------------------------------------------------------------------- 
       subroutine plan_cyl (igeom)
