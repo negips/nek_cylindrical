@@ -45,7 +45,7 @@ MAP="map2D.o map2D_usr.o"                                                       
 PRC="fast_reset.o h1mg_reset.o"                                                        # Preconditioner reset
 MATF="wrapper_lapack.o matf_krylov.o matrix_functions.o"                               # Matrix functions
 CYL="frame_cyl.o cylindrical_subs.o plan_cyl.o cylindrical_fast.o"                     # Cylindrical formulation
-USR+="$FRM $FSF $CHKP $LSM $STT $MAP $PRC $CYL mesh2_exchange.o laplace_testing.o rotate_cyclic.o orthonew.o gmres_solver.o subs_ifpgll.o null_space_jd.o wrapper_lapack.o mesh1_pressure_integration.o full_mass.o kopriva.o"
+USR+="$FRM $FSF $CHKP $LSM $STT $MAP $PRC $CYL mesh2_exchange.o laplace_testing.o rotate_cyclic.o orthonew.o gmres_solver.o subs_ifpgll.o null_space_jd.o wrapper_lapack.o mesh1_pressure_integration.o full_mass.o kopriva.o generic_subs.o"
 #echo $USR
 #USR="frame.o mntrlog_block.o mntrlog.o mntrtmr_block.o mntrtmr.o rprm_block.o rprm.o"
 #USR+="io_tools.o io_tools_block.o" 

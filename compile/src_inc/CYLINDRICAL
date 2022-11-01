@@ -4,8 +4,9 @@
 
       common /cylindrical_ls/ cyl_ifcyl
 
-      real cyl_radius(lx1,ly1,lz1,lelv)   ! Radius (Just stored)
-      common /cylindrical_rv/ cyl_radius
+      real cyl_radius(lx1,ly1,lz1,lelv)   ! Radius on M1
+      real cyl_radius2(lx2,ly2,lz2,lelv)  ! Radius on M2
+      common /cylindrical_rv/ cyl_radius,cyl_radius2
 
 
 !     Variables needed for the KTH Framework

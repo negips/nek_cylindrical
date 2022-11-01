@@ -26,10 +26,12 @@
       include 'GEOM'
       include 'CYLINDRICAL'
 
-      integer i,n
+      integer i,n,n2
 
       n = lx1*ly1*lz1*nelv
-      call copy(cyl_radius,ym1,n)       ! Radial coordinate
+      call copy(cyl_radius,ym1,n)       ! Radial coordinate (M1)
+      n2 = lx2*ly2*lz2*nelv
+      call copy(cyl_radius,ym2,n2)      ! Radial coordinate (M2)
 
       return
       end subroutine

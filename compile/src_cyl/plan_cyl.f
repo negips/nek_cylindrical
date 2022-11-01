@@ -394,5 +394,419 @@ c                not the current pressure derived from extrapolation.
       return
       end
 c-----------------------------------------------------------------------
+      subroutine esolver_cyl (res,h1,h2,h2inv,intype)
 
+!     Choose E-solver
+
+      INCLUDE 'SIZE'
+      INCLUDE 'ESOLV'
+      INCLUDE 'INPUT'
+      include 'CTIMER'
+C
+      real res   (lx2,ly2,lz2,lelv)
+      real h1    (lx1,ly1,lz1,lelv)
+      real h2    (lx1,ly1,lz1,lelv)
+      real h2inv (lx1,ly1,lz1,lelv)
+      common /scruz/ wk1(lx2*ly2*lz2*lelv)
+     $             , wk2(lx2*ly2*lz2*lelv)
+     $             , wk3(lx2*ly2*lz2*lelv)
+
+      integer ig
+
+      integer igmres
+
+      if (icalld.eq.0) teslv=0.0
+
+!      call ortho_left(res) !Ensure that residual is orthogonal to null space
+
+      icalld=icalld+1
+      neslv=icalld
+      etime1=dnekclock()
+
+      if (.not. ifsplit) then
+        if (param(42).eq.1) then
+          call uzawa_cyl(res,h1,h2,h2inv,intype,icg)
+        else
+          call uzawa_gmres_cyl(res,h1,h2,h2inv,intype,icg)
+          if (ig.gt.6) then 
+            write(6,*) 'Unknown GMRES. exitting in esolver_new()'
+            call exitt
+          endif  
+        endif
+      else
+        write(6,*) 'error: e-solver does not exist pnpn'
+        call exitt
+      endif
+
+      teslv=teslv+(dnekclock()-etime1)
+
+      RETURN
+      END
+c-----------------------------------------------------------------------
+
+      subroutine uzawa_gmres_cyl(res,h1,h2,h2inv,intype,iter)
+
+c     Solve the cylindrical pressure equation by right-preconditioned 
+c     GMRES iteration.
+c     intype =  0  (steady)
+c     intype =  1  (explicit)
+c     intype = -1  (implicit)
+
+      implicit none
+
+      include 'SIZE'
+      include 'INPUT'   ! param
+      include 'MASS'    ! bm2
+      include 'TSTEP'
+      include 'GMRES'
+
+      integer lt1,lt2
+      parameter(lt1 = lx1*ly1*lz1*lelv)
+      parameter(lt2 = lx2*ly2*lz2*lelv)
+
+      real divex
+      common  /ctolpr/ divex
+      
+      logical          ifprint
+      common  /cprint/ ifprint
+
+      real             res  (lt2)
+      real             h1   (lt1)
+      real             h2   (lt1)
+      real             h2inv(lt1)
+      
+      real wp
+      common /scrmg/   wp (lt2)
+
+      real wk1,wk2
+      common /ctmp0/   wk1(lgmres),wk2(lgmres)
+
+      real y
+      common /cgmres1/ y(lgmres)
+
+      real alpha, l, temp
+      integer j,m
+
+      logical iflag
+      save    iflag
+      data    iflag /.false./
+      real    norm_fac
+      save    norm_fac
+
+      real*8 etime1,dnekclock
+
+      integer ntot2
+      real glsc2,glsc3,vlsc2,vlsc3
+      integer iconv,intype
+      real tolpss,div0
+      integer i,k,iter
+      real etime2,etime_p,ratio,rnorm
+
+      integer maxiter
+
+      logical ifwgt           ! If Weighted orthogonalization
+      integer ngs             ! No of Gram-Schmid
+
+      ifwgt = .false.
+      ngs   = 1
+
+!     I've removed ortho from earlier calls and call it here at
+!     the beginning      
+      call ortho(res)
+c
+      if(.not.iflag) then
+         iflag=.true.
+         call uzawa_gmres_split0(ml_gmres,mu_gmres,bm2,bm2inv,
+     $                           lx2*ly2*lz2*nelv)
+         norm_fac = 1./sqrt(volvm2)
+      endif
+c
+      etime1 = dnekclock()
+      etime_p = 0.
+      divex = 0.
+      iter  = 0
+      m = lgmres
+c
+      call chktcg2(tolps,res,iconv)
+      if (param(21).gt.0.and.tolps.gt.abs(param(21))) 
+     $   tolps = abs(param(21))
+!      if (istep.eq.0) tolps = 1.e-4
+      tolpss = tolps
+
+      ntot2  = lx2*ly2*lz2*nelv
+
+      iconv = 0
+      call rzero(x_gmres,ntot2)
+
+      do while(iconv.eq.0.and.iter.lt.1000)
+
+         if(iter.eq.0) then
+                                                        !      -1
+            call col3(r_gmres,ml_gmres,res,ntot2)       ! r = L  res
+         else
+            !update residual
+            call copy(r_gmres,res,ntot2)                      ! r = res
+            call cdabdtp_cyl(w_gmres,x_gmres,h1,h2,h2inv,intype)  ! w = A x
+            call add2s2(r_gmres,w_gmres,-1.,ntot2)            ! r = r - w
+                                                              !      -1
+            call col2(r_gmres,ml_gmres,ntot2)                 ! r = L   r
+         endif
+                                                            !            ______
+         gamma_gmres(1) = sqrt(glsc2(r_gmres,r_gmres,ntot2))! gamma  = \/ (r,r) 
+                                                            !      1
+         if(iter.eq.0) then
+            div0 = gamma_gmres(1)*norm_fac
+            if (param(21).lt.0) tolpss=abs(param(21))*div0
+         endif
+
+         !check for lucky convergence
+         rnorm = 0.
+         if(gamma_gmres(1) .eq. 0.) goto 9000
+         temp = 1./gamma_gmres(1)
+         call cmult2(v_gmres(1,1),r_gmres,temp,ntot2)! v  = r / gamma
+                                                     !  1            1
+         do j=1,m
+            iter = iter+1
+                                                           !       -1
+            call col3(w_gmres,mu_gmres,v_gmres(1,j),ntot2) ! w  = U   v
+                                                           !           j
+            
+            etime2 = dnekclock()
+            if(param(43).eq.1) then
+               call uzprec(z_gmres(1,j),w_gmres,h1,h2,intype,wp)
+            else                                        !       -1
+               call hsmg_solve(z_gmres(1,j),w_gmres)    ! z  = M   w
+            endif     
+            etime_p = etime_p + dnekclock()-etime2
+     
+            call cdabdtp_cyl(w_gmres,z_gmres(1,j),    ! w = A z
+     $                   h1,h2,h2inv,intype)      !        j
+     
+                                                  !      -1
+            call col2(w_gmres,ml_gmres,ntot2)     ! w = L   w
+
+!           Gram-Schmidt:
+            call ortho_subspace(w_gmres,ntot2,h_gmres(1,j),v_gmres,
+     $            lt2,j,bm2,ifwgt,ngs,wk1,wk2)
+
+!           Apply Givens rotations to new column
+            do i=1,j-1
+               temp = h_gmres(i,j)                   
+               h_gmres(i  ,j)=  c_gmres(i)*temp 
+     $                        + s_gmres(i)*h_gmres(i+1,j)  
+               h_gmres(i+1,j)= -s_gmres(i)*temp 
+     $                        + c_gmres(i)*h_gmres(i+1,j)
+            enddo
+                                                              !            ______
+            alpha = sqrt(glsc2(w_gmres,w_gmres,ntot2))        ! alpha =  \/ (w,w)
+            rnorm = 0.
+            if(alpha.eq.0.) goto 900  !converged
+            l = sqrt(h_gmres(j,j)*h_gmres(j,j)+alpha*alpha)
+            temp = 1./l
+            c_gmres(j) = h_gmres(j,j) * temp
+            s_gmres(j) = alpha  * temp
+            h_gmres(j,j) = l
+            gamma_gmres(j+1) = -s_gmres(j) * gamma_gmres(j)
+            gamma_gmres(j)   =  c_gmres(j) * gamma_gmres(j)
+
+            
+            rnorm = abs(gamma_gmres(j+1))*norm_fac
+            ratio = rnorm/div0
+            if (ifprint.and.nio.eq.0) 
+     $         write (6,66) iter,tolpss,rnorm,div0,ratio,istep
+   66       format(i5,1p4e12.5,i8,' Divergence')
+
+#ifndef FIXITER
+            if (rnorm .lt. tolpss) goto 900  !converged
+#else
+            if (iter.gt.param(151)-1) goto 900
+#endif
+            if (j.eq.m) goto 1000 !not converged, restart
+
+            temp = 1./alpha
+            call cmult2(v_gmres(1,j+1),w_gmres,temp,ntot2) ! v    = w / alpha
+                                                           !  j+1            
+         enddo          ! j=1,m
+
+  900    iconv = 1
+ 1000    continue
+         !back substitution
+         !     -1
+         !c = H   gamma
+         do k=j,1,-1
+            temp = gamma_gmres(k)
+            do i=j,k+1,-1
+               temp = temp - h_gmres(k,i)*c_gmres(i)
+            enddo
+            c_gmres(k) = temp/h_gmres(k,k)
+         enddo
+         !sum up Arnoldi vectors
+         do i=1,j
+            call add2s2(x_gmres,z_gmres(1,i),c_gmres(i),ntot2) 
+                       ! x = x + c  z
+                       !          i  i
+         enddo
+
+      enddo           ! while(iconv.eq.0.and.iter.lt.1000)
+ 9000 continue
+c
+      divex = rnorm
+
+      call copy(res,x_gmres,ntot2)
+
+      call ortho (res)  ! Orthogonalize wrt null space, if present
+
+      etime1 = dnekclock()-etime1
+      if (nio.eq.0) write(6,9999) istep,'  U-PRES gmres (CYL) ', 
+     &                            iter,divex,div0,tolpss,etime_p,etime1
+c     call flush_hack
+ 9999 format(i11,a,I6,1p5e13.4)
+
+      return
+      end
+
+c-----------------------------------------------------------------------
+      subroutine uzawa_cyl (rcg,h1,h2,h2inv,intype,iter)
+
+C     Solve the pressure equation by (nested) preconditioned 
+C     conjugate gradient iteration.
+C     INTYPE =  0  (steady)
+C     INTYPE =  1  (explicit)
+C     INTYPE = -1  (implicit)
+      
+      implicit none
+
+      include 'SIZE'
+      include 'MASS'
+      include 'INPUT'
+      include 'PARALLEL'
+      include 'TSTEP' 
+
+      integer lt1,lt2
+      parameter(lt1 = lx1*ly1*lz1*lelv)
+      parameter(lt2 = lx2*ly2*lz2*lelv)
+
+      real divex
+      common  /ctolpr/ divex
+
+      logical          ifprint
+      common  /cprint/ ifprint
+      real             rcg  (lt2)
+      real             h1   (lt1)
+      real             h2   (lt1)
+      real             h2inv(lt1)
+
+      real wp,xcg,pcg,rpcg
+      common /scruz/   wp   (lt2)
+     $ ,               xcg  (lt2)
+     $ ,               pcg  (lt2) 
+     $ ,               rpcg (lt2)
+ 
+      real*8 etime1,dnekclock
+      integer*8 ntotg,nxyz2
+
+      integer intype,iter,iconv,ntot1,ntot2
+      real alpha,beta,rrp1,rrp2,pap,div0,ratio
+      real rnrm1,rrpx,rnorm,tolpss
+      real h1_mx,h2_mx,wp_mx
+
+      real glamax,glsc2
+      real pcgmx
+
+
+      etime1 = dnekclock()
+      DIVEX = 0.
+      ITER  = 0
+
+      call chktcg2 (tolps,rcg,iconv)
+      if (param(21).gt.0.and.tolps.gt.abs(param(21))) 
+     $   tolps = abs(param(21))
+
+      nxyz2 = lx2*ly2*lz2
+      ntot2 = nxyz2*nelv
+      ntotg = nxyz2*nelgv
+
+      call uzprec  (rpcg,rcg,h1,h2,intype,wp)
+      rrp1 = glsc2 (rpcg,rcg,ntot2)
+      call copy    (pcg,rpcg,ntot2)
+      call rzero   (xcg,ntot2)
+      if (rrp1.eq.0) return
+      beta = 0.
+      div0=0.
+
+      tolpss = tolps
+      do 1000 iter=1,nmxp
+
+         call convprn (iconv,rnorm,rrp1,rcg,rpcg,tolpss)
+
+         if (iter.eq.1)      div0   = rnorm
+         if (param(21).lt.0) tolpss = abs(param(21))*div0
+
+         ratio = rnorm/div0
+         if (ifprint.and.nio.eq.0) 
+     $   write (6,66) iter,tolpss,rnorm,div0,ratio,istep
+   66    format(i5,1p4e12.5,i8,' Divergence')
+c
+         if (iconv.eq.1.and.iter.gt.1) goto 9000
+
+         if (iter .ne. 1) then
+            beta = rrp1/rrp2
+            call add2s1 (pcg,rpcg,beta,ntot2)
+         endif
+
+         call cdabdtp_cyl(wp,pcg,h1,h2,h2inv,intype)
+         pap   = glsc2 (pcg,wp,ntot2)
+
+         if (pap.ne.0.) then
+            alpha = rrp1/pap
+         else
+            pcgmx = glamax(pcg,ntot2)
+            wp_mx = glamax(wp ,ntot2)
+            ntot1 = lx1*ly1*lz1*nelv
+            h1_mx = glamax(h1 ,ntot1)
+            h2_mx = glamax(h2 ,ntot1)
+            if (nid.eq.0) write(6,*) 'ERROR: pap=0 in uzawa.'
+     $      ,iter,pcgmx,wp_mx,h1_mx,h2_mx
+            call exitt
+         endif
+         call add2s2 (xcg,pcg,alpha,ntot2)
+         call add2s2 (rcg,wp,-alpha,ntot2)
+
+         if (iter.eq.-1) then
+            call convprn (iconv,rnrm1,rrpx,rcg,rpcg,tolpss)
+            if (iconv.eq.1) then
+               rnorm = rnrm1
+               ratio = rnrm1/div0
+               if (nio.eq.0) 
+     $         write (6,66) iter,tolpss,rnrm1,div0,ratio,istep
+               goto 9000
+            endif
+         endif
+
+         call ortho(rcg)
+
+         rrp2 = rrp1
+         call uzprec  (rpcg,rcg,h1,h2,intype,wp)
+
+ 1000 continue
+      if (nid.eq.0) write (6,3001) iter,rnorm,tolpss
+ 3001 format(I6,' **ERROR**: Failed to converge in UZAWA:',6E13.4)
+ 9000 continue
+
+      divex = rnorm
+      iter  = iter-1
+
+      if (iter.gt.0) call copy (rcg,xcg,ntot2)
+      call ortho(rcg)
+
+      etime1 = dnekclock()-etime1
+      if (nio.eq.0) write(6,9999) istep, '  U-Press std (CYL). ',
+     &                            iter,divex,div0,tolpss,etime1
+ 9999 format(I11,a,I7,1p4E13.4)
+19999 format(I11,'  U-Press 1.e-5: ',I7,1p4E13.4)
+
+
+      return
+      end subroutine uzawa_cyl
+c-----------------------------------------------------------------------
 
