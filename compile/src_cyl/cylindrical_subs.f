@@ -36,16 +36,16 @@
       call copy(cyl_radius,ym1,n)       ! Radial coordinate (M1)
 
       n2 = lx2*ly2*lz2*nelv
-      call copy(cyl_radius,ym2,n2)      ! Radial coordinate (M2)
+      call copy(cyl_radius2,ym2,n2)      ! Radial coordinate (M2)
 
 !     For cylindrical solver
 !     I probably need to do this in the core
 !     After the geometry has been regenerated
-      call col2(bm1,cyl_radius,n)
       call col2(bm2,cyl_radius2,n2)
-      call invers2(bm2inv,bm2,n)
+      call invers2(bm2inv,bm2,n2)
 
       ifield = 1
+      call col2(bm1,cyl_radius,n)
       call copy    (binvm1,bm1,n)
       call dssum   (binvm1,lx1,ly1,lz1)
       call invcol1 (binvm1,n)

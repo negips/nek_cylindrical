@@ -153,6 +153,8 @@ c     Generate fast diagonalization matrices for each element
 
       integer isd
 
+      real epstol
+
       logical ifcyl_old
 
       ierr = 0
@@ -178,7 +180,7 @@ c     Generate fast diagonalization matrices for each element
       n = lx1*ly1*lz1*nelv
 
       ifcyl_old = cyl_ifcyl
-      cyl_ifcyl = .false.
+      cyl_ifcyl = .true.
 
 !     Get 1D radius
       if (cyl_ifcyl) then
@@ -206,6 +208,8 @@ c     Generate fast diagonalization matrices for each element
       ifinterior = .false. 
       call copy(fld,vtrans(1,1,1,1,ifld),n)
       call get_1D_fld(fldr,flds,fldt,fld,ifinterior)
+
+      epstol = 1.0e-10
 
       do e=1,nelv
 c
@@ -276,7 +280,7 @@ c
 !        Set up diagonal inverse
 
          if (if3d) then
-            eps = 1.e-5 * (vlmax(lr(2),nr-2)
+            eps = epstol * (vlmax(lr(2),nr-2)
      $                  +  vlmax(ls(2),ns-2) + vlmax(lt(2),nt-2))
             l   = 1
             do k=1,nt
@@ -293,7 +297,7 @@ c
             enddo
             enddo
          else
-            eps = 1.e-5*(vlmax(lr(2),nr-2) + vlmax(ls(2),ns-2))
+            eps = epstol*(vlmax(lr(2),nr-2) + vlmax(ls(2),ns-2))
             l   = 1
             do j=1,ns
             do i=1,nr

@@ -132,6 +132,8 @@ c     intype = -1  (implicit)
       ifwgt = .false.
       ngs   = 1
 
+      ntot2  = lx2*ly2*lz2*nelv
+
 !     I've removed ortho from earlier calls and call it here at
 !     the beginning      
       call ortho(res)
@@ -155,7 +157,6 @@ c
 !      if (istep.eq.0) tolps = 1.e-4
       tolpss = tolps
 
-      ntot2  = lx2*ly2*lz2*nelv
 
       iconv = 0
       call rzero(x_gmres,ntot2)
