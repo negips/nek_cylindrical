@@ -98,6 +98,35 @@
       return
       end subroutine 
 !---------------------------------------------------------------------- 
+      subroutine exchange_m1(x1,y1)
+
+!     Exchange interior values of neighboring elements
+!     On the Pressure mesh        
+
+      implicit none
+
+      include 'SIZE'
+      include 'INPUT'
+      include 'PARALLEL'
+      integer n
+
+      real x1(lx1,ly1,lz1,lelv)     ! output
+      real y1(lx1,ly1,lz1,lelv)     ! input
+
+      n  = lx1*ly1*lz1*nelv
+
+      call copy(x1,y1,n)                ! Fill up everything
+      call dface_ext   (x1)             ! Extend to face
+      call edge_ext    (x1)             ! Extend to Edges
+      call crnr_ext    (x1)             ! Extend to Corners
+      call dssum       (x1,lx1,ly1,lz1) ! Add up all contributions
+      call dface_add1si(x1,-1.)         ! Here we have exchanged face values
+      call edge_corr   (x1)             ! Correct the edge values
+      call crnr_corr   (x1)             ! Correct the corner values
+
+      return
+      end subroutine 
+!---------------------------------------------------------------------- 
 
       subroutine edge_ext(x)
 

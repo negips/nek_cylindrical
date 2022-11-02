@@ -15,6 +15,7 @@
       call stat_register
 !      call frame_register_f3d
 !      call tst_register
+      call frame_register_cyl()
 
       return
       end subroutine
@@ -33,6 +34,7 @@
 !      call frame_get_param_f3d
       call frame_get_param_fs
 !      call tst_init
+      call frame_get_param_cyl()
 
       return
       end subroutine

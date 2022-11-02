@@ -1135,7 +1135,11 @@ c     Solve coupled Helmholtz equations (stress formulation)
 
          call strs_project_a(r1,r2,r3,h1,h2,rmult,ifield,ierr,matmod)
 
-         call cggosf  (u1,u2,u3,r1,r2,r3,h1,h2,rmult,binvm1
+!         call cggosf  (u1,u2,u3,r1,r2,r3,h1,h2,rmult,binvm1
+!     $                ,vol,tol,maxit,matmod)
+
+!        prabal. cggosf_cyl         
+         call cggosf_cyl (u1,u2,u3,r1,r2,r3,h1,h2,rmult,binvm1
      $                ,vol,tol,maxit,matmod)
 
          call strs_project_b(u1,u2,u3,h1,h2,rmult,ifield,ierr)

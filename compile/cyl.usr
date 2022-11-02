@@ -115,12 +115,8 @@ c-----------------------------------------------------------------------
           param(95) = 50        ! start of projections
         endif
 
-!       For cylindrical solver
-!       I probably need to do this in the core
-!       After the geometry has been regenerated
-        call col2(bm1,ym1,n)
-        call col2(bm2,ym2,n2)
-        call invers2(bm2inv,bm2,n)
+!       Initialize cylindrical solve        
+        call cyl_init()
 
         call rone(vtrans(1,1,1,1,2),n)
         call rone(vdiff(1,1,1,1,2),n)
@@ -149,11 +145,10 @@ c-----------------------------------------------------------------------
         call outpost2(vtrans,vdiff,t(1,1,1,1,2),pr,
      $                vdiff(1,1,1,1,2),1,'vis')
 
-!       Preconditioner
-        param(42)=uparam(8)       ! 0: GMRES (nonsymmetric), 1: PCG w/o weights
-        param(43)=uparam(9)       ! 0: Additive multilevel (param 42=0), 1: Original 2 level
-        param(44)=uparam(10)      ! 0: E based Schwartz (FEM), 1: A based Schwartz
-       
+!!       Preconditioner
+!        param(42)=uparam(8)       ! 0: GMRES (nonsymmetric), 1: PCG w/o weights
+!        param(43)=uparam(9)       ! 0: Additive multilevel (param 42=0), 1: Original 2 level
+!        param(44)=uparam(10)      ! 0: E based Schwartz (FEM), 1: A based Schwartz
 
 12    format(A4,2x,16(E12.5,2x))
 
@@ -317,7 +312,7 @@ c-----------------------------------------------------------------------
 
       do e=1,nelv
       do i=1,nc
-        xc(i,e) = 2.0*pi*xc(i,e)
+!        xc(i,e) = 2.0*pi*xc(i,e)
       enddo
       enddo
 
@@ -531,6 +526,51 @@ c-----------------------------------------------------------------------
       return
       end subroutine        
 !---------------------------------------------------------------------- 
+
+      subroutine fast_check()
+
+      implicit none
+
+      include 'SIZE'
+
+
+      return
+      end subroutine fast_check
+!---------------------------------------------------------------------- 
+
+      subroutine outmat_formatted(a,m,n,name6,ie)
+
+      real a(m,n)
+      character*6 name6
+
+      character*28 str
+
+      call blank(str,28)
+
+      write(str,7) '(I5,2x,A6,2x,',n,'(E15.8E2,2x))'
+    7 format(a13,I2,A13)
+
+      write(6,*) 
+      write(6,*) ie,' matrix: ',name6,m,n,str
+
+      do i=1,m
+         write(6,str) ie,name6,(a(i,j),j=1,n)
+      enddo
+      write(6,*) 
+
+      return
+      end
+c-----------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
 
 
 

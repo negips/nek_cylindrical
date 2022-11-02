@@ -23,17 +23,17 @@ targetCFL = 5.0
 writeControl = TimeStep
 writeInterval = 10
 
-userParam01 = 1.0e-3   # Air Density                 1.2061e-3
+userParam01 = 1.0e-0   # Air Density                 1.2061e-3
 userParam02 = 1.0e-0   # Water Density               1.0
-userParam03 = 1.5e-5   # Air viscosity   (Dynamic)   1.5042e-6
-userParam04 = 7.3e-4   # Water viscosity (Dynamic)   8.3000e-5
+userParam03 = 1.5e-4   # Air viscosity   (Dynamic)   1.5042e-6
+userParam04 = 1.5e-4   # Water viscosity (Dynamic)   8.3000e-5
 userParam05 = 1.0      # Reset local_solves
 userParam06 = 1.0      # Reset h1_crs
 userParam07 = 1000.0    # Reset preconditioner
 
 userParam08 = 0.0      #  0: GMRES (nonsymmetric), 1: PCG w/o weights
 userParam09 = 1.0      #  0: Additive multilevel (param 42=0), 1: Original 2 level
-userParam10 = 0.0      #  0: E based Schwartz (FEM), 1: A based Schwartz
+userParam10 = 0.0      #  0: E based Schwartz (SEM), 1: A based Schwartz (FEM)
 
 
 filtering = hpfrt
@@ -109,5 +109,8 @@ NEGV              = 10                     # Number of eigenvalues
 IFPR              = yes                    # If pressure in arnoldi vector
 IFCOMPLEX         = no                     # Use complex arithmetic (znaupd)
 
-
+#
+[_CYLIN]                # Runtime parameter Cylindrical
+CYL_IFCYL         = yes                    # If Cylindrical
+CYL_LOG           = 1                      # Log levek
 

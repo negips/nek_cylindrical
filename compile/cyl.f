@@ -35,7 +35,7 @@ c-----------------------------------------------------------------------
       nug    = mug/rhog
       nuw    = muw/rhow
 
-      eps    = 2.0e-2
+      eps    = 3.0e-2
 
       if (ifield.eq.1) then
         utrans = setvp(rhog,rhow,temp,eps)
@@ -60,7 +60,7 @@ c-----------------------------------------------------------------------
 
       integer ix,iy,iz,ieg
 
-      ffx = 3.00
+      ffx = 0.00
       ffy = 0.0
       ffz = 0.0
 
@@ -101,10 +101,6 @@ c-----------------------------------------------------------------------
 
       integer i,j,k,e,n,n2
 
-      integer igeom
-      character cb*3
-      integer ie,iface,nfaces
-
       real x,y,z
 
       real gl2norm,glsc2,glsc3
@@ -118,6 +114,9 @@ c-----------------------------------------------------------------------
         if (param(95).gt.0) then
           param(95) = 50        ! start of projections
         endif
+
+!       Initialize cylindrical solve        
+        call cyl_init()
 
         call rone(vtrans(1,1,1,1,2),n)
         call rone(vdiff(1,1,1,1,2),n)
@@ -137,6 +136,8 @@ c-----------------------------------------------------------------------
 
         call outpost(v1mask,v2mask,v3mask,pr,tmask,'msk')
 
+        call outpost(vx,vy,vz,pr,t,'   ')
+
 !       Reynolds number of the field
         do i=1,n
           t(i,1,1,1,2) = vtrans(i,1,1,1,1)*1.0*7.3/vdiff(i,1,1,1,1)
@@ -144,11 +145,10 @@ c-----------------------------------------------------------------------
         call outpost2(vtrans,vdiff,t(1,1,1,1,2),pr,
      $                vdiff(1,1,1,1,2),1,'vis')
 
-!       Preconditioner
-        param(42)=uparam(8)       ! 0: GMRES (nonsymmetric), 1: PCG w/o weights
-        param(43)=uparam(9)       ! 0: Additive multilevel (param 42=0), 1: Original 2 level
-        param(44)=uparam(10)      ! 0: E based Schwartz (FEM), 1: A based Schwartz
-       
+!!       Preconditioner
+!        param(42)=uparam(8)       ! 0: GMRES (nonsymmetric), 1: PCG w/o weights
+!        param(43)=uparam(9)       ! 0: Additive multilevel (param 42=0), 1: Original 2 level
+!        param(44)=uparam(10)      ! 0: E based Schwartz (FEM), 1: A based Schwartz
 
 12    format(A4,2x,16(E12.5,2x))
 
@@ -219,20 +219,20 @@ c-----------------------------------------------------------------------
         uz = omega(2)*rady(2)
       endif
 
-!     Damping near the top/bottom walls
-      mu = 0.05
-      xmid = (wallx(1)+wallx(2))/2.0
-      if (x.lt.xmid) then
-        x0 = wallx(1)
-        ux = (1.0 - exp(-((x-x0)/mu)**2))*ux
-        uy = (1.0 - exp(-((x-x0)/mu)**2))*uy
-        uz = (1.0 - exp(-((x-x0)/mu)**2))*uz
-      else
-        x0 = wallx(2)
-        ux = (1.0 - exp(-((x-x0)/mu)**2))*ux
-        uy = (1.0 - exp(-((x-x0)/mu)**2))*uy
-        uz = (1.0 - exp(-((x-x0)/mu)**2))*uz
-      endif
+!!     Damping near the top/bottom walls
+!      mu = 0.05
+!      xmid = (wallx(1)+wallx(2))/2.0
+!      if (x.lt.xmid) then
+!        x0 = wallx(1)
+!        ux = (1.0 - exp(-((x-x0)/mu)**2))*ux
+!        uy = (1.0 - exp(-((x-x0)/mu)**2))*uy
+!        uz = (1.0 - exp(-((x-x0)/mu)**2))*uz
+!      else
+!        x0 = wallx(2)
+!        ux = (1.0 - exp(-((x-x0)/mu)**2))*ux
+!        uy = (1.0 - exp(-((x-x0)/mu)**2))*uy
+!        uz = (1.0 - exp(-((x-x0)/mu)**2))*uz
+!      endif
 
 
       return
@@ -262,26 +262,31 @@ c-----------------------------------------------------------------------
       real rmid,xmid,y0,z0
       real mu,x0
 
+      real rnd
+
+      call random_number(rnd)
+
       pi = 4.0*atan(1.0)
 
-      ux = 0.0 ! sin(pi*(y-1.0)/0.8)
+      ux = 0.0
       uy = 0.
-      uz = tc_a(1)*y + tc_a(2)/y
+      uz = tc_a(1)*y + tc_a(2)/y + 0.001*rnd
 
-!     Damping near the top/bottom walls
-      mu = 0.01
-      xmid = (wallx(1)+wallx(2))/2.0
-      if (x.lt.xmid) then
-        x0 = wallx(1)
-        ux = (1.0 - exp(-((x-x0)/mu)**2))*ux
-        uy = (1.0 - exp(-((x-x0)/mu)**2))*uy
-        uz = (1.0 - exp(-((x-x0)/mu)**2))*uz
-      else
-        x0 = wallx(2)
-        ux = (1.0 - exp(-((x-x0)/mu)**2))*ux
-        uy = (1.0 - exp(-((x-x0)/mu)**2))*uy
-        uz = (1.0 - exp(-((x-x0)/mu)**2))*uz
-      endif
+
+!!     Damping near the top/bottom walls
+!      mu = 0.01
+!      xmid = (wallx(1)+wallx(2))/2.0
+!      if (x.lt.xmid) then
+!        x0 = wallx(1)
+!        ux = (1.0 - exp(-((x-x0)/mu)**2))*ux
+!        uy = (1.0 - exp(-((x-x0)/mu)**2))*uy
+!        uz = (1.0 - exp(-((x-x0)/mu)**2))*uz
+!      else
+!        x0 = wallx(2)
+!        ux = (1.0 - exp(-((x-x0)/mu)**2))*ux
+!        uy = (1.0 - exp(-((x-x0)/mu)**2))*uy
+!        uz = (1.0 - exp(-((x-x0)/mu)**2))*uz
+!      endif
 
       return
       end
@@ -292,16 +297,24 @@ c-----------------------------------------------------------------------
   
       include 'SIZE'      ! _before_ mesh is generated, which 
       include 'INPUT'
-      include 'GEOM'
       include 'TSTEP'
       include 'PARALLEL'
-!      include 'TOTAL'     ! guarantees GLL mapping of mesh.
 
-!      ifaxis = .true.   ! just for initialization
+      integer e,i,nc
+
       param(42)=0       ! 0: GMRES (nonsymmetric), 1: PCG w/o weights
       param(43)=1       ! 0: Additive multilevel (param 42=0), 1: Original 2 level
       param(44)=0       ! 0: E based Schwartz (FEM), 1: A based Schwartz
 
+      nc = 2**ndim
+
+      pi = 4.0*atan(1.0)
+
+      do e=1,nelv
+      do i=1,nc
+!        xc(i,e) = 2.0*pi*xc(i,e)
+      enddo
+      enddo
 
 
       return
@@ -513,6 +526,51 @@ c-----------------------------------------------------------------------
       return
       end subroutine        
 !---------------------------------------------------------------------- 
+
+      subroutine fast_check()
+
+      implicit none
+
+      include 'SIZE'
+
+
+      return
+      end subroutine fast_check
+!---------------------------------------------------------------------- 
+
+      subroutine outmat_formatted(a,m,n,name6,ie)
+
+      real a(m,n)
+      character*6 name6
+
+      character*28 str
+
+      call blank(str,28)
+
+      write(str,7) '(I5,2x,A6,2x,',n,'(E15.8E2,2x))'
+    7 format(a13,I2,A13)
+
+      write(6,*) 
+      write(6,*) ie,' matrix: ',name6,m,n,str
+
+      do i=1,m
+         write(6,str) ie,name6,(a(i,j),j=1,n)
+      enddo
+      write(6,*) 
+
+      return
+      end
+c-----------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
 
 
 

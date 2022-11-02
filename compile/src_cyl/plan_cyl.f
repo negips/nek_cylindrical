@@ -3,6 +3,10 @@
 !     Author: Prabal Negi
 !     Description: Cylindrical coordinates solver
 !
+!     Outside dependencies: 
+!     generic_subs.f          : ortho_subspace()     
+!
+!      
 !======================================================================
 !---------------------------------------------------------------------- 
       subroutine plan_cyl (igeom)
@@ -50,9 +54,11 @@ C     Operator splitting technique.
          call sethlm  (h1,h2,intype)
          call cresvif_cyl (resv1,resv2,resv3,h1,h2)
 
+!        Velocity            
          call ophinv (dv1,dv2,dv3,resv1,resv2,resv3,h1,h2,tolhv,nmxv)
          call opadd2 (vx,vy,vz,dv1,dv2,dv3)
 
+!        Pressure
          call incomprn_cyl(vx,vy,vz,pr)
 
       endif
@@ -359,15 +365,13 @@ c                not the current pressure derived from extrapolation.
       if (ifprjp)   call setrhsp  (dp,h1,h2,h2inv,pset(1,i),nprv(i))
 
       if (intype.eq.1) then 
-         scaledt = dt/bd(1)
-         scaledi = 1./scaledt
-         call cmult(dp,scaledt,ntot2)        ! scale for tol
-!         call esolver  (dp,h1,h2,h2inv,intype)  ! prabal
-         call esolver_new(dp,h1,h2,h2inv,intype,gmtype)
-         call cmult(dp,scaledi,ntot2)
+        scaledt = dt/bd(1)
+        scaledi = 1./scaledt
+        call cmult(dp,scaledt,ntot2)        ! scale for tol
+        call esolver_cyl(dp,h1,h2,h2inv,intype)
+        call cmult(dp,scaledi,ntot2)
       else
-!         call esolver  (dp,h1,h2,h2inv,intype)  ! prabal
-         call esolver_new(dp,h1,h2,h2inv,intype,gmtype)
+        call esolver_cyl(dp,h1,h2,h2inv,intype)
       endif 
       if (ifprjp)   call gensolnp (dp,h1,h2,h2inv,pset(1,i),nprv(i))
 
@@ -387,12 +391,11 @@ c                not the current pressure derived from extrapolation.
         call opadd2 (ux,uy,uz,dv1,dv2,dv3)
       endif
 
-      if (ifmhd)  call chkptol	! to avoid repetition
+      if (ifmhd)  call chkptol      ! to avoid repetition
 
       tpres=tpres+(dnekclock()-etime1)
 
       return
       end
 c-----------------------------------------------------------------------
-
 
