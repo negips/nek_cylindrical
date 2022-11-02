@@ -11,7 +11,7 @@
 !                 convect_cylindircal     : Cylindrical convective term
 !                 dealias_rho_uv          : Dealiased \rho*u*v      
 !                 dealias_uv              : Dealiased u*v
-!                 axhmsf_cyl              : Ax (cylindrical)
+!                 axhmsf_cyl              : Ax (cylindrical and coupled)
 !                 stnrate_cyl             : 1/2*(grad(u) + grad(u)^T)      
 !                 stress_cyl              : Sij = 2*mu*Eij
 !                 div_stress_cyl          : Grad(v)\dot Sij
@@ -23,20 +23,23 @@
       implicit none
 
       include 'SIZE'
-      include 'GEOM'
+      include 'GEOM'          ! GiM1
       include 'MASS'
       include 'TSTEP'         ! ifield
       include 'INPUT'
+      include 'WZ'            ! W3M1
 
       include 'CYLINDRICAL'
 
-      integer i,n,n2
+      integer e,i,n,n2,nxyz1
+      real r,ri,wght,jaci
+
 
       n = lx1*ly1*lz1*nelv
       call copy(cyl_radius,ym1,n)       ! Radial coordinate (M1)
 
       n2 = lx2*ly2*lz2*nelv
-      call copy(cyl_radius2,ym2,n2)      ! Radial coordinate (M2)
+      call copy(cyl_radius2,ym2,n2)     ! Radial coordinate (M2)
 
 !     For cylindrical solver
 !     I probably need to do this in the core
@@ -49,6 +52,71 @@
       call copy    (binvm1,bm1,n)
       call dssum   (binvm1,lx1,ly1,lz1)
       call invcol1 (binvm1,n)
+
+!     Geometric factors for the integrated del-squared operator
+      nxyz1 = lx1*ly1*lz1      
+      if (ldim.eq.2) then
+        do e=1,nelv
+          do i=1,nxyz1
+            r             = cyl_radius(i,1,1,e)       ! Radius
+            jaci          = 1.0/jacm1(i,1,1,e)        ! 1/Jac
+            wght          = w3m1(i,1,1)               ! W
+
+!           G11          
+            g1m1(i,1,1,e) =  r*jaci*wght*(rxm1(i,1,1,e)*rxm1(i,1,1,e)
+     $                        +rym1(i,1,1,e)*rym1(i,1,1,e))
+
+!           G22          
+            g2m1(i,1,1,e) =  r*jaci*wght*(sxm1(i,1,1,e)*sxm1(i,1,1,e)
+     $                        +sym1(i,1,1,e)*sym1(i,1,1,e))
+
+!           G12          
+            g4m1(i,1,1,e) =  r*jaci*wght*(rxm1(i,1,1,e)*sxm1(i,1,1,e)
+     $                        +rym1(i,1,1,e)*sxm1(i,1,1,e))
+          enddo
+        enddo  
+      else
+        do e=1,nelv
+          do i=1,nxyz1
+            r             = cyl_radius(i,1,1,e)       ! Radius
+            ri            = 1.0/cyl_radius(i,1,1,e)   ! 1/R
+            jaci          = 1.0/jacm1(i,1,1,e)        ! 1/Jac
+            wght          = w3m1(i,1,1)               ! W
+
+!           G11          
+            g1m1(i,1,1,e) =   r*jaci*wght*(rxm1(i,1,1,e)*rxm1(i,1,1,e))
+     $                     +  r*jaci*wght*(rym1(i,1,1,e)*rym1(i,1,1,e))
+     $                     + ri*jaci*wght*(rzm1(i,1,1,e)*rzm1(i,1,1,e))
+
+!           G22          
+            g2m1(i,1,1,e) =   r*jaci*wght*(sxm1(i,1,1,e)*sxm1(i,1,1,e))
+     $                     +  r*jaci*wght*(sym1(i,1,1,e)*sym1(i,1,1,e))
+     $                     + ri*jaci*wght*(szm1(i,1,1,e)*szm1(i,1,1,e)) 
+
+!           G33 
+            g3m1(i,1,1,e) =   r*jaci*wght*(txm1(i,1,1,e)*txm1(i,1,1,e))
+     $                     +  r*jaci*wght*(tym1(i,1,1,e)*tym1(i,1,1,e))
+     $                     + ri*jaci*wght*(tzm1(i,1,1,e)*tzm1(i,1,1,e)) 
+
+!           G12 
+            g4m1(i,1,1,e) =   r*jaci*wght*(rxm1(i,1,1,e)*sxm1(i,1,1,e))
+     $                     +  r*jaci*wght*(rym1(i,1,1,e)*sym1(i,1,1,e))
+     $                     + ri*jaci*wght*(rzm1(i,1,1,e)*szm1(i,1,1,e))
+
+!           G13
+            g5m1(i,1,1,e) =   r*jaci*wght*(rxm1(i,1,1,e)*txm1(i,1,1,e))
+     $                     +  r*jaci*wght*(rym1(i,1,1,e)*tym1(i,1,1,e))
+     $                     + ri*jaci*wght*(rzm1(i,1,1,e)*tzm1(i,1,1,e))
+
+!           G23
+            g6m1(i,1,1,e) =   r*jaci*wght*(sxm1(i,1,1,e)*txm1(i,1,1,e))
+     $                     +  r*jaci*wght*(sym1(i,1,1,e)*tym1(i,1,1,e))
+     $                     + ri*jaci*wght*(szm1(i,1,1,e)*tzm1(i,1,1,e))
+
+          enddo   ! i=1,nxyz1
+        enddo     ! e=1,nelv
+      endif
+
 
       if (ifheat) then ! temperature mass matrix
         ifield = 2
@@ -1050,7 +1118,6 @@ c-----------------------------------------------------------------------
       return
       end subroutine axhmsf_cyl             
 !-----------------------------------------------------------------------
-
       subroutine stnrate_cyl (u1,u2,u3,nel,matmod)
 
 C     Compute strainrates

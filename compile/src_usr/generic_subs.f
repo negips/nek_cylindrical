@@ -126,8 +126,6 @@
 
       implicit none
 
-      include 'SIZE'
-
       integer nx,ny,nz
       integer my              ! no of columns
 
@@ -137,17 +135,13 @@
       real opy(ny*my)
       integer i,j,k
 
-      if (ndim.eq.3) then
-        i = 1
-        j = 1
-        do k = 1,nz
-          call mxm (fld(i),nx,opy,ny,fldo(j),my)
-          i = i + nx*ny
-          j = j + nx*my
-        enddo  
-      else
-        call mxm (fld,nx,opy,ny,fldo,my)
-      endif  
+      i = 1
+      j = 1
+      do k = 1,nz
+        call mxm (fld(i),nx,opy,ny,fldo(j),my)
+        i = i + nx*ny
+        j = j + nx*my
+      enddo  
 
       return
       end subroutine tensory_op

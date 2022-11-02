@@ -111,14 +111,11 @@ c     if (nxc.lt.2) nxc=2
       nxc     = 2
       nx_crs  = nxc
 
-!      if(nio.eq.0) write(6,*) 'setup h1 coarse grid (again), nx_crs=', 
-!     $                         nx_crs
-
       ncr     = nxc**ldim
       nxyz_c  = ncr
-c
+
 c     Set SEM_to_GLOB
-c
+
       call get_vertex
       call set_vert(se_to_gcrs,ngv,nxc,nelv,vertex,.true.)
 
@@ -173,8 +170,6 @@ c         call get_local_crs(a,lda,nxc,h1,h2,w,ldw)
 c      else
 c        NOTE: a(),h1,...,w2() must all be large enough
          n = lx1*ly1*lz1*nelv
-!         call rone  (h1,n)
-!         call rzero (h2,n)
          call copy  (h1,h1_usr,n)
          call copy  (h2,h2_usr,n)
          call get_local_crs_galerkin(a,ncr,nxc,h1,h2,w1,w2)

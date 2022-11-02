@@ -25,7 +25,7 @@ c
       real rho(lx1)     ! density
       real rad(lx1)     ! radius
       real rmean        ! mean radius
-      real mri          ! mean radius inverse
+      real mri2         ! mean radius inverse squared
       real vlsc2
 
       real dummy(lx1)
@@ -74,8 +74,8 @@ c     calculate B tilde operator
 !     In order to make an approximate tensor product form      
       if (isd.eq.3) then
         rmean = vlsc2(rad,bh,lx1)/2.0
-        mri   = 1.0/rmean
-        call cmult(lam,mri,lx1)
+        mri2   = (1.0/rmean)**2
+        call cmult(lam,mri2,lx1)
       endif  
 
       if(.not.l) call row_zero(s,n,n,1)
@@ -156,9 +156,9 @@ c-----------------------------------------------------------------------
       n=lx1
 
 c     compute the scale factors for J      
-      gl=0.5*ll
-      gm=0.5*lm
-      gr=0.5*lr
+      gl=0.0*0.5*ll
+      gm=0.0*0.5*lm
+      gr=0.0*0.5*lr
 
       gll = gl*gl
       glm = gl*gm
