@@ -3,9 +3,12 @@
 !     Author: Prabal Negi
 !     Description: Cylindrical coordinates heat solver
 !
+!     Routines:
+!     cdscal_cyl              : Main driver
+!     makeq_cyl               : rhs terms
+!     convab_cyl              : Convection term (Fluid/Mesh velocities)      
+!      
 !     Outside dependencies: 
-!     generic_subs.f          : ortho_subspace()     
-!
 !      
 !======================================================================
 !---------------------------------------------------------------------- 
@@ -168,7 +171,9 @@ C     !! NOTE: Do not change the content of the array BQ until the current
             call add2 (vz, wz, ntot)
           endif
         else
-          if (.not.ifchar) call convab
+!          if (.not.ifchar) call convab
+!         Fluid convection term          
+          if (.not.ifchar) call convab_cyl(1)
         endif
       endif
 
@@ -185,7 +190,9 @@ C     !! NOTE: Do not change the content of the array BQ until the current
 
          else
 
-           if (ifmvbd.and..not.ifchar) call admesht
+!           if (ifmvbd.and..not.ifchar) call admesht
+!          Mesh convection term            
+           if (ifmvbd.and..not.ifchar) call convab_cyl(2)
 
            call makeabq
 
@@ -203,3 +210,75 @@ C     !! NOTE: Do not change the content of the array BQ until the current
 
       return
       end
+!---------------------------------------------------------------------- 
+
+      subroutine convab_cyl(ifld)
+
+!     Eulerian scheme, add convection term to forcing function 
+!     at current time step.
+!     Using either fluid or mesh velocities        
+
+      implicit none
+
+      include 'SIZE'
+      include 'SOLN'
+      include 'INPUT'
+      include 'MVGEOM'
+      include 'MASS'
+      include 'TSTEP'
+
+      real ta
+      common /scruz/ ta (lx1*ly1*lz1*lelt)
+
+      integer i,nel,n
+      integer ifld      ! ifld = 1: Fluid velocities as convecting field
+                        ! ifld = 2: -(Mesh) velocities as convecting field
+     
+
+      nel = nelfld(ifield)
+      n   = lx1*ly1*lz1*nel
+
+      if (ifld.eq.1) then
+!       Convection using Fluid velocities
+        if (ifuservp) then
+          call convect_cylindrical_rho(ta,vtrans(1,1,1,1,ifield),
+     $                                 t(1,1,1,1,ifield-1),vx,vy,vz)
+!         ta already contains mass matrix      
+          call sub2(bq(1,1,1,1,ifield-1),ta,n)
+        else  
+          call convect_cylindrical(ta,t(1,1,1,1,ifield-1),vx,vy,vz)
+!         ta already contains mass matrix      
+          call subcol3(bq(1,1,1,1,ifield-1),ta,vtrans(1,1,1,1,ifield),n)
+        endif
+      elseif(ifld.eq.2) then
+
+!       Convection using Mesh velocities        
+        if (ifuservp) then
+          call convect_cylindrical_rho(ta,vtrans(1,1,1,1,ifield),
+     $                                 t(1,1,1,1,ifield-1),wx,wy,wz)
+!         ta already contains mass matrix
+!         The sign is opposite to that of the regular convection term        
+          call add2(bq(1,1,1,1,ifield-1),ta,n)
+        else  
+          call convect_cylindrical(ta,t(1,1,1,1,ifield-1),wx,wy,wz)
+!         ta already contains mass matrix
+!         The sign is opposite to that of the regular convection term        
+          call addcol3(bq(1,1,1,1,ifield-1),ta,vtrans(1,1,1,1,ifield),n)
+        endif
+      else
+        if (nio.eq.0) then
+          write(6,*) 'Unknown ifld=',ifld
+          write(6,*) 'Exitting in convab_cyl'
+        endif
+        call exitt        
+      endif        
+
+      return
+      end
+c-----------------------------------------------------------------------
+
+
+
+
+
+

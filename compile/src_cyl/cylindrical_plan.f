@@ -135,13 +135,23 @@ C              current time step is completed.
                                                 call makeuf
       if (filterType.eq.2)                      call make_hpf
       if (ifnav .and..not.ifchar) then
+!       Fluid Convection term        
         if (ifuservp) then
-          call advab_rho_cyl()
+          call advab_rho_cyl(1)
         else
-          call advab_cyl()
+          call advab_cyl(1)
         endif
       endif
-      if (ifmvbd.and..not.ifchar)               call admeshv
+!      if (ifmvbd.and..not.ifchar)               call admeshv
+      if (ifmvbd .and..not.ifchar) then
+!       Mesh convection term        
+        if (ifuservp) then
+          call advab_rho_cyl(2)
+        else
+          call advab_cyl(2)
+        endif
+      endif
+
       if (iftran)                               call makeabf
       if ((iftran.and..not.ifchar).or.
      $    (iftran.and..not.ifnav.and.ifchar))   call makebdf
@@ -152,7 +162,7 @@ C              current time step is completed.
       return
       end
 !---------------------------------------------------------------------- 
-      subroutine advab_rho_cyl()
+      subroutine advab_rho_cyl(ifld)
 
 !     Eulerian scheme, add convection term to forcing function 
 !     at current time step.
@@ -162,6 +172,7 @@ C              current time step is completed.
 
       include 'SIZE'
       include 'SOLN'
+      include 'MVGEOM'
       include 'MASS'
       include 'TSTEP'
 
@@ -175,6 +186,10 @@ C              current time step is completed.
 
       integer ntot1
 
+      integer ifld      ! ifld = 1: Fluid velocities as convecting field
+                        ! ifld = 2: -(Mesh) velocities as convecting field
+
+
       ntot1 = lx1*ly1*lz1*nelv
 
 !     bfx,bfy,bfz get multiplied by vtrans later in makeabf.
@@ -183,43 +198,87 @@ C              current time step is completed.
 !     rhoi = 1/\rho      
       call invers2(rhoi,vtrans(1,1,1,1,ifield),ntot1)
 
-      call convect_cylindrical_rho (ta1,vtrans(1,1,1,1,ifield),vx,
-     $                              vx,vy,vz)
-      call convect_cylindrical_rho (ta2,vtrans(1,1,1,1,ifield),vy,
-     $                              vx,vy,vz)
-      if (ldim.eq.3) then
-        call convect_cylindrical_rho (ta3,vtrans(1,1,1,1,ifield),vz,
+      if (ifld.eq.1) then
+!       Convecting using Fluid velocity            
+        call convect_cylindrical_rho (ta1,vtrans(1,1,1,1,ifield),vx,
      $                                vx,vy,vz)
-      endif  
+        call convect_cylindrical_rho (ta2,vtrans(1,1,1,1,ifield),vy,
+     $                                vx,vy,vz)
+        if (ldim.eq.3) then
+          call convect_cylindrical_rho (ta3,vtrans(1,1,1,1,ifield),vz,
+     $                                  vx,vy,vz)
+        endif  
 
-      call col2(ta1,rhoi,ntot1)
-      call sub2 (bfx,ta1,ntot1)
+        call col2(ta1,rhoi,ntot1)
+        call sub2 (bfx,ta1,ntot1)
 
-      call col2(ta2,rhoi,ntot1)      
-      call sub2 (bfy,ta2,ntot1)
-      if (ldim.eq.3) then
-        call col2(ta3,rhoi,ntot1)
-        call sub2 (bfz,ta3,ntot1)
-      endif
-
-!     Additional terms in cylindrical formulation
-!     Division by R gets cancelled by the multiplication by R
-!     from the Jacobian
-      if (ldim.eq.3) then      
-        call dealias_rho_uv(ta2,vtrans(1,1,1,1,ifield),vz,vz)
         call col2(ta2,rhoi,ntot1)      
-        call add2(bfy,ta2,ntot1)
-        
-        call dealias_rho_uv(ta3,vtrans(1,1,1,1,ifield),vy,vz)
-        call col2(ta3,rhoi,ntot1)      
-        call sub2(bfz,ta3,ntot1)
-      endif  
+        call sub2 (bfy,ta2,ntot1)
+        if (ldim.eq.3) then
+          call col2(ta3,rhoi,ntot1)
+          call sub2 (bfz,ta3,ntot1)
+        endif
+
+!       Additional terms in cylindrical formulation
+!       Division by R gets cancelled by the multiplication by R
+!       from the Jacobian
+        if (ldim.eq.3) then      
+          call dealias_rho_uv(ta2,vtrans(1,1,1,1,ifield),vz,vz)
+          call col2(ta2,rhoi,ntot1)      
+          call add2(bfy,ta2,ntot1)
+          
+          call dealias_rho_uv(ta3,vtrans(1,1,1,1,ifield),vy,vz)
+          call col2(ta3,rhoi,ntot1)      
+          call sub2(bfz,ta3,ntot1)
+        endif
+
+      elseif (ifld.eq.2) then
+!       Convecting using Mesh velocity            
+        call convect_cylindrical_rho (ta1,vtrans(1,1,1,1,ifield),vx,
+     $                                wx,wy,wz)
+        call convect_cylindrical_rho (ta2,vtrans(1,1,1,1,ifield),vy,
+     $                                wx,wy,wz)
+        if (ldim.eq.3) then
+          call convect_cylindrical_rho (ta3,vtrans(1,1,1,1,ifield),vz,
+     $                                  wx,wy,wz)
+        endif  
+
+!       Sign is opposite that of Fluid convection term        
+        call col2(ta1,rhoi,ntot1)
+        call add2 (bfx,ta1,ntot1)
+
+        call col2(ta2,rhoi,ntot1)      
+        call add2 (bfy,ta2,ntot1)
+        if (ldim.eq.3) then
+          call col2(ta3,rhoi,ntot1)
+          call add2 (bfz,ta3,ntot1)
+        endif
+
+!       Additional terms in cylindrical formulation
+!       Division by R gets cancelled by the multiplication by R
+!       from the Jacobian
+        if (ldim.eq.3) then      
+          call dealias_rho_uv(ta2,vtrans(1,1,1,1,ifield),wz,vz)
+          call col2(ta2,rhoi,ntot1)      
+          call sub2(bfy,ta2,ntot1)
+          
+          call dealias_rho_uv(ta3,vtrans(1,1,1,1,ifield),wz,vy)
+          call col2(ta3,rhoi,ntot1)      
+          call add2(bfz,ta3,ntot1)
+        endif
+      else        
+        if (nio.eq.0) then
+          write(6,*) 'Unknown ifld=',ifld
+          write(6,*) 'Exitting in advab_rho_cyl'
+        endif
+        call exitt        
+      endif        
 
       return
       end subroutine
 !---------------------------------------------------------------------- 
 
-      subroutine advab_cyl()
+      subroutine advab_cyl(ifld)
 
 !     Eulerian scheme, add convection term to forcing function 
 !     at current time step.
@@ -228,6 +287,7 @@ C              current time step is completed.
 
       include 'SIZE'
       include 'SOLN'
+      include 'MVGEOM'
       include 'MASS'
       include 'TSTEP'
 
@@ -238,31 +298,68 @@ C              current time step is completed.
 
       integer ntot1
 
+      integer ifld      ! ifld = 1: Fluid velocities as convecting field
+                        ! ifld = 2: -(Mesh) velocities as convecting field
+
       ntot1 = lx1*ly1*lz1*nelv
 
-      call convect_cylindrical (ta1,vx,vx,vy,vz)
-      call convect_cylindrical (ta2,vy,vx,vy,vz)
-      if (ldim.eq.3) then
-        call convect_cylindrical (ta3,vz,vx,vy,vz)
-      endif  
+      if (ifld.eq.1) then
+!       Convecting using Fluid velocity            
+        call convect_cylindrical (ta1,vx,vx,vy,vz)
+        call convect_cylindrical (ta2,vy,vx,vy,vz)
+        if (ldim.eq.3) then
+          call convect_cylindrical (ta3,vz,vx,vy,vz)
+        endif  
 
-      call sub2 (bfx,ta1,ntot1)
-      call sub2 (bfy,ta2,ntot1)
-      if (ldim.eq.3) then
-        call sub2 (bfz,ta3,ntot1)
+        call sub2 (bfx,ta1,ntot1)
+        call sub2 (bfy,ta2,ntot1)
+        if (ldim.eq.3) then
+          call sub2 (bfz,ta3,ntot1)
+        endif
+
+!       Additional terms in cylindrical formulation
+!       Division by R gets cancelled by the multiplication by R
+!       from the Jacobian
+        if (ldim.eq.3) then      
+          call dealias_uv(ta2,vz,vz)
+          call add2(bfy,ta2,ntot1)
+          
+          call dealias_uv(ta3,vy,vz)
+          call sub2(bfz,ta3,ntot1)
+        endif
+      elseif (ifld.eq.2) then
+!       Convecting using Mesh velocity            
+        call convect_cylindrical (ta1,vx,wx,wy,wz)
+        call convect_cylindrical (ta2,vy,wx,wy,wz)
+        if (ldim.eq.3) then
+          call convect_cylindrical (ta3,vz,wx,wy,wz)
+        endif  
+
+        call add2 (bfx,ta1,ntot1)
+        call add2 (bfy,ta2,ntot1)
+        if (ldim.eq.3) then
+          call add2 (bfz,ta3,ntot1)
+        endif
+
+!       Additional terms in cylindrical formulation
+!       Division by R gets cancelled by the multiplication by R
+!       from the Jacobian
+        if (ldim.eq.3) then      
+          call dealias_uv(ta2,wz,vz)
+          call sub2(bfy,ta2,ntot1)
+          
+          call dealias_uv(ta3,vz,vy)
+          call add2(bfz,ta3,ntot1)
+        endif
+
+      else
+        if (nio.eq.0) then
+          write(6,*) 'Unknown ifld=',ifld
+          write(6,*) 'Exitting in advab_cyl'
+        endif
+        call exitt        
+
       endif
-
-!     Additional terms in cylindrical formulation
-!     Division by R gets cancelled by the multiplication by R
-!     from the Jacobian
-      if (ldim.eq.3) then      
-        call dealias_uv(ta2,vz,vz)
-        call add2(bfy,ta2,ntot1)
-        
-        call dealias_uv(ta3,vy,vz)
-        call sub2(bfz,ta3,ntot1)
-      endif  
-
 
       return
       end subroutine
