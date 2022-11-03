@@ -113,4 +113,11 @@ IFCOMPLEX         = no                     # Use complex arithmetic (znaupd)
 [_CYLIN]                # Runtime parameter Cylindrical
 CYL_IFCYL         = yes                    # If Cylindrical
 CYL_LOG           = 1                      # Log levek
+CYL_OMEGA1        = -1.0                   # Inner angular velocity
+CYL_OMEGA2        = 0.0                    # Outer angular velocity
+
+
+
+
+
 

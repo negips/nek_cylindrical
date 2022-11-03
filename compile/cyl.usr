@@ -115,9 +115,6 @@ c-----------------------------------------------------------------------
           param(95) = 50        ! start of projections
         endif
 
-!       Initialize cylindrical solve        
-        call init_cyl()
-
         call rone(vtrans(1,1,1,1,2),n)
         call rone(vdiff(1,1,1,1,2),n)
 
@@ -137,6 +134,9 @@ c-----------------------------------------------------------------------
         call outpost(v1mask,v2mask,v3mask,pr,tmask,'msk')
 
         call outpost(vx,vy,vz,pr,t,'   ')
+
+!       Initialize cylindrical solve        
+        call init_cyl()
 
 !       Reynolds number of the field
         do i=1,n
