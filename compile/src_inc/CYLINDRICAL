@@ -13,8 +13,8 @@
       real cyl_omega(2)       ! Inner and Outer Angular Rotation rates
       real cyl_tc_ab(2)       ! Taylor Couette Solution parameters
       real cyl_ta_num         ! Taylor Number
-      common /taylor_geom/ cyl_wallx,cyl_rady,cyl_omega,cyl_tc_ab,
-     $                     cyl_ta_num 
+      common /cyl_taylor_geom/ cyl_wallx,cyl_rady,cyl_omega,
+     $                         cyl_tc_ab,cyl_ta_num 
 
 
 !     Variables needed for the KTH Framework
