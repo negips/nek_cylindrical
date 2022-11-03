@@ -74,9 +74,10 @@ $(OBJDIR)/generic_subs.o        :$(SRC_USR)/generic_subs.f;             $(F77) -
 
 $(OBJDIR)/frame_cyl.o           :$(SRC_CYL)/frame_cyl.f;                $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@
 $(OBJDIR)/cylindrical_subs.o    :$(SRC_CYL)/cylindrical_subs.f;         $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@
-$(OBJDIR)/plan_cyl.o            :$(SRC_CYL)/plan_cyl.f;                 $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@
+$(OBJDIR)/cylindrical_plan.o    :$(SRC_CYL)/cylindrical_plan.f;         $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@
 $(OBJDIR)/cylindrical_fast.o    :$(SRC_CYL)/cylindrical_fast.f;         $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@
 $(OBJDIR)/cylindrical_solver.o  :$(SRC_CYL)/cylindrical_solver.f;       $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@
+$(OBJDIR)/cylindrical_conduct.o :$(SRC_CYL)/cylindrical_conduct.f;      $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@
 
 
 

@@ -70,6 +70,16 @@
      $     'Log Level ',
      $     rpar_int,0,0.0,.false.,'  ')
 
+!     CYL_OMEGA1
+      call rprm_rp_reg(cyl_omega1_id,cyl_sec_id,'CYL_OMEGA1',
+     $     'Inner Omega ',
+     $     rpar_real,0,0.0,.false.,'  ')
+
+!     CYL_OMEGA2
+      call rprm_rp_reg(cyl_omega2_id,cyl_sec_id,'CYL_OMEGA2',
+     $     'Outer Omega ',
+     $     rpar_real,0,0.0,.false.,'  ')
+
 !     timing
       ltim = dnekclock() - ltim
       call mntr_tmr_add(cyl_tmr_tot_id,1,ltim)
@@ -99,11 +109,11 @@
 
       ! functions
       real dnekclock
-!-----------------------------------------------------------------------
-      ! timing
+
+!     Timing
       ltim = dnekclock()
 
-      ! get runtime parameters
+!     Get runtime parameters
 !     cyl_ifcyl
       call rprm_rp_get(itmp,rtmp,ltmp,ctmp,cyl_ifcyl_id,rpar_log)
       cyl_ifcyl = ltmp
@@ -112,8 +122,24 @@
       call rprm_rp_get(itmp,rtmp,ltmp,ctmp,cyl_log_id,rpar_int)
       cyl_log = itmp
 
+!     cyl_omega1
+      call rprm_rp_get(itmp,rtmp,ltmp,ctmp,cyl_omega1_id,rpar_real)
+      cyl_omega(1) = rtmp
+
+!     cyl_omega2
+      call rprm_rp_get(itmp,rtmp,ltmp,ctmp,cyl_omega2_id,rpar_real)
+      cyl_omega(2) = rtmp
+
+!     Timing
+      ltim = dnekclock() - ltim
+      call mntr_tmr_add(cyl_tmr_tot_id,1,ltim)
 
       return
       end subroutine frame_get_param_cyl 
 !---------------------------------------------------------------------- 
+
+
+
+
+
 

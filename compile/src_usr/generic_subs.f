@@ -71,7 +71,7 @@
       real fld  (nx*ny*nz)
       real fldf (mx*my*mz)
 
-!     x operator is applied direction      
+!     x operator is applied directly 
       real opx(mx*nx)
 
 !     y,z operators apply as transposed operators 

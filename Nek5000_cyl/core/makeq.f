@@ -25,25 +25,23 @@ C     !! NOTE: Do not change the content of the array BQ until the current
       call makeq_aux ! nekuq, etc.
 
       if (ifadvc(ifield) .and. if_conv_std) then
+        if (ifcvfld(ifield)) then
+          if (ifmvbd) then
+             call sub2 (vx, wx, ntot)
+             call sub2 (vy, wy, ntot)
+             call sub2 (vz, wz, ntot)
+          endif
 
-         if (ifcvfld(ifield)) then
-            if (ifmvbd) then
-               call sub2 (vx, wx, ntot)
-               call sub2 (vy, wy, ntot)
-               call sub2 (vz, wz, ntot)
-             endif
+          call convab
 
-             call convab
-
-             if (ifmvbd) then
-                call add2 (vx, wx, ntot)
-                call add2 (vy, wy, ntot)
-                call add2 (vz, wz, ntot)
-             endif
-         else
-             if (.not.ifchar) call convab
-         endif
-
+          if (ifmvbd) then
+             call add2 (vx, wx, ntot)
+             call add2 (vy, wy, ntot)
+             call add2 (vz, wz, ntot)
+          endif
+        else
+          if (.not.ifchar) call convab
+        endif
       endif
 
       if (iftran) then

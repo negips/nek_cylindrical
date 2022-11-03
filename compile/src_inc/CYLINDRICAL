@@ -8,6 +8,14 @@
       real cyl_radius2(lx2,ly2,lz2,lelv)  ! Radius on M2
       common /cylindrical_rv/ cyl_radius,cyl_radius2
 
+      real cyl_wallx(2)       ! Top and bottom wall positions
+      real cyl_rady(2)        ! Inner and Outer cylinder Radii
+      real cyl_omega(2)       ! Inner and Outer Angular Rotation rates
+      real cyl_tc_ab(2)       ! Taylor Couette Solution parameters
+      real cyl_ta_num         ! Taylor Number
+      common /taylor_geom/ cyl_wallx,cyl_rady,cyl_omega,cyl_tc_ab,
+     $                     cyl_ta_num 
+
 
 !     Variables needed for the KTH Framework
 !---------------------------------------------------------------------- 
@@ -23,8 +31,11 @@
 
 !     Variable ids      
       integer cyl_ifcyl_id          ! If Cylindrical id
-      
-      common /cyl_frame_varid/ cyl_ifcyl_id 
+      integer cyl_omega1_id         ! Inner Omega id
+      integer cyl_omega2_id         ! Outer Omega id
+     
+      common /cyl_frame_varid/ cyl_ifcyl_id,cyl_omega1_id,
+     $                         cyl_omega2_id 
 
       integer cyl_log               ! Log Level
 

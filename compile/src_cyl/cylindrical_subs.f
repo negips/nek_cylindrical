@@ -2,6 +2,7 @@
 !     Author: Prabal Negi      
 !     Description: Routines for 3D cylindrical solve implementation
 !     Routines:   init_cyl()              : Cylindrical Coordinates initialization
+!                 reset_geom_cyl()        : Reset MASS/Geometric factors 
 !                 cdabdtp_cyl()           : Pressure Pseudolaplacian
 !                 opdiv_cyl()             : Cylindrical Divergence
 !                 multd_cyl()             : D*u = q*(D*u)
@@ -18,8 +19,109 @@
 !                 ttxyz_cyl               : Grad(v)\dot      
 !
 !======================================================================
-      subroutine cyl_init()
+      subroutine init_cyl()
       
+      implicit none
+
+      include 'SIZE'
+      include 'GEOM'          ! ym1,ym2
+      include 'MASS'          ! volvm1
+      include 'TSTEP'         ! ifield
+      include 'SOLN'          ! vdiff,vtrans
+      include 'INPUT'
+
+      include 'CYLINDRICAL'
+
+      integer n,n2
+
+      real glmin,glmax,glsc2
+      real r1,r2,omg1,omg2,d
+
+      integer ifld
+
+      real nufld
+      common /scrcg/ nufld(lx1,ly1,lz1,lelt)
+
+      real nuavg
+      character*132 str
+
+      n = lx1*ly1*lz1*nelv
+      call copy(cyl_radius,ym1,n)       ! Radial coordinate (M1)
+
+      n2 = lx2*ly2*lz2*nelv
+      call copy(cyl_radius2,ym2,n2)     ! Radial coordinate (M2)
+
+      cyl_rady(1) = glmin(cyl_radius,n)
+      cyl_rady(2) = glmax(cyl_radius,n)
+
+!     Negative value means we specify \Omega1*R1
+      if (cyl_omega(1).lt.0) then
+        cyl_omega(1) = -cyl_omega(1)/cyl_rady(1)
+      endif 
+
+!     Negative value means we specify \Omega2*R2
+      if (cyl_omega(1).lt.0) then
+        cyl_omega(2) = -cyl_omega(2)/cyl_rady(2)
+      endif  
+
+!     Laminar Taylor-Couette Parameters
+!----------------------------------------       
+
+!     Laminar Taylor Couette solution
+      omg1        = cyl_omega(1)
+      omg2        = cyl_omega(2)
+      r1          = cyl_rady(1)
+      r2          = cyl_rady(2)
+      d           = r2-r1
+
+      cyl_tc_ab(1) = (omg2*r2*r2 - omg1*r1*r1)/(r2**2 - r1**2)
+      cyl_tc_ab(2) = (omg1 - omg2)*(r1**2)*(r2**2)/(r2**2 - r1**2)
+
+!     For the Narrow gap approximation
+!     nu = mu/rho 
+      call invcol3(nufld,vdiff,vtrans,n)
+      nuavg = glsc2(nufld,bm1,n)/volvm1
+
+      cyl_ta_num   = 4.0*(omg1*r1*r1 - omg2*r2*r2)*(omg1*(d**4)) 
+     $                  /((r2**2 - r1**2)*(nuavg**2))
+
+      call blank(str,132)
+      write(str,'(A9,1x,E12.4E2)') 'Radius 1:', r1
+      call mntr_log(cyl_id,cyl_log,str)
+
+      call blank(str,132)
+      write(str,'(A9,1x,E12.4E2)') 'Radius 2:', r2
+      call mntr_log(cyl_id,cyl_log,str)
+
+      call blank(str,132)
+      write(str,'(A16,1x,E12.4E2)') 'Taylor Coutte A:', cyl_tc_ab(1)
+      call mntr_log(cyl_id,cyl_log,str)
+
+      call blank(str,132)
+      write(str,'(A16,1x,E12.4E2)') 'Taylor Coutte B:', cyl_tc_ab(2)
+      call mntr_log(cyl_id,cyl_log,str)
+
+      call blank(str,132)
+      write(str,'(A14,1x,E16.8E2)') 'Taylor Number:', cyl_ta_num
+      call mntr_log(cyl_id,cyl_log,str)
+!---------------------------------------- 
+
+!     Add the factor of Radius into mass matrix and
+!     geometric factors
+      call reset_geom_cyl()
+
+!     Preconditioner
+      param(42)=0       ! 0: GMRES (nonsymmetric), 1: PCG w/o weights
+      param(43)=1       ! 0: Additive multilevel (param 42=0), 1: Original 2 level
+      param(44)=0       ! 0: E based Schwartz (SEM), 1: A based Schwartz (FEM)
+
+
+      return
+      end subroutine init_cyl
+!----------------------------------------------------------------------
+
+      subroutine reset_geom_cyl()
+
       implicit none
 
       include 'SIZE'
@@ -34,21 +136,25 @@
       integer e,i,n,n2,nxyz1
       real r,ri,wght,jaci
 
+      integer ifld
 
+!     For cylindrical solver
+!     I probably need to do this in at every time step at igeom=2
+!     After the geometry has been regenerated
       n = lx1*ly1*lz1*nelv
       call copy(cyl_radius,ym1,n)       ! Radial coordinate (M1)
 
       n2 = lx2*ly2*lz2*nelv
       call copy(cyl_radius2,ym2,n2)     ! Radial coordinate (M2)
 
-!     For cylindrical solver
-!     I probably need to do this in the core
-!     After the geometry has been regenerated
+!     BM2*R
       call col2(bm2,cyl_radius2,n2)
       call invers2(bm2inv,bm2,n2)
 
+      ifld   = ifield
       ifield = 1
-      call col2(bm1,cyl_radius,n)
+!     BM1*R      
+      call col2    (bm1,cyl_radius,n)
       call copy    (binvm1,bm1,n)
       call dssum   (binvm1,lx1,ly1,lz1)
       call invcol1 (binvm1,n)
@@ -117,7 +223,6 @@
         enddo     ! e=1,nelv
       endif
 
-
       if (ifheat) then ! temperature mass matrix
         ifield = 2
         n      = lx1*ly1*lz1*nelt
@@ -126,17 +231,11 @@
         call invcol1 (bintm1,n)
       endif
 
-      ifield = 1
+      ifield = ifld
 
-!     Preconditioner
-      param(42)=0       ! 0: GMRES (nonsymmetric), 1: PCG w/o weights
-      param(43)=1       ! 0: Additive multilevel (param 42=0), 1: Original 2 level
-      param(44)=0       ! 0: E based Schwartz (SEM), 1: A based Schwartz (FEM)
-
-
-      return
-      end subroutine
-!---------------------------------------------------------------------- 
+      return 
+      end subroutine reset_geom_cyl
+!----------------------------------------------------------------------       
       subroutine cdabdtp_cyl (ap,wp,h1,h2,h2inv,intype)
 
 !     INTYPE= 0  Compute the matrix-vector product    DA(-1)DT*p

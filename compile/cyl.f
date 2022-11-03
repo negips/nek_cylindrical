@@ -116,7 +116,7 @@ c-----------------------------------------------------------------------
         endif
 
 !       Initialize cylindrical solve        
-        call cyl_init()
+        call init_cyl()
 
         call rone(vtrans(1,1,1,1,2),n)
         call rone(vdiff(1,1,1,1,2),n)

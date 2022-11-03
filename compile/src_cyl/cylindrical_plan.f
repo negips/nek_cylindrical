@@ -3,6 +3,13 @@
 !     Author: Prabal Negi
 !     Description: Cylindrical coordinates solver
 !
+!     Routines:
+!     plan_cyl                : Main driver
+!     cresvif_cyl             : Create Residual for momentum solver            
+!     advab_rho_cyl           : Cylindrical advection term (with variable density)
+!     advab_rho               : Cylindrical advection term (standard)
+!     incomprn_cyl            : Cylindrical Pressure Poisson Solver
+!
 !     Outside dependencies: 
 !     generic_subs.f          : ortho_subspace()     
 !
@@ -318,10 +325,6 @@ c                not the current pressure derived from extrapolation.
       real dtbd,bdti,const,scaledt,scaledi,dtb
       integer i
 
-      integer gmtype
-
-      gmtype = 5        ! std cylindrical
-
       ifprjp=.false.    ! Project out previous pressure solutions?
       istart=param(95)  
       if (istep.ge.istart.and.istart.ne.0) ifprjp=.true.
@@ -373,7 +376,7 @@ c                not the current pressure derived from extrapolation.
       else
         call esolver_cyl(dp,h1,h2,h2inv,intype)
       endif 
-      if (ifprjp)   call gensolnp (dp,h1,h2,h2inv,pset(1,i),nprv(i))
+      if (ifprjp) call gensolnp (dp,h1,h2,h2inv,pset(1,i),nprv(i))
 
       call add2(up,dp,ntot2)
 
