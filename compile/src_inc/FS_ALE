@@ -16,6 +16,7 @@
                                                 ! the free surface
 
       real fs_damp(lx1,ly1,lz1,lelv)            ! Damping function
+      real fs_intpos(lx1,ly1,lz1,lelv)          ! Interface position
       real fs_ofst                              ! offset before damping
 
       character*3 fs_cbc(6,lelv)                ! mark the interface
@@ -35,7 +36,7 @@
       common /fs_is/  fs_nel, fs_nsymo
       common /fs_iv/  fs_elno, fs_iface, fs_ie, fs_ix, fs_iy, fs_iz
       common /fs_iv8/ fs_gl_num
-      common /fs_rv/  fs_vmult, fs_mask, fs_crmask, fs_damp
+      common /fs_rv/  fs_vmult, fs_mask, fs_crmask, fs_damp, fs_intpos
       common /fs_rs/  fs_ofst 
 
       common /fs_cv/  fs_cbc

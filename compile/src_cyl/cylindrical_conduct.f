@@ -4,7 +4,8 @@
 !     Description: Cylindrical coordinates heat solver
 !
 !     Routines:
-!     cdscal_cyl              : Main driver
+!     heat_cyl                : Main driver      
+!     cdscal_cyl              : sub driver
 !     makeq_cyl               : rhs terms
 !     convab_cyl              : Convection term (Fluid/Mesh velocities)      
 !      
@@ -12,6 +13,56 @@
 !      
 !======================================================================
 !---------------------------------------------------------------------- 
+      subroutine heat_cyl(igeom)
+
+C     Driver for temperature or passive scalar.
+C
+C     Current version:
+C     (1) Varaiable properties.
+C     (2) Implicit time stepping.
+C     (3) User specified tolerance for the Helmholtz solver
+C         (not based on eigenvalues).
+C     (4) A passive scalar can be defined on either the 
+C         temperatur or the velocity mesh.
+C     (5) A passive scalar has its own multiplicity (B.C.).  
+
+      implicit none
+
+      include 'SIZE'
+      include 'INPUT'
+      include 'TSTEP'
+      include 'DEALIAS'
+
+      integer igeom
+      integer intype
+
+      real*8 ts, dnekclock
+
+      ts = dnekclock()
+
+      if (nio.eq.0 .and. igeom.eq.2) 
+     &    write(*,'(13x,a)') 'Solving for (CYL) Hmholtz scalars'
+
+      do ifield = 2,nfield
+         if (idpss(ifield-1).eq.0) then      ! helmholtz
+            intype        = -1
+            if (.not.iftmsh(ifield)) imesh = 1
+            if (     iftmsh(ifield)) imesh = 2
+            call unorm
+            call settolt
+            call cdscal_cyl(igeom)
+         endif
+      enddo
+
+      if (nio.eq.0 .and. igeom.eq.2)
+     &   write(*,'(4x,i7,a,1p2e12.4)') 
+     &   istep,'  Scalars done (CYL)',time,dnekclock()-ts
+
+      return
+      end
+c-----------------------------------------------------------------------
+
+
       subroutine cdscal_cyl (igeom)
 
 !     Solve the convection-diffusion equation for passive scalar IPSCAL

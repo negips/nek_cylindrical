@@ -57,6 +57,9 @@ C     Operator splitting technique.
 
 !        new geometry, new b.c.
 
+!        modify v1mask to account for moving interface
+         call modify_mask()
+
          intype = -1
          call sethlm  (h1,h2,intype)
          call cresvif_cyl (resv1,resv2,resv3,h1,h2)

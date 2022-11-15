@@ -48,7 +48,7 @@
       logical cornerpoint     ! function
 
 
-      AW_int  = 1.23
+      AW_int  = 1.50
       tol     = 1.0e-6
       outflds = .true.
 
@@ -88,8 +88,8 @@
           call surface_int(sint,sarea,xm1,ie,iface)
           sint = sint/sarea
 !         Change these conditions for actual case            
-          if (cb.eq.'O  ') then
-!          if (cb.eq.'E  '.and.(abs(sint-AW_int).lt.tol)) then
+!          if (cb.eq.'O  ') then
+          if (cb.eq.'E  '.and.(abs(sint-AW_int).lt.tol)) then
              fs_nel = fs_nel + 1
              fs_cbc(iface,ie) = 'INT'
              fs_elno(fs_nel)  = ie
@@ -1578,7 +1578,6 @@ c-----------------------------------------------------------------------
 
 !     Get interface position        
 
-
       implicit none
 
       include 'SIZE'
@@ -1602,14 +1601,17 @@ c-----------------------------------------------------------------------
      $              , dmy1(lt)
      $              , dmy2(lt)
 
+      real clevel                         ! contour level
+
       n = lx1*ly1*lz1*nelv
 
 !     Get Weights
       mu = 0.01
+      clevel          = 0.0
       do i=1,n
-        x             = abs(t(i,1,1,1,1))       ! absolute distance from interface 
-        wght(i)       = exp(-(x/mu)**2)         ! local weights
-        pos(i)        = xm1(i,1,1,1)            ! which coordinate?
+        x             = abs(t(i,1,1,1,1) - clevel)  ! absolute distance from interface 
+        wght(i)       = exp(-(x/mu)**2)             ! local weights
+        pos(i)        = xm1(i,1,1,1)                ! which coordinate?
       enddo
 
       call copy(wghte,wght,n)

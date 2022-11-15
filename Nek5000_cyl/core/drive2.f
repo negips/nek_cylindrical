@@ -773,7 +773,8 @@ C
             if (     iftmsh(ifield)) imesh = 2
             call unorm
             call settolt
-            call cdscal(igeom)
+!            call cdscal(igeom)
+            call cdscal_cyl(igeom)
          endif
       enddo
 
