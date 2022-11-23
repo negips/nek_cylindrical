@@ -48,10 +48,10 @@
       call mntr_tmr_is_name_reg(lpmid,'FRM_TOT')
 !     Total time
       call mntr_tmr_reg(cyl_tmr_tot_id,lpmid,cyl_id,
-     $     'CYL_TOT','FS module total time',.false.)
+     $     'CYL_TOT','CYLINDRICAL module total time',.false.)
 !     Initialisation time
       call mntr_tmr_reg(cyl_tmr_ini_id,lpmid,cyl_id,
-     $     'CYL_INI','FS initialisation time',.true.)
+     $     'CYL_INI','CYLINDRICAL initialisation time',.true.)
        
 !     Register and set active section
       call rprm_sec_reg(cyl_sec_id,cyl_id,

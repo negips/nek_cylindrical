@@ -132,6 +132,10 @@ c        if (ifaxis.and.ifmhd) isd = 2 !This is a problem if T is to be T!
          intype = 0
          if (iftran) intype = -1
          call sethlm  (h1,h2,intype)
+
+!        No diffusivity         
+         call rzero(h1,n)
+
          call bcneusc (ta,-1)
          call add2    (h2,ta,n)
          call bcdirsc (t(1,1,1,1,ifield-1))

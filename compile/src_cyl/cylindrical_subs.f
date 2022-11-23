@@ -6,6 +6,7 @@
 !                 cdabdtp_cyl()           : Pressure Pseudolaplacian
 !                 opdiv_cyl()             : Cylindrical Divergence
 !                 multd_cyl()             : D*u = q*(D*u)
+!                 multd_rho_cyl()         : \rho*D*u = \rho*q*(D*u)
 !                 opgradt_cyl()           : Pressure gradient term
 !                 cdtp_cyl()              : (D^T)*p = p*(D*v)
 !                 convect_cylindircal_rho : Cylindrical convective term with density
@@ -293,6 +294,7 @@
         endif
       endif
       call opdiv_cyl (ap,tb1,tb2,tb3)
+!      call opdiv_rho_cyl (ap,tb1,tb2,tb3)
 
       return
       end
@@ -557,6 +559,46 @@ C
       end
 
 c-----------------------------------------------------------------------
+      subroutine opdiv_rho_cyl(outfld,inpx,inpy,inpz)
+
+!     Compute OUTFLD = SUMi Di*INPi, 
+!     the divergence of the vector field (INPX,INPY,INPZ)
+
+
+      implicit none
+
+      include 'SIZE'
+      include 'GEOM'
+      include 'SOLN'    ! vtrans
+
+      real outfld (lx2,ly2,lz2,lelv)
+      real inpx   (lx1,ly1,lz1,lelv)
+      real inpy   (lx1,ly1,lz1,lelv)
+      real inpz   (lx1,ly1,lz1,lelv)
+
+      real work
+      common /ctmp0/ work (lx2,ly2,lz2,lelv)
+      
+      integer iflg,ntot2
+
+      iflg = 1
+
+      ntot2 = lx2*ly2*lz2*nelv
+      call rzero(outfld,ntot2)
+
+      call multd_rho_cyl (work,inpx,vtrans,rxm2,sxm2,txm2,1,iflg)
+      call copy  (outfld,work,ntot2)
+      call multd_rho_cyl (work,inpy,vtrans,rym2,sym2,tym2,2,iflg)
+      call add2  (outfld,work,ntot2)
+      if (ldim.eq.3) then
+        call multd_rho_cyl (work,inpz,vtrans,rzm2,szm2,tzm2,3,iflg)
+        call add2  (outfld,work,ntot2)
+      endif
+
+      return
+      end
+
+c-----------------------------------------------------------------------
 
       subroutine multd_cyl (du,u,rm2,sm2,tm2,isd,iflg)
 
@@ -708,7 +750,142 @@ c-----------------------------------------------------------------------
       tmltd=tmltd+(dnekclock()-etime1)
 #endif
       return
-      END
+      end
+c-----------------------------------------------------------------------
+
+      subroutine multd_rho_cyl (du,u,rho,rm2,sm2,tm2,isd,iflg)
+
+!     Compute D*X
+!     X    : input variable, defined on M1
+!     DX   : output variable, defined on M2 (note: D is rectangular)   
+!     RM2 : RXM2, RYM2 or RZM2
+!     SM2 : SXM2, SYM2 or SZM2
+!     TM2 : TXM2, TYM2 or TZM2
+!     ISD : spatial direction (x=1,y=2,z=3)
+!     IFLG: OPGRAD (iflg=0) or OPDIV (iflg=1)
+
+      implicit none
+
+      include 'SIZE'
+      include 'WZ'
+      include 'DXYZ'
+      include 'IXYZ'
+      include 'GEOM'
+      include 'MASS'
+      include 'INPUT'
+      include 'ESOLV'
+      include 'CTIMER'
+
+      real           du   (lx2*ly2*lz2,lelv)
+      real           u    (lx1*ly1*lz1,lelv)
+      real           rho  (lx1*ly1*lz1,lelv)    ! Density
+      real           rm2  (lx2*ly2*lz2,lelv)
+      real           sm2  (lx2*ly2*lz2,lelv)
+      real           tm2  (lx2*ly2*lz2,lelv)
+
+      integer isd,iflg
+
+      real ta1,ta2,ta3
+      common /ctmp1/ ta1 (lx1*ly1*lz1)
+     $ ,             ta2 (lx1*ly1*lz1)
+     $ ,             ta3 (lx1*ly1*lz1)
+
+      real           duax(lx1)
+
+      common /fastmd/ ifdfrm(lelt), iffast(lelt), ifh2, ifsolv
+      logical ifdfrm, iffast, ifh2, ifsolv
+
+      integer e,i1,i2,iz
+      integer nxy1,nyz1,nxy2,nxyz1,nxyz2,n1,n2
+
+
+#ifdef TIMER
+      if (icalld.eq.0) tmltd=0.0
+      icalld=icalld+1
+      nmltd=icalld
+      etime1=dnekclock()
+#endif
+
+      nyz1  = ly1*lz1
+      nxy2  = lx2*ly2
+      nxyz1 = lx1*ly1*lz1
+      nxyz2 = lx2*ly2*lz2
+
+      n1    = lx2*ly1
+      n2    = lx2*ly2
+
+      if (ndim.eq.2) then
+!       Not implemented
+        if (nio.eq.0) then
+          write(6,*)
+     $      'multd_cyl not implemented for 2D yet.'
+          call exitt
+        endif
+      endif 
+
+      if (ifsplit) then
+!       Not implemented
+        if (nio.eq.0) then
+          write(6,*)
+     $      'multd_cyl not implemented for Pn-Pn'
+          call exitt
+        endif
+      endif 
+
+      do e=1,nelv
+
+!       du/dr
+        call tensor3_op(du(1,e),u(1,e),lx1,ly1,lz1,dxm12,iytm12,
+     $                  iztm12,lx2,ly2,lz2)
+!       dr/dx_i*du/dr        
+        call col2 (du(1,e),rm2(1,e),nxyz2)
+
+!       du/ds
+        call tensor3_op(ta1,u(1,e),lx1,ly1,lz1,ixm12,dytm12,
+     $                  iztm12,lx2,ly2,lz2)
+!       ds/dx_i*du/ds        
+        call addcol3 (du(1,e),ta1,sm2(1,e),nxyz2)
+
+!       du/dt
+        call tensor3_op(ta3,u(1,e),lx1,ly1,lz1,ixm12,iytm12,
+     $                  dztm12,lx2,ly2,lz2)
+!       dt/dx_i*du/dt        
+        call addcol3 (du(1,e),ta3,tm2(1,e),nxyz2)
+
+!       Collocate with the weights and Radius on the pressure mesh
+        call col2 (du(1,e),w3m2,nxyz2)
+        if (isd.ne.3) then
+          call col2 (du(1,e),ym2(1,1,1,e),nxyz2)
+        endif
+
+!       Add additional Radial term
+        if (isd.eq.2) then
+!         I12*u        
+!         ta3 = u (M1 -> M2)
+          call tensor3_op(ta3,u(1,e),lx1,ly1,lz1,ixm12,iytm12,
+     $                    iztm12,lx2,ly2,lz2)
+
+!         W*I12*u          
+          call col3 (ta1,w3m2,ta3,nxyz2)
+!         J*W*I12*u          
+          call col2 (ta1,jacm2(1,1,1,e),nxyz2)
+          call add2 (du(1,e),ta1,nxyz2)
+        endif
+
+!       ta3 = \rho (M1 -> M2)
+        call tensor3_op(ta3,rho(1,e),lx1,ly1,lz1,ixm12,iytm12,
+     $                  iztm12,lx2,ly2,lz2)
+        
+!       Collocate with density
+        call col2(du,ta3,nxyz2) 
+       
+      enddo       ! e=1,nelv
+
+#ifdef TIMER
+      tmltd=tmltd+(dnekclock()-etime1)
+#endif
+      return
+      end subroutine multd_rho_cyl
 c-----------------------------------------------------------------------
       subroutine convect_cylindrical_rho(bdu,rho,u,cx,cy,cz)
 

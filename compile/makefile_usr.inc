@@ -71,6 +71,7 @@ $(OBJDIR)/null_space_jd.o       :$(SRC_USR)/null_space_jd.f;            $(F77) -
 $(OBJDIR)/full_mass.o           :$(SRC_USR)/full_mass.f;                $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@
 $(OBJDIR)/kopriva.o             :$(SRC_USR)/kopriva.f;                  $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@
 $(OBJDIR)/generic_subs.o        :$(SRC_USR)/generic_subs.f;             $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@
+$(OBJDIR)/problem.o             :$(SRC_USR)/problem.f;                  $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@
 
 $(OBJDIR)/frame_cyl.o           :$(SRC_CYL)/frame_cyl.f;                $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@
 $(OBJDIR)/cylindrical_subs.o    :$(SRC_CYL)/cylindrical_subs.f;         $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@

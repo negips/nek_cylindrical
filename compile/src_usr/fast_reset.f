@@ -209,6 +209,11 @@ c     Generate fast diagonalization matrices for each element
       call copy(fld,vtrans(1,1,1,1,ifld),n)
       call get_1D_fld(fldr,flds,fldt,fld,ifinterior)
 
+!!     prabal      
+!      call rone(fldr,lx1*nelv)
+!      call rone(flds,ly1*nelv)
+!      call rone(fldt,lz1*nelv)
+
       epstol = 1.0e-10
 
       do e=1,nelv

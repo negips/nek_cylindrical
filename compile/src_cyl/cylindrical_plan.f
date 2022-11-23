@@ -453,6 +453,7 @@ c                not the current pressure derived from extrapolation.
       endif
 
       call opdiv_cyl(dp,ux,uy,uz)
+!      call opdiv_rho_cyl(dp,ux,uy,uz)
 
       if (intype.eq.1) then
         bdti = -bd(1)/dt
