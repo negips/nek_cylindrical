@@ -609,4 +609,180 @@ c     call copy (dpc,binv,n)
       return
       end
 c-----------------------------------------------------------------------
+      subroutine setprec_cyl (dpcm1,helm1,helm2,imsh,isd)
+
+!     Generate diagonal preconditioner for the Helmholtz operator.
+
+      implicit none
+
+      include 'SIZE'
+      include 'WZ'
+      include 'DXYZ'
+      include 'GEOM'
+      include 'INPUT'
+      include 'TSTEP'
+      include 'MASS'
+      include 'CYLINDRICAL'
+
+      real            dpcm1 (lx1,ly1,lz1,1)
+      common /fastmd/ ifdfrm(lelt), iffast(lelt), ifh2, ifsolv
+      logical ifdfrm, iffast, ifh2, ifsolv
+      real            helm1(lx1,ly1,lz1,1), helm2(lx1,ly1,lz1,1)
+      real ysm1(ly1)
+
+      integer ie,iq,iz,iy,ix,ntot
+      integer i,j,e,iel,ijk
+      integer nel,imsh,isd
+      real term1,term2
+
+      real k_f3d                ! passed as argument
+      real const
+
+      real rinv(lx1,ly1,lz1,lelv)
+      real rinv2(lx1,ly1,lz1,lelv)
+      real const
+
+      nel=nelt
+      if (imsh.eq.1) nel=nelv
+
+      ntot = nel*lx1*ly1*lz1
+
+      call rzero(dpcm1,ntot)
+      do 1000 ie=1,nel
+
+        if (ifaxis) call setaxdy ( ifrzer(ie) )
+
+        const = 1.0
+        if (isd.eq.1) const=2.0
+
+        do 320 iq=1,lx1
+        do 320 iz=1,lz1
+        do 320 iy=1,ly1
+        do 320 ix=1,lx1
+           dpcm1(ix,iy,iz,ie) = dpcm1(ix,iy,iz,ie) + 
+     $                    const*g1m1(iq,iy,iz,ie) * dxtm1(ix,iq)**2
+  320   continue
+
+        const = 1.0
+        if (isd.eq.2) const=2.0
+        do 340 iq=1,ly1
+        do 340 iz=1,lz1
+        do 340 iy=1,ly1
+        do 340 ix=1,lx1
+           dpcm1(ix,iy,iz,ie) = dpcm1(ix,iy,iz,ie) + 
+     $                     const*g2m1(ix,iq,iz,ie) * dytm1(iy,iq)**2
+  340   continue
+        if (ldim.eq.3) then
+           const = 1.0
+           if (isd.eq.2) const=2.0
+         
+           do 360 iq=1,lz1
+           do 360 iz=1,lz1
+           do 360 iy=1,ly1
+           do 360 ix=1,lx1
+              dpcm1(ix,iy,iz,ie) = dpcm1(ix,iy,iz,ie) + const* 
+     $     g3m1(ix,iy,iq,ie)*(dztm1(iz,iq)/cyl_radius(ix,iy,iz,ie))**2
+  360      continue
+c
+c          add cross terms if element is deformed.
+c
+!          I am not caring about this since we don't have deformed
+!          elements in the cylindrical formulation (yet)
+           if (ifdfrm(ie)) then
+              do 600 iy=1,ly1,ly1-1
+              do 600 iz=1,lz1,max(1,lz1-1)
+              dpcm1(1,iy,iz,ie) = dpcm1(1,iy,iz,ie)
+     $            + g4m1(1,iy,iz,ie) * dxtm1(1,1)*dytm1(iy,iy)
+     $            + g5m1(1,iy,iz,ie) * dxtm1(1,1)*dztm1(iz,iz)
+              dpcm1(lx1,iy,iz,ie) = dpcm1(lx1,iy,iz,ie)
+     $            + g4m1(lx1,iy,iz,ie) * dxtm1(lx1,lx1)*dytm1(iy,iy)
+     $            + g5m1(lx1,iy,iz,ie) * dxtm1(lx1,lx1)*dztm1(iz,iz)
+  600         continue
+              do 700 ix=1,lx1,lx1-1
+              do 700 iz=1,lz1,max(1,lz1-1)
+                 dpcm1(ix,1,iz,ie) = dpcm1(ix,1,iz,ie)
+     $            + g4m1(ix,1,iz,ie) * dytm1(1,1)*dxtm1(ix,ix)
+     $            + g6m1(ix,1,iz,ie) * dytm1(1,1)*dztm1(iz,iz)
+                 dpcm1(ix,ly1,iz,ie) = dpcm1(ix,ly1,iz,ie)
+     $            + g4m1(ix,ly1,iz,ie) * dytm1(ly1,ly1)*dxtm1(ix,ix)
+     $            + g6m1(ix,ly1,iz,ie) * dytm1(ly1,ly1)*dztm1(iz,iz)
+  700         continue
+              do 800 ix=1,lx1,lx1-1
+              do 800 iy=1,ly1,ly1-1
+                 dpcm1(ix,iy,1,ie) = dpcm1(ix,iy,1,ie)
+     $                + g5m1(ix,iy,1,ie) * dztm1(1,1)*dxtm1(ix,ix)
+     $                + g6m1(ix,iy,1,ie) * dztm1(1,1)*dytm1(iy,iy)
+                 dpcm1(ix,iy,lz1,ie) = dpcm1(ix,iy,lz1,ie)
+     $                + g5m1(ix,iy,lz1,ie) * dztm1(lz1,lz1)*dxtm1(ix,ix)
+     $                + g6m1(ix,iy,lz1,ie) * dztm1(lz1,lz1)*dytm1(iy,iy)
+  800         continue
+           endif
+
+        else  ! 2d
+
+           iz=1
+           if (ifdfrm(ie)) then
+              do 602 iy=1,ly1,ly1-1
+                 dpcm1(1,iy,iz,ie) = dpcm1(1,iy,iz,ie)
+     $                + g4m1(1,iy,iz,ie) * dxtm1(1,1)*dytm1(iy,iy)
+                 dpcm1(lx1,iy,iz,ie) = dpcm1(lx1,iy,iz,ie)
+     $                + g4m1(lx1,iy,iz,ie) * dxtm1(lx1,lx1)*dytm1(iy,iy)
+  602         continue
+              do 702 ix=1,lx1,lx1-1
+                 dpcm1(ix,1,iz,ie) = dpcm1(ix,1,iz,ie)
+     $                + g4m1(ix,1,iz,ie) * dytm1(1,1)*dxtm1(ix,ix)
+                 dpcm1(ix,ly1,iz,ie) = dpcm1(ix,ly1,iz,ie)
+     $                + g4m1(ix,ly1,iz,ie) * dytm1(ly1,ly1)*dxtm1(ix,ix)
+  702         continue
+           endif
+
+        endif
+ 1000 continue
+
+!     Add additional terms for cylindrical formulation
+
+      call invers2(rinv,cyl_radius,ntot)        ! rinv = 1/R
+      call copy(rinv2,rinv,ntot)
+      call invcol2(rinv2,rinv,ntot)             ! rinv2 = 1/R^2
+
+      if (isd.eq.1) then
+!        call cmult(rinv2,const,ntot)            ! (k^2)/R^2
+!        call Xaddcol3(dpcm1,rinv2,bm1,ntot)     ! D = D + BM1*(k^2)/R^2
+
+      elseif (isd.eq.2) then
+        const = 2.0
+        call cmult(rinv2,const,ntot)            ! (2/R^2)
+        call Xaddcol3(dpcm1,rinv2,bm1,ntot)     ! D = D + BM1*(2/R^2)
+      elseif (isd.eq.3) then
+!       Again, ignoring cross derivatives for now        
+        do 380 ie=1,nelv
+        do 380 iq=1,ly1
+        do 380 iz=1,lz1
+        do 380 iy=1,ly1
+        do 380 ix=1,lx1
+           dpcm1(ix,iy,iz,ie) = dpcm1(ix,iy,iz,ie)
+     $     - sym1(ix,iq,iz,ie)*w3m1(ix,iy,iz)*dym1(iy,iq)
+     $     - sym1(ix,iq,iz,ie)*w3m1(ix,iy,iz)*dytm1(iy,iq)
+     $     + bm1(ix,iy,iz,ie)*rinv2(ix,iy,iz,ie)             
+  380   continue
+      else
+
+        if (nid.eq.0) then
+          write(6,*) 'Unrecognized ISD in setprec_cyl', ISD
+        endif
+        call exitt
+      endif  
+
+      call col2    (dpcm1,helm1,ntot)
+      call addcol3 (dpcm1,helm2,bm1,ntot)
+
+      call dssum (dpcm1,lx1,ly1,lz1)
+      call invcol1 (dpcm1,ntot)
+
+      return
+      end
+!---------------------------------------------------------------------- 
+
+
+
 
