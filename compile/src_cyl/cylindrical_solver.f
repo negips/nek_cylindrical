@@ -7,6 +7,7 @@
 !     esolver_cyl       : Choose E solver
 !     uzawa_gmres_cyl   : GMRES solver
 !     uzawa_cyl         : CG solver
+!     cggosf_cyl        : CG solver (velocity)
 !      
 !
 !     Outside dependencies: 
@@ -485,9 +486,6 @@ c     overrule input tolerance
 
       if (ifcrsl) call set_up_h1_crs_strs(h1,h2,ifield,matmod)
 
-c      if (nio.eq.0.and.istep.eq.1) write(6,6) ifield,tol,tin
-c   6  format(i3,1p2e12.4,' ifield, tol, tol_in')
-
       if ( .not.ifsolv ) then           !     Set logical flags
          call setfast (h1,h2,imesh)
          ifsolv = .true.
@@ -508,88 +506,84 @@ c        if ( .not.ifprint )  goto 9999
       endif
 
 C     Evaluate diagional pre-conidtioner for fluid solve
-      call setprec (dpc,h1,h2,imesh,1)
-      call setprec (wa ,h1,h2,imesh,2)
-      call add2    (dpc,wa,n)
+      call setprec (qq1,h1,h2,imesh,1)
+      call setprec (qq2,h1,h2,imesh,2)
       if (ldim.eq.3) then
-         call setprec (wa,h1,h2,imesh,3)
-         call add2    (dpc,wa,n)
+         call setprec (qq3,h1,h2,imesh,3)
       endif
-c     call rone (dpc,n)
-c     call copy (dpc,binv,n)
 
       if (iffdm) then
-         call set_fdm_prec_h1b(dpc,h1,h2,nel)
-         call fdm_h1a (pp1,r1,dpc,nel,ktype(1,1,1),wa)
-         call fdm_h1a (pp2,r2,dpc,nel,ktype(1,1,2),wa)
-         call fdm_h1a (pp3,r3,dpc,nel,ktype(1,1,3),wa)
-         call rmask   (pp1,pp2,pp3,nel)
-         call opdssum (pp1,pp2,pp3)
+!         call set_fdm_prec_h1b(dpc,h1,h2,nel)
+!         call fdm_h1a (pp1,r1,dpc,nel,ktype(1,1,1),wa)
+!         call fdm_h1a (pp2,r2,dpc,nel,ktype(1,1,2),wa)
+!         call fdm_h1a (pp3,r3,dpc,nel,ktype(1,1,3),wa)
+!         call rmask   (pp1,pp2,pp3,nel)
+!         call opdssum (pp1,pp2,pp3)
       else
-         call col3 (pp1,dpc,r1,n)
-         call col3 (pp2,dpc,r2,n)
-         if (if3d) call col3 (pp3,dpc,r3,n)
+        call col3 (pp1,qq1,r1,n)
+        call col3 (pp2,qq2,r2,n)
+        if (if3d) call col3 (pp3,qq3,r3,n)
       endif
       if (ifcrsl) then
-         call crs_strs(p1,p2,p3,r1,r2,r3)
-         call rmask   (p1,p2,p3,nel)
+        call crs_strs(p1,p2,p3,r1,r2,r3)
+        call rmask   (p1,p2,p3,nel)
       else
-         call opzero(p1,p2,p3)
+        call opzero(p1,p2,p3)
       endif
       call opadd2       (p1,p2,p3,pp1,pp2,pp3)
       rpp1 = op_glsc2_wt(p1,p2,p3,r1,r2,r3,rmult)
 
       maxit=200
       do 1000 iter=1,maxit
-!         call axhmsf  (ap1,ap2,ap3,p1,p2,p3,h1,h2,matmod)
-         call axhmsf_cyl (ap1,ap2,ap3,p1,p2,p3,h1,h2,matmod)      ! prabal
-         call rmask   (ap1,ap2,ap3,nel)
-         call opdssum (ap1,ap2,ap3)
-         pap   = op_glsc2_wt(p1,p2,p3,ap1,ap2,ap3,rmult)
-         alpha = rpp1 / pap
+!        call axhmsf  (ap1,ap2,ap3,p1,p2,p3,h1,h2,matmod)
+        call axhmsf_cyl (ap1,ap2,ap3,p1,p2,p3,h1,h2,matmod)      ! prabal
+        call rmask   (ap1,ap2,ap3,nel)
+        call opdssum (ap1,ap2,ap3)
+        pap   = op_glsc2_wt(p1,p2,p3,ap1,ap2,ap3,rmult)
+        alpha = rpp1 / pap
 
-         call opadds (u1,u2,u3,p1 ,p2 ,p3 , alpha,n,2)
-         call opadds (r1,r2,r3,ap1,ap2,ap3,-alpha,n,2)
+        call opadds (u1,u2,u3,p1 ,p2 ,p3 , alpha,n,2)
+        call opadds (r1,r2,r3,ap1,ap2,ap3,-alpha,n,2)
 
-         call opdot  (wa,r1,r2,r3,r1,r2,r3,n)
-         rbnorm = glsc3(wa,binv,rmult,n)
-         rbnorm = sqrt (rbnorm/vol)
+        call opdot  (wa,r1,r2,r3,r1,r2,r3,n)
+        rbnorm = glsc3(wa,binv,rmult,n)
+        rbnorm = sqrt (rbnorm/vol)
 
-         if (iter.eq.1) r0 = rbnorm
+        if (iter.eq.1) r0 = rbnorm
 
-         if (rbnorm.lt.tol) then
-            ifin = iter
-            if (nio.eq.0) then
-               if (matmod.ge.0) write(6,3000) istep,ifin,rbnorm,r0,tol
-               if (matmod.lt.0) write(6,3010) istep,ifin,rbnorm,r0,tol
-            endif
-            goto 9999
-         endif
+        if (rbnorm.lt.tol) then
+           ifin = iter
+           if (nio.eq.0) then
+              if (matmod.ge.0) write(6,3000) istep,ifin,rbnorm,r0,tol
+              if (matmod.lt.0) write(6,3010) istep,ifin,rbnorm,r0,tol
+           endif
+           goto 9999
+        endif
 
-         if (iffdm) then
-            call fdm_h1a (pp1,r1,dpc,nel,ktype(1,1,1),wa)
-            call fdm_h1a (pp2,r2,dpc,nel,ktype(1,1,2),wa)
-            call fdm_h1a (pp3,r3,dpc,nel,ktype(1,1,3),wa)
-            call rmask   (pp1,pp2,pp3,nel)
-            call opdssum (pp1,pp2,pp3)
-         else
-            call col3 (pp1,dpc,r1,n)
-            call col3 (pp2,dpc,r2,n)
-            if (if3d) call col3 (pp3,dpc,r3,n)
-         endif
+        if (iffdm) then
+           call fdm_h1a (pp1,r1,dpc,nel,ktype(1,1,1),wa)
+           call fdm_h1a (pp2,r2,dpc,nel,ktype(1,1,2),wa)
+           call fdm_h1a (pp3,r3,dpc,nel,ktype(1,1,3),wa)
+           call rmask   (pp1,pp2,pp3,nel)
+           call opdssum (pp1,pp2,pp3)
+        else
+           call col3 (pp1,qq1,r1,n)
+           call col3 (pp2,qq2,r2,n)
+           if (if3d) call col3 (pp3,qq3,r3,n)
+        endif
 
-         if (ifcrsl) then
-           call crs_strs(qq1,qq2,qq3,r1,r2,r3)
-           call rmask   (qq1,qq2,qq3,nel)
-           call opadd2  (pp1,pp2,pp3,qq1,qq2,qq3)
-         endif
+        if (ifcrsl) then
+          call crs_strs(qq1,qq2,qq3,r1,r2,r3)
+          call rmask   (qq1,qq2,qq3,nel)
+          call opadd2  (pp1,pp2,pp3,qq1,qq2,qq3)
+        endif
 
-         call opdot (wa,r1,r2,r3,pp1,pp2,pp3,n)
+        call opdot (wa,r1,r2,r3,pp1,pp2,pp3,n)
 
-         rpp2 = rpp1
-         rpp1 = glsc2(wa,rmult,n)
-         beta = rpp1/rpp2
-         call opadds (p1,p2,p3,pp1,pp2,pp3,beta,n,1)
+        rpp2 = rpp1
+        rpp1 = glsc2(wa,rmult,n)
+        beta = rpp1/rpp2
+        call opadds (p1,p2,p3,pp1,pp2,pp3,beta,n,1)
 
  1000 continue
       if (matmod.ge.0.and.nio.eq.0) write (6,3001) 
