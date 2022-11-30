@@ -54,7 +54,7 @@ c     Galerkin projection
       return
       end
 c-----------------------------------------------------------------------
-      subroutine axhelm_cyl (au,u,helm1,helm2,imesh,isd)
+      subroutine axhelm_cyl_pr (au,u,helm1,helm2,imesh,isd)
 
 !     Compute the (Helmholtz) matrix-vector product,
 !     AU = helm1*[A]u + helm2*[B]u, for NEL elements.
@@ -215,36 +215,9 @@ C
  100  continue
 C
       if (ifh2) call addcol4 (au,helm2,bm1,u,ntot)
-C
-C     If axisymmetric, add a diagonal term in the radial direction (ISD=2)
-C
-      if (ifaxis.and.(isd.eq.2)) then
-         do 200 e=1,nel
-C
-            if (ifrzer(e)) then
-               call mxm(u  (1,1,1,e),lx1,datm1,ly1,duax,1)
-               call mxm(ym1(1,1,1,e),lx1,datm1,ly1,ysm1,1)
-            endif
-c
-            do 190 j=1,ly1
-            do 190 i=1,lx1
-C               if (ym1(i,j,1,e).ne.0.) then
-                  if (ifrzer(e)) then
-                     term1 = 0.0
-                     if(j.ne.1) 
-     $             term1 = bm1(i,j,1,e)*u(i,j,1,e)/ym1(i,j,1,e)**2
-                     term2 =  wxm1(i)*wam1(1)*dam1(1,j)*duax(i)
-     $                       *jacm1(i,1,1,e)/ysm1(i)
-                  else
-                   term1 = bm1(i,j,1,e)*u(i,j,1,e)/ym1(i,j,1,e)**2
-                     term2 = 0.
-                  endif
-                  au(i,j,1,e) = au(i,j,1,e)
-     $                          + helm1(i,j,1,e)*(term1+term2)
-C               endif
-  190       continue
-  200    continue
-      endif
+
+!     Add contributions of additional terms in cylindrical formulation
+!     Not done yet      
 
       taxhm=taxhm+(dnekclock()-etime1)
       return

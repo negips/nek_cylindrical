@@ -458,53 +458,17 @@ C
             call tensor3_op(dtx(1,e),ta1,lx2,ly2,lz2,
      $                      dxtm12,iym12,izm12,lx1,ly1,lz1)
 
-!            call col3 (ta1,wx,rm2(1,e),nxyz2)
-!            call mxm  (dxtm12,lx1,ta1,lx2,ta2,nyz2)
-!            i1 = 1
-!            i2 = 1
-!            do iz=1,lz2
-!              call mxm  (ta2(i2),lx1,iym12,ly2,ta1(i1),ly1)
-!              i1 = i1 + n1
-!              i2 = i2 + n2
-!            enddo
-!            call mxm  (ta1,nxy1,izm12,lz2,dtx(1,e),lz1)
-
 !           (dv/ds)*(ds/dx_i)*W*p
             call col3 (ta1,wx,sm2(1,e),nxyz2)
             call tensor3_op(ta2,ta1,lx2,ly2,lz2,
      $                      ixtm12,dym12,izm12,lx1,ly1,lz1)
             call add2 (dtx(1,e),ta2,nxyz1)
 
-!            call col3 (ta1,wx,sm2(1,e),nxyz2)
-!            call mxm  (ixtm12,lx1,ta1,lx2,ta2,nyz2)
-!            i1 = 1
-!            i2 = 1
-!            do iz=1,lz2
-!              call mxm  (ta2(i2),lx1,dym12,ly2,ta1(i1),ly1)
-!              i1 = i1 + n1
-!              i2 = i2 + n2
-!            enddo
-!            call mxm  (ta1,nxy1,izm12,lz2,ta2,lz1)
-!            call add2 (dtx(1,e),ta2,nxyz1)
-
 !           (dv/dt)*(dt/dx_i)*W*p
             call col3 (ta1,wx,tm2(1,e),nxyz2)
             call tensor3_op(ta2,ta1,lx2,ly2,lz2,
      $                      ixtm12,iym12,dzm12,lx1,ly1,lz1)
             call add2 (dtx(1,e),ta2,nxyz1)
-
-
-!            call col3 (ta1,wx,tm2(1,e),nxyz2)
-!            call mxm  (ixtm12,lx1,ta1,lx2,ta2,nyz2)
-!            i1 = 1
-!            i2 = 1
-!            do iz=1,lz2
-!              call mxm  (ta2(i2),lx1,iym12,ly2,ta1(i1),ly1)
-!              i1 = i1 + n1
-!              i2 = i2 + n2
-!            enddo
-!            call mxm  (ta1,nxy1,dzm12,lz2,ta2,lz1)
-!            call add2 (dtx(1,e),ta2,nxyz1)
 
 !           Additional term in the Radial direction            
 !           (v/R)*W*p
@@ -514,19 +478,6 @@ C
               call tensor3_op(ta2,ta1,lx2,ly2,lz2,
      $                        ixtm12,iym12,izm12,lx1,ly1,lz1)
               call add2 (dtx(1,e),ta2,nxyz1)
-
-!              call invcol3(ta1,wx,ym2(1,1,1,e),nxyz2)
-!              call col2(ta1,jacm2(1,1,1,e),nxyz2)
-!              call mxm  (ixtm12,lx1,ta1,lx2,ta2,nyz2)
-!              i1 = 1
-!              i2 = 1
-!              do iz=1,lz2
-!                 call mxm  (ta2(i2),lx1,iym12,ly2,ta1(i1),ly1)
-!                 i1 = i1 + n1
-!                 i2 = i2 + n2
-!              enddo
-!              call mxm  (ta1,nxy1,izm12,lz2,ta2,lz1)
-!              call add2 (dtx(1,e),ta2,nxyz1)
             endif    ! isd.eq.2
 
           endif      ! ifsplit
