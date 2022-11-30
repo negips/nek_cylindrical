@@ -8,6 +8,7 @@
 !     uzawa_gmres_cyl   : GMRES solver
 !     uzawa_cyl         : CG solver
 !     cggosf_cyl        : CG solver (velocity)
+!     setprec_cyl       : Diagonal Preconditioner (Velocity)       
 !      
 !
 !     Outside dependencies: 
@@ -506,10 +507,10 @@ c        if ( .not.ifprint )  goto 9999
       endif
 
 C     Evaluate diagional pre-conidtioner for fluid solve
-      call setprec (qq1,h1,h2,imesh,1)
-      call setprec (qq2,h1,h2,imesh,2)
+      call setprec_cyl(qq1,h1,h2,imesh,1)
+      call setprec_cyl(qq2,h1,h2,imesh,2)
       if (ldim.eq.3) then
-         call setprec (qq3,h1,h2,imesh,3)
+         call setprec_cyl(qq3,h1,h2,imesh,3)
       endif
 
       if (iffdm) then
@@ -525,8 +526,8 @@ C     Evaluate diagional pre-conidtioner for fluid solve
         if (if3d) call col3 (pp3,qq3,r3,n)
       endif
       if (ifcrsl) then
-        call crs_strs(p1,p2,p3,r1,r2,r3)
-        call rmask   (p1,p2,p3,nel)
+!        call crs_strs(p1,p2,p3,r1,r2,r3)
+!        call rmask   (p1,p2,p3,nel)
       else
         call opzero(p1,p2,p3)
       endif
@@ -561,11 +562,11 @@ C     Evaluate diagional pre-conidtioner for fluid solve
         endif
 
         if (iffdm) then
-           call fdm_h1a (pp1,r1,dpc,nel,ktype(1,1,1),wa)
-           call fdm_h1a (pp2,r2,dpc,nel,ktype(1,1,2),wa)
-           call fdm_h1a (pp3,r3,dpc,nel,ktype(1,1,3),wa)
-           call rmask   (pp1,pp2,pp3,nel)
-           call opdssum (pp1,pp2,pp3)
+!           call fdm_h1a (pp1,r1,dpc,nel,ktype(1,1,1),wa)
+!           call fdm_h1a (pp2,r2,dpc,nel,ktype(1,1,2),wa)
+!           call fdm_h1a (pp3,r3,dpc,nel,ktype(1,1,3),wa)
+!           call rmask   (pp1,pp2,pp3,nel)
+!           call opdssum (pp1,pp2,pp3)
         else
            call col3 (pp1,qq1,r1,n)
            call col3 (pp2,qq2,r2,n)
@@ -573,9 +574,9 @@ C     Evaluate diagional pre-conidtioner for fluid solve
         endif
 
         if (ifcrsl) then
-          call crs_strs(qq1,qq2,qq3,r1,r2,r3)
-          call rmask   (qq1,qq2,qq3,nel)
-          call opadd2  (pp1,pp2,pp3,qq1,qq2,qq3)
+!          call crs_strs(qq1,qq2,qq3,r1,r2,r3)
+!          call rmask   (qq1,qq2,qq3,nel)
+!          call opadd2  (pp1,pp2,pp3,qq1,qq2,qq3)
         endif
 
         call opdot (wa,r1,r2,r3,pp1,pp2,pp3,n)
@@ -629,12 +630,11 @@ c-----------------------------------------------------------------------
       integer nel,imsh,isd
       real term1,term2
 
-      real k_f3d                ! passed as argument
       real const
+      real r
 
       real rinv(lx1,ly1,lz1,lelv)
       real rinv2(lx1,ly1,lz1,lelv)
-      real const
 
       nel=nelt
       if (imsh.eq.1) nel=nelv
@@ -653,8 +653,9 @@ c-----------------------------------------------------------------------
         do 320 iz=1,lz1
         do 320 iy=1,ly1
         do 320 ix=1,lx1
+           r                  = cyl_radius(ix,iy,iz,ie)
            dpcm1(ix,iy,iz,ie) = dpcm1(ix,iy,iz,ie) + 
-     $                    const*g1m1(iq,iy,iz,ie) * dxtm1(ix,iq)**2
+     $                    r*const*g1m1(iq,iy,iz,ie) * dxtm1(ix,iq)**2
   320   continue
 
         const = 1.0
@@ -663,8 +664,9 @@ c-----------------------------------------------------------------------
         do 340 iz=1,lz1
         do 340 iy=1,ly1
         do 340 ix=1,lx1
+           r                  = cyl_radius(ix,iy,iz,ie)
            dpcm1(ix,iy,iz,ie) = dpcm1(ix,iy,iz,ie) + 
-     $                     const*g2m1(ix,iq,iz,ie) * dytm1(iy,iq)**2
+     $                     r*const*g2m1(ix,iq,iz,ie) * dytm1(iy,iq)**2
   340   continue
         if (ldim.eq.3) then
            const = 1.0
@@ -674,8 +676,9 @@ c-----------------------------------------------------------------------
            do 360 iz=1,lz1
            do 360 iy=1,ly1
            do 360 ix=1,lx1
+              r                  = cyl_radius(ix,iy,iz,ie)
               dpcm1(ix,iy,iz,ie) = dpcm1(ix,iy,iz,ie) + const* 
-     $     g3m1(ix,iy,iq,ie)*(dztm1(iz,iq)/cyl_radius(ix,iy,iz,ie))**2
+     $     g3m1(ix,iy,iq,ie)*(dztm1(iz,iq)**2)/r
   360      continue
 c
 c          add cross terms if element is deformed.

@@ -79,6 +79,7 @@ $(OBJDIR)/cylindrical_plan.o    :$(SRC_CYL)/cylindrical_plan.f;         $(F77) -
 $(OBJDIR)/cylindrical_fast.o    :$(SRC_CYL)/cylindrical_fast.f;         $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@
 $(OBJDIR)/cylindrical_solver.o  :$(SRC_CYL)/cylindrical_solver.f;       $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@
 $(OBJDIR)/cylindrical_conduct.o :$(SRC_CYL)/cylindrical_conduct.f;      $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@
+$(OBJDIR)/cylindrical_h1mg.o    :$(SRC_CYL)/cylindrical_h1mg.f;         $(F77) -c $(FL2) -I$(SRC_INC)/ $< -o $@
 
 
 
